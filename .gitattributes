@@ -1,0 +1,11 @@
+# .bat и .vbs обязаны быть с CRLF: с переводами строк в стиле Unix
+# cmd.exe ломается на многострочных блоках if.
+*.bat text eol=crlf
+*.vbs text eol=crlf
+
+# Остальное храним с LF, на диск раскладывается по правилам системы
+*.py  text eol=lf
+*.sql text eol=lf
+*.md  text eol=lf
+*.html text
+*.txt text
