@@ -37,7 +37,7 @@ import docscan
 
 # Версия сборки. Должна совпадать с UI_BUILD в it-inventory.html: если файлы
 # обновили, а сервер не перезапустили, приложение об этом само скажет.
-APP_BUILD = "2026-09-18.12"
+APP_BUILD = "2026-09-18.13"
 
 BASE = Path(__file__).resolve().parent
 ROOT = BASE.parent
@@ -1097,6 +1097,13 @@ def _ad_login(cur, login, password, row):
                     (who["name"] or row["full_name"], who.get("position") or row["position"], sid))
     cur.execute("select * from staff where id = %s", (sid,))
     return cur.fetchone()
+
+
+@app.get("/api/login-info")
+def api_login_info():
+    """Что показать на экране входа до входа: включён ли вход через домен."""
+    with db() as conn, conn.cursor() as cur:
+        return jsonify({"ad": bool(_adauth_cfg(cur).get("enabled"))})
 
 
 @app.post("/api/login")

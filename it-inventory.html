@@ -342,7 +342,7 @@
 <div id="loginScreen" hidden>
   <form id="loginForm" autocomplete="on">
     <h1>Учёт ИТ-отдела</h1>
-    <div class="sub">Вход в систему — доменный логин (например, i.ivanov) и пароль Windows, либо логин и пароль, выданные администратором</div>
+    <div class="sub" id="lg_sub">Вход в систему</div>
     <div class="field"><label for="lg_login">Логин</label>
       <input id="lg_login" name="username" autocomplete="username" autofocus></div>
     <div class="field"><label for="lg_pass">Пароль</label>
@@ -2294,7 +2294,7 @@
 
   /* Версия интерфейса. Сервер отдаёт свою в /api/state; расходятся —
      значит файлы обновили, а сервер не перезапустили. */
-  var UI_BUILD = "2026-09-18.12";
+  var UI_BUILD = "2026-09-18.13";
 
   /* ================== связь с сервером ================== */
   function api(path, data){
@@ -2466,6 +2466,13 @@
   function showLogin(){
     $("appRoot").hidden = true;
     $("loginScreen").hidden = false;
+    /* подсказка про домен — только там, где вход через домен включён:
+       в других местах домена может не быть, и заходят по выданным паролям */
+    api("/api/login-info").then(function(d){
+      $("lg_sub").textContent = d.ad
+        ? "Вход в систему — доменный логин (например, i.ivanov) и пароль Windows, либо логин и пароль, выданные администратором"
+        : "Вход в систему — логин и пароль, выданные администратором";
+    }).catch(function(){});
     setTimeout(function(){ $("lg_login").focus(); }, 30);
   }
   $("loginForm").onsubmit = function(e){
