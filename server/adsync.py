@@ -24,7 +24,7 @@ employeeType) стоит условленное значение — так ад
 import datetime
 import secrets
 
-from ldap3 import Server, Connection, ALL, SUBTREE, LEVEL, SIMPLE
+from ldap3 import Server, Connection, ALL, SUBTREE, LEVEL, BASE, SIMPLE
 
 # Атрибуты, которые забираем из домена
 ATTRS = ["givenName", "initials", "sn", "telephoneNumber", "mail",
@@ -130,8 +130,8 @@ def search_base(cfg):
     return ",".join("OU=" + x for x in reversed(parts)) + ("," + base if base else "")
 
 
-def connect(cfg):
-    """Подключение и вход под служебной учётной записью."""
+def make_server(cfg):
+    """Сервер домена из настроек: адрес, порт, LDAPS."""
     host = (cfg.get("server") or "").strip()
     if not host:
         raise ValueError("не указан адрес сервера домена")
@@ -147,8 +147,12 @@ def connect(cfg):
     if ":" in host and not host.startswith("["):
         host, _, p = host.partition(":")
         port = int(p or port)
+    return Server(host, port=port, use_ssl=use_ssl, get_info=ALL, connect_timeout=10)
 
-    server = Server(host, port=port, use_ssl=use_ssl, get_info=ALL, connect_timeout=10)
+
+def connect(cfg):
+    """Подключение и вход под служебной учётной записью."""
+    server = make_server(cfg)
     conn = Connection(server,
                       user=(cfg.get("user") or "").strip() or None,
                       password=cfg.get("password") or None,
@@ -194,6 +198,100 @@ def fetch(cfg, limit=0):
             if limit and len(out) >= limit:
                 break
         return out
+    finally:
+        try:
+            conn.unbind()
+        except Exception:
+            pass
+
+
+# ------------------------------------------------------------------ вход через домен
+
+AUTH_DEFAULTS = {
+    "enabled": False,
+    "orgId": "",          # чьи настройки домена (сервер, база поиска) использовать
+    "suffix": "",         # хвост UPN: i.ivanov + @company.local
+    "group": "",          # группа AD, членам которой открыт вход (пусто — всем)
+    "roleId": "",         # роль, с которой заводится новый пользователь ИТ
+    "newOrgId": "",       # учреждение, в которое он попадает
+}
+
+
+def merge_auth(saved):
+    cfg = dict(AUTH_DEFAULTS)
+    cfg.update(saved or {})
+    return cfg
+
+
+def _in_group(groups, want):
+    """Состоит ли пользователь в группе: сравниваем с полным DN или с CN."""
+    want = (want or "").strip().lower()
+    if not want:
+        return True
+    for g in groups or []:
+        g = str(g).lower()
+        if g == want:
+            return True
+        cn = g.split(",", 1)[0]
+        if cn.startswith("cn=") and cn[3:] == want:
+            return True
+    return False
+
+
+def authenticate(cfg, auth, login, password, server=None, strategy=None):
+    """Проверяет логин и пароль в домене и возвращает сведения о человеке.
+
+    Вход — самим пользователем (simple bind под его UPN), а не служебной учёткой:
+    так домен сам проверяет пароль, отключённые учётки и истёкшие пароли, а у нас
+    пароль не хранится вовсе. После входа читаем свою же запись — имя и группы.
+    Возвращает dict(login, name, guid, groups, email, position) или None.
+    server/strategy — для проверки без настоящего домена.
+    """
+    login = (login or "").strip()
+    if not login or not password:
+        return None
+    if "@" in login or "\\" in login:
+        upn, sam = login, login.split("@")[0].split("\\")[-1]
+    else:
+        suffix = (auth.get("suffix") or "").strip().lstrip("@")
+        upn = login + "@" + suffix if suffix else login
+        sam = login
+    srv = server or make_server(cfg)
+    kw = {"client_strategy": strategy} if strategy else {}
+    conn = Connection(srv, user=upn, password=password, authentication=SIMPLE,
+                      auto_bind=False, raise_exceptions=False, receive_timeout=15, **kw)
+    try:
+        if not conn.bind():
+            return None
+        # обычно логин — sAMAccountName; если ввели полный DN, читаем саму запись
+        if "=" in login:
+            conn.search(search_base=login, search_filter="(objectClass=*)", search_scope=BASE,
+                        attributes=ATTRS + ["memberOf"], size_limit=1)
+        else:
+            conn.search(search_base=search_base(cfg),
+                        search_filter="(&(objectClass=user)(sAMAccountName=%s))" % escape_filter(sam),
+                        search_scope=SUBTREE, attributes=ATTRS + ["memberOf"], size_limit=1)
+        entry = None
+        for e in conn.response or []:
+            if e.get("type") == "searchResEntry":
+                entry = e.get("attributes") or {}
+                break
+        if entry is None:
+            return None
+        if auth.get("skipDisabled", True):
+            try:
+                if int(_one(entry, "userAccountControl") or 0) & ACCOUNT_DISABLED:
+                    return None
+            except ValueError:
+                pass
+        groups = entry.get("memberOf") or []
+        if isinstance(groups, (str, bytes)):
+            groups = [groups]
+        if not _in_group(groups, auth.get("group")):
+            return None
+        return {"login": _one(entry, "sAMAccountName") or sam, "name": full_name(entry), "guid": _guid(entry),
+                "email": _one(entry, "mail"), "position": _one(entry, "title"),
+                "groups": [str(g) for g in groups]}
     finally:
         try:
             conn.unbind()

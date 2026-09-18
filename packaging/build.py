@@ -25,7 +25,19 @@ PKG = ROOT / "packaging"
 OUT = ROOT / "dist" / "asset-it-server"
 
 # то, что ставится в окружение сервера
-REQUIREMENTS = ["flask", "psycopg[binary]", "waitress", "ldap3"]
+REQUIREMENTS = ["flask", "psycopg[binary]", "waitress", "ldap3",
+                "pypdfium2", "pytesseract", "pillow"]
+
+# Языковые данные Tesseract: сам движок ставится на сервере отдельно, а словари
+# едут с пакетом — качать их на сервере без интернета неоткуда.
+TESSDATA = ("rus", "eng")
+TESSDATA_URL = "https://github.com/tesseract-ocr/tessdata/raw/main/%s.traineddata"
+
+# Установщик самого движка: на сервере без интернета winget бесполезен,
+# поэтому кладём .exe рядом и ставим с него.
+TESSERACT_EXE = "tesseract-ocr-setup.exe"
+TESSERACT_URL = ("https://github.com/UB-Mannheim/tesseract/releases/download/"
+                 "v5.4.0.20240606/tesseract-ocr-w64-setup-5.4.0.20240606.exe")
 
 # из server/ берём только исходники, без настроек и служебных файлов
 SERVER_SKIP = {".env", "__pycache__"}
@@ -40,7 +52,7 @@ def copy_server():
         if f.is_dir():
             if f.name == "migrations":
                 shutil.copytree(f, dst / f.name, dirs_exist_ok=True)
-            continue
+            continue        # tessdata кладёт ensure_tessdata
         shutil.copy2(f, dst / f.name)
     print("  server/ — скопирован")
 
@@ -63,6 +75,39 @@ def ensure_wheels():
                     "-d", str(wheels), "--only-binary=:all:"], check=True)
 
 
+def ensure_tessdata():
+    """Словари для распознавания: сначала из репозитория, иначе качаем."""
+    src = ROOT / "server" / "tessdata"
+    dst = OUT / "server" / "tessdata"
+    dst.mkdir(parents=True, exist_ok=True)
+    import urllib.request
+    for lang in TESSDATA:
+        name = lang + ".traineddata"
+        if (dst / name).exists():
+            continue
+        if (src / name).exists():
+            shutil.copy2(src / name, dst / name)
+            continue
+        print("  tessdata/%s — качаю (нужен интернет) ..." % name)
+        urllib.request.urlretrieve(TESSDATA_URL % lang, dst / name)
+    got = sorted(f.name for f in dst.glob("*.traineddata"))
+    print("  tessdata/ — %s" % ", ".join(got))
+
+
+def ensure_tesseract():
+    """Установщик движка распознавания — в пакет, чтобы ставить без интернета."""
+    dst = OUT / "tesseract"
+    dst.mkdir(parents=True, exist_ok=True)
+    f = dst / TESSERACT_EXE
+    if f.exists() and f.stat().st_size > 10 * 1024 * 1024:
+        print("  tesseract/ — установщик уже на месте")
+        return
+    import urllib.request
+    print("  tesseract/ — качаю установщик, 48 МБ (нужен интернет) ...")
+    urllib.request.urlretrieve(TESSERACT_URL, f)
+    print("  tesseract/%s — %.0f МБ" % (TESSERACT_EXE, f.stat().st_size / 1024 / 1024))
+
+
 def main():
     OUT.mkdir(parents=True, exist_ok=True)
     shutil.copy2(ROOT / "it-inventory.html", OUT / "it-inventory.html")
@@ -70,6 +115,8 @@ def main():
     copy_server()
     copy_packaging()
     ensure_wheels()
+    ensure_tessdata()
+    ensure_tesseract()
 
     # настройки прошлой установки в пакет не попадают
     for junk in (OUT / "server" / ".env",):

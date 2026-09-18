@@ -64,6 +64,27 @@
   .side .cnt{margin-left:auto;font-size:11px;font-weight:700;color:var(--muted)}
   .side button.on .cnt{color:var(--accent-fg);opacity:.8}
   .side-foot{flex:0 0 auto;padding:12px 0 0;border-top:1px solid var(--border)}
+  .copy{font-size:10.5px;color:var(--muted);text-align:center;line-height:1.35;margin-top:10px;
+    opacity:.85;word-break:break-word}
+  #loginScreen .copy{position:fixed;left:0;right:0;bottom:14px;margin:0}
+  /* подпись прижата к низу: main — колонка на всю высоту, дашборд её заполняет,
+     а подпись отталкивается margin-top:auto — так она внизу и на коротком экране */
+  main{display:flex;flex-direction:column;min-height:100vh}
+  #v-dash:not([hidden]){display:flex;flex-direction:column;flex:1 1 auto}
+  #v-dash > *{flex:0 0 auto}
+  .dash-copy{margin-top:auto;padding-top:0;border-top:1px solid var(--border);
+    font-size:11.5px;letter-spacing:.02em;cursor:default}
+  .dash-copy::before{content:"";display:block;height:14px}
+  .mthumb{width:44px;height:44px;object-fit:cover;border-radius:6px;border:1px solid var(--border);
+    display:block;background:var(--surface-2)}
+  .mthumb-none{width:44px;height:44px;border-radius:6px;border:1px dashed var(--border);
+    display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:16px}
+  #m_preview{max-width:100%;max-height:320px;border-radius:8px;border:1px solid var(--border);display:block}
+  /* увеличенное фото при наведении на миниатюру: свой слой, иначе ячейка таблицы обрежет */
+  #photoPop{position:fixed;z-index:120;padding:6px;background:var(--surface);border:1px solid var(--border);
+    border-radius:10px;box-shadow:var(--shadow);pointer-events:none}
+  #photoPop img{display:block;max-width:360px;max-height:360px;border-radius:6px}
+  #mi_photo{max-width:100%;max-height:260px;border-radius:8px;border:1px solid var(--border);display:block;margin-bottom:12px}
   .side #themeSw{display:flex;gap:4px;margin-bottom:8px}
   .whoami{display:flex;align-items:center;gap:8px;padding:8px 10px;
     border:1px solid var(--border);border-radius:9px}
@@ -88,6 +109,8 @@
     border-radius:7px;padding:5px 4px;font-size:11px;color:var(--muted)}
   .side #roleSw button.on{background:var(--surface-2);border-color:var(--accent);color:var(--text)}
   body.noadmin .col-adm{display:none}
+  body.nodict .col-dict{display:none}
+  #xferBody td:last-child .ic, #xhistBody td:last-child .ic{margin-left:12px}
   .side #themeSw button{width:auto;flex:1;justify-content:center;border:1px solid var(--border);
     border-radius:7px;padding:5px 4px;font-size:11px;color:var(--muted)}
   .side #themeSw button.on{background:var(--accent);border-color:var(--accent);color:var(--accent-fg)}
@@ -104,16 +127,28 @@
     border-radius:8px;margin-bottom:6px;background:var(--surface)}
   .stat-row .nm{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:600}
   body.nosubs .col-sub{display:none}
-  main{flex:1;min-width:0;padding:20px 22px 64px}
+  main{flex:1;min-width:0;padding:20px 22px 20px}
   header.top{display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:space-between;margin-bottom:14px}
 
+  /* Узкое окно: панель переезжает наверх, но остаётся той же по смыслу —
+     выбор учреждения, затем группы «Обзор», «Учёт», «Справочники», в каждой
+     кнопки в строку с переносом. Раньше панель просто ложилась набок: выбор
+     учреждения растягивался на полблока, а все кнопки слипались в один столбец. */
   @media(max-width:900px){
     .app{display:block}
     aside.side{width:auto;height:auto;position:static;border-right:none;border-bottom:1px solid var(--border);
-      flex-direction:row;gap:6px;overflow-x:auto;padding:10px}
-    aside.side .grp,.brand,.side-foot{display:none}
-    .side button{width:auto;white-space:nowrap}
-    .side .cnt{margin-left:6px}
+      display:block;overflow:visible;padding:10px 12px}
+    .brand{display:none}
+    .orgpick{width:auto;min-width:200px;max-width:320px;margin:0 0 4px}
+    .side-nav{display:flex;flex-wrap:wrap;align-items:center;gap:3px 4px;overflow:visible}
+    #regNav{display:contents}
+    .side .grp{flex:0 0 100%;margin:8px 2px 2px}
+    .side-nav > .grp:first-child{margin-top:2px}
+    .side button{width:auto;white-space:nowrap;padding:5px 9px;gap:6px}
+    .side .cnt{margin-left:4px}
+    .side-foot{display:flex;align-items:center;gap:10px;padding:8px 0 0;margin-top:8px}
+    .side #themeSw{margin:0}
+    .whoami{flex:1 1 auto;min-width:0;padding:5px 8px}
     main{padding:16px 12px 48px}
   }
 
@@ -199,6 +234,13 @@
   .b-ok{background:var(--ok-bg);color:var(--ok)}
   .b-info{background:var(--info-bg);color:var(--info)}
   .b-warn{background:var(--warn-bg);color:var(--warn)}
+  /* переданное оборудование: бейдж живёт рядом со статусом, пока единицу не ввели в работу */
+  .b-xfer{background:var(--warn-bg);color:var(--warn);margin-left:4px;cursor:help}
+  /* два бейджа в узкой колонке: даём ячейке перенос, иначе второй обрежется многоточием */
+  td.st-x{white-space:normal;line-height:1.3;padding-top:4px;padding-bottom:4px;text-overflow:clip}
+  td.st-x .badge{white-space:nowrap}
+  #btnXferOnly{border-color:var(--warn);color:var(--warn);font-weight:600}
+  #btnXferOnly.on{background:var(--warn);color:#1a1200}
   .b-danger{background:var(--danger-bg);color:var(--danger)}
   .b-mute{background:var(--surface-2);color:var(--muted)}
   .chip{display:inline-block;background:var(--surface-2);border:1px solid var(--border);border-radius:6px;
@@ -207,6 +249,14 @@
   .buildwarn{margin:0 0 14px;padding:10px 14px;border-radius:10px;font-size:12.5px;
     background:var(--warn-bg);color:var(--warn);border:1px solid var(--warn)}
   .note{font-size:12px;color:var(--muted);margin-top:10px}
+  .dropzone{margin-top:12px;padding:26px;border:2px dashed var(--border);border-radius:12px;
+    text-align:center;cursor:pointer;transition:border-color .12s,background .12s}
+  .dropzone b{display:block;font-size:14px;margin-bottom:4px}
+  .dropzone span{font-size:12.5px;color:var(--muted)}
+  .dropzone.over{border-color:var(--accent);background:var(--surface-2)}
+  .dropzone.busy{opacity:.6;pointer-events:none}
+  .row-done{opacity:.55}
+  .row-done input, .row-done select{pointer-events:none}
   .net-un{color:var(--muted)}
   .net-off{color:var(--muted);font-size:12px}
   .adlog{margin:12px 0 0;padding-left:18px;max-height:260px;overflow:auto}
@@ -272,10 +322,14 @@
   .dlg-foot{padding:12px 18px;border-top:1px solid var(--border);display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap}
   .hist ul{margin:6px 0 0;padding-left:18px;max-height:140px;overflow:auto}
   .hist li{font-size:12.5px;color:var(--muted);margin-bottom:3px}
-  #toast{position:fixed;left:50%;bottom:22px;transform:translateX(-50%) translateY(160%);
+  /* Всплывашка: скрыта не сдвигом за край (у пустого элемента высота меньше сдвига,
+     и у низа экрана оставалась полоска), а прозрачностью и visibility. */
+  #toast{position:fixed;left:50%;bottom:22px;transform:translateX(-50%) translateY(30px);
     background:var(--text);color:var(--bg);padding:10px 16px;border-radius:10px;font-size:13px;
-    transition:.25s;z-index:99;max-width:90vw}
-  #toast.on{transform:translateX(-50%) translateY(0)}
+    transition:opacity .25s,transform .25s,visibility 0s .25s;z-index:99;max-width:90vw;
+    opacity:0;visibility:hidden;pointer-events:none}
+  #toast.on{transform:translateX(-50%) translateY(0);opacity:1;visibility:visible;
+    transition:opacity .25s,transform .25s,visibility 0s}
 </style>
 <script>
   /* тема применяется до отрисовки, чтобы не было вспышки */
@@ -288,7 +342,7 @@
 <div id="loginScreen" hidden>
   <form id="loginForm" autocomplete="on">
     <h1>Учёт ИТ-отдела</h1>
-    <div class="sub">Вход в систему</div>
+    <div class="sub">Вход в систему — доменный логин (например, i.ivanov) и пароль Windows, либо логин и пароль, выданные администратором</div>
     <div class="field"><label for="lg_login">Логин</label>
       <input id="lg_login" name="username" autocomplete="username" autofocus></div>
     <div class="field"><label for="lg_pass">Пароль</label>
@@ -296,6 +350,7 @@
     <div class="err" id="lg_err"></div>
     <button class="btn-primary" type="submit">Войти</button>
   </form>
+  <div class="copy" title="Developed by @Khalimoov">Copyright © 2026 Axborot texnologiyalar guruhi</div>
 </div>
 
 <div class="app" id="appRoot" hidden>
@@ -311,19 +366,25 @@
     <button data-nav="notices"><span class="ico">◔</span><span class="nm">Уведомления</span><span class="cnt" id="cntNotices"></span></button>
     <button data-nav="repairs"><span class="ico">⚒</span><span class="nm">Ремонты</span><span class="cnt" id="cntRepairs"></span></button>
     <button data-nav="dels" id="navDels"><span class="ico">✕</span><span class="nm">История удалений</span><span class="cnt" id="cntDels"></span></button>
+    <button data-nav="xhist" id="navXhist"><span class="ico">⇢</span><span class="nm">История передач</span><span class="cnt" id="cntXhist"></span></button>
 
     <div class="grp">Учёт</div>
     <div id="regNav"></div>
     <button data-nav="ips"><span class="ico">⌗</span><span class="nm">IP-адреса</span><span class="cnt" id="cntIps"></span></button>
+    <button data-nav="docs" id="navDocs"><span class="ico">⎙</span><span class="nm">Приходные накладные</span><span class="cnt" id="cntDocs"></span></button>
+    <button data-nav="transfers" id="navXfer"><span class="ico">⇢</span><span class="nm">Накладные по передаче</span><span class="cnt" id="cntXfer"></span></button>
 
     <div class="grp">Справочники</div>
-    <button data-nav="users"><span class="ico">☺</span><span class="nm">Пользователи</span><span class="cnt" id="cntUsers"></span></button>
+    <button data-nav="users"><span class="ico">☺</span><span class="nm">Сотрудники</span><span class="cnt" id="cntUsers"></span></button>
     <button data-nav="orgs" id="navOrgs"><span class="ico">⚑</span><span class="nm">Учреждения</span><span class="cnt" id="cntOrgs"></span></button>
     <button data-nav="ad" id="navAd"><span class="ico">⇄</span><span class="nm">Active Directory</span><span class="cnt" id="cntAd"></span></button>
-    <button data-nav="staff" id="navStaff"><span class="ico">⚒</span><span class="nm">Сотрудники ИТ</span><span class="cnt" id="cntStaff"></span></button>
+    <button data-nav="warehouses" id="navWh"><span class="ico">▤</span><span class="nm">Склады</span><span class="cnt" id="cntWh"></span></button>
+    <button data-nav="staff" id="navStaff"><span class="ico">⚒</span><span class="nm">Пользователи ИТ</span><span class="cnt" id="cntStaff"></span></button>
     <button data-nav="roles" id="navRoles"><span class="ico">⚿</span><span class="nm">Роли и доступ</span><span class="cnt" id="cntRoles"></span></button>
     <button data-nav="divisions"><span class="ico">▤</span><span class="nm">Подразделения</span><span class="cnt" id="cntDivs"></span></button>
     <button data-nav="departments"><span class="ico">▥</span><span class="nm">Отделы</span><span class="cnt" id="cntDeps"></span></button>
+    <button data-nav="places"><span class="ico">⌖</span><span class="nm">Место</span><span class="cnt" id="cntPlaces"></span></button>
+    <button data-nav="models"><span class="ico">▣</span><span class="nm">Модели</span><span class="cnt" id="cntModels"></span></button>
 
     </div><!-- /side-nav -->
 
@@ -384,6 +445,7 @@
           <div class="empty" id="dashDivsEmpty" hidden>Подразделения пока не заведены.</div>
         </div>
       </div>
+      <div class="copy dash-copy" title="Developed by @Khalimoov">Copyright © 2026 Axborot texnologiyalar guruhi</div>
     </section>
 
     <!-- ================= РАЗДЕЛ УЧЁТА ================= -->
@@ -451,9 +513,11 @@
           <select id="fCat" title="Категория"></select>
           <select id="fSub" class="col-sub" title="Подкатегория"></select>
           <select id="fType" title="Тип"></select>
+          <select id="fModel" title="Модель"></select>
           <select id="fStatus" title="Статус"></select>
           <select id="fDiv" title="Подразделение"></select>
           <select id="fDep" title="Отдел"></select>
+          <button id="btnXferOnly" class="btn-sm" hidden title="Показать только переданное оборудование">⇢ Переданные</button>
           <button id="btnReset" hidden>Сбросить</button>
           <span class="cnt" id="itemsCount"></span>
         </div>
@@ -461,9 +525,9 @@
           <div class="tablewrap">
             <table id="tbl">
               <colgroup>
-                <col style="width:3.4%"><col style="width:15%"><col style="width:11%"><col class="hide-md col-sub" style="width:11%">
-                <col style="width:19%"><col style="width:11%"><col style="width:11%">
-                <col class="hide-md" style="width:9%"><col class="hide-sm" style="width:8%">
+                <col style="width:3.4%"><col style="width:10%"><col style="width:11%"><col class="hide-md col-sub" style="width:11%">
+                <col style="width:17%"><col style="width:12%"><col style="width:12%">
+                <col style="width:8%"><col class="hide-md" style="width:8%"><col class="hide-sm" style="width:8%">
               </colgroup>
               <thead><tr>
                 <th class="num">#</th>
@@ -473,6 +537,7 @@
                 <th data-s="typeName">Тип<span class="arr"></span></th>
                 <th data-s="status">Статус<span class="arr"></span></th>
                 <th data-s="ownerName">Ответственный<span class="arr"></span></th>
+                <th data-s="whName">Склад<span class="arr"></span></th>
                 <th data-s="divName" class="hide-md">Подразделение<span class="arr"></span></th>
                 <th data-s="depName" class="hide-sm">Отдел<span class="arr"></span></th>
               </tr></thead>
@@ -708,6 +773,27 @@
     </section>
 
     <!-- ================= ИСТОРИЯ УДАЛЕНИЙ ================= -->
+    <section id="v-xhist" hidden>
+      <div class="stats" id="xhistStats"></div>
+      <div class="searchbar">
+        <div class="searchbox"><input id="qXhist" type="search" placeholder="Поиск по номеру, типу, складу, кто, примечанию…"></div>
+      </div>
+      <div class="card">
+        <div class="tablewrap">
+          <table>
+            <colgroup><col style="width:3.4%"><col style="width:11%"><col style="width:11%">
+              <col style="width:16%"><col style="width:12%"><col style="width:12%">
+              <col class="hide-md" style="width:11%"><col style="width:13%"><col style="width:10.6%"></colgroup>
+            <thead><tr><th class="num">#</th><th>Когда</th><th>Инв. номер</th><th>Тип</th>
+              <th>Откуда</th><th>Куда</th><th class="hide-md">Кто</th><th>Примечание</th><th>Накладная</th></tr></thead>
+            <tbody id="xhistBody"></tbody>
+          </table>
+        </div>
+        <div class="empty" id="xhistEmpty" hidden>Передач между складами пока не было.</div>
+      </div>
+      <div class="note">Все передачи подряд — с накладной и без. Удалить запись может только администратор, с причиной; след остаётся в «Истории удалений».</div>
+    </section>
+
     <section id="v-dels" hidden>
       <div class="stats" id="delStats"></div>
       <div class="searchbar">
@@ -727,12 +813,12 @@
             <colgroup>
               <col style="width:3.4%"><col style="width:12%"><col style="width:13%">
               <col style="width:10%"><col style="width:9%"><col class="hide-md" style="width:14%">
-              <col style="width:9%"><col class="hide-md" style="width:12%"><col style="width:17.6%">
+              <col style="width:9%"><col class="hide-md" style="width:12%"><col style="width:13.6%"><col style="width:4%">
             </colgroup>
             <thead><tr>
               <th class="num">#</th><th>Когда</th><th>Кто удалил</th><th id="delColOrg">Раздел</th>
               <th>Инв. номер</th><th class="hide-md">Тип</th><th>Статус</th>
-              <th class="hide-md">Был у сотрудника</th><th>Причина</th>
+              <th class="hide-md">Был у сотрудника</th><th>Причина</th><th></th>
             </tr></thead>
             <tbody id="delsBody"></tbody>
           </table>
@@ -821,13 +907,13 @@
             <div class="field"><label for="isSup">Материал</label><select id="isSup"></select></div>
             <div class="field"><label for="isQty">Кол-во</label>
               <input id="isQty" type="number" min="1" step="1" value="1"></div>
-            <div class="field"><label for="isUser">Пользователь</label><select id="isUser"></select></div>
+            <div class="field"><label for="isUser">Сотрудник</label><select id="isUser"></select></div>
             <div class="field"><label for="isDate">Дата</label><input id="isDate" type="date"></div>
             <div class="field"><label for="isNote">Примечание</label>
               <input id="isNote" placeholder="Залили краску в принтер, заменили термопасту"></div>
           </div>
-          <div class="row" style="margin-top:12px"><button class="btn-primary" id="btnIssue">Списать на пользователя</button></div>
-          <div class="note">Подразделение и отдел подставляются из карточки пользователя. Списание попадает в его профиль.</div>
+          <div class="row" style="margin-top:12px"><button class="btn-primary" id="btnIssue">Списать на сотрудника</button></div>
+          <div class="note">Подразделение и отдел подставляются из карточки сотрудника. Списание попадает в его профиль.</div>
         </div>
         <div class="searchbar">
           <div class="searchbox"><input id="qIssue" type="search" placeholder="Поиск по материалу, сотруднику, примечанию…"></div>
@@ -836,7 +922,7 @@
           <div class="tablewrap">
             <table>
               <colgroup><col style="width:3.4%"><col style="width:9%"><col style="width:21%"><col style="width:7%"><col style="width:16%"><col style="width:12%"><col class="hide-md" style="width:11%"><col style="width:13%"><col style="width:6%"></colgroup>
-              <thead><tr><th class="num">#</th><th>Дата</th><th>Материал</th><th>Кол-во</th><th>Пользователь</th><th>Подразделение</th><th class="hide-md">Отдел</th><th>Примечание</th><th></th></tr></thead>
+              <thead><tr><th class="num">#</th><th>Дата</th><th>Материал</th><th>Кол-во</th><th>Сотрудник</th><th>Подразделение</th><th class="hide-md">Отдел</th><th>Примечание</th><th></th></tr></thead>
               <tbody id="issuedBody"></tbody>
             </table>
           </div>
@@ -922,7 +1008,7 @@
         <div class="searchbox"><input id="qUser" type="search" placeholder="Поиск по ФИО, должности, подразделению…"></div>
         <div class="row">
           <button id="btnCollectUsers">Собрать из записей</button>
-          <button class="btn-primary" id="btnAddUser">+ Пользователь</button>
+          <button class="btn-primary" id="btnAddUser">+ Сотрудник</button>
         </div>
       </div>
       <div class="card">
@@ -933,9 +1019,76 @@
             <tbody id="usersBody"></tbody>
           </table>
         </div>
-        <div class="empty" id="usersEmpty" hidden>Пользователи пока не заведены.</div>
+        <div class="empty" id="usersEmpty" hidden>Сотрудники пока не заведены.</div>
       </div>
-      <div class="note">Клик по строке открывает профиль сотрудника: закреплённое оборудование и выданные материалы. Карандаш — правка данных. «Собрать из записей» создаёт пользователей из текстовых значений поля «Ответственный» во всех разделах и подставляет вместо них ссылку на справочник.</div>
+      <div class="note">Клик по строке открывает профиль сотрудника: закреплённое оборудование и выданные материалы. Карандаш — правка данных. «Собрать из записей» создаёт сотрудников из текстовых значений поля «Ответственный» во всех разделах и подставляет вместо них ссылку на справочник.</div>
+    </section>
+
+    <!-- ================= НАКЛАДНЫЕ ================= -->
+    <section id="v-docs" hidden>
+      <div class="card pad">
+        <div class="row" style="justify-content:space-between;align-items:center">
+          <h2 style="margin:0">Приём накладной</h2>
+          <button class="btn-sm" id="btnDocCfg">⚙ Куда сохранять</button>
+        </div>
+        <div class="dropzone" id="docDrop">
+          <b>Перетащите сюда скан накладной</b>
+          <span>PDF или изображение, до 40 МБ. Или <a href="#" id="docPick">выберите файл</a></span>
+          <input type="file" id="docFile" accept=".pdf,.png,.jpg,.jpeg,.tif,.tiff,.bmp" hidden>
+        </div>
+        <div class="note" id="docOcr"></div>
+        <div class="err" id="docErr"></div>
+      </div>
+
+      <div class="card pad" id="docCfgCard" style="margin-top:14px" hidden>
+        <div class="grid2">
+          <div class="field"><label for="dc_path">Папка архива</label>
+            <input id="dc_path" placeholder="\\192.168.1.20\archives\documents"></div>
+          <div class="field"><label for="dc_lang">Языки распознавания</label>
+            <input id="dc_lang" placeholder="rus+eng"></div>
+          <div class="field"><label for="dc_dpi">Качество распознавания, dpi</label>
+            <input id="dc_dpi" type="number" min="120" max="600" placeholder="300"></div>
+          <div class="field"><label>&nbsp;</label>
+            <button id="btnDocCfgSave">Сохранить</button></div>
+        </div>
+        <div class="note">Файлы раскладываются по учреждению, году и месяцу. При переезде в Docker здесь указывается точка монтирования, например <code>/opt/asset-it/documents</code>.</div>
+      </div>
+
+      <div class="card" style="margin-top:14px">
+        <div class="tablewrap">
+          <table>
+            <colgroup><col style="width:3.4%"><col style="width:12%"><col style="width:10%">
+              <col style="width:26%"><col style="width:9%"><col style="width:13%">
+              <col class="hide-md" style="width:15%"><col style="width:11%"></colgroup>
+            <thead><tr><th class="num">#</th><th>Когда</th><th>Номер</th><th>Файл</th>
+              <th>Строк</th><th>Состояние</th><th class="hide-md">Принял</th><th></th></tr></thead>
+            <tbody id="docsBody"></tbody>
+          </table>
+        </div>
+        <div class="empty" id="docsEmpty" hidden>Приходные накладные пока не загружались.</div>
+      </div>
+      <div class="note">Клик по строке открывает разбор: строки накладной с распознанными номенклатурой, наименованием и количеством. Каждую строку вы направляете в свой раздел — одна накладная может разойтись и по оборудованию, и по материалам.</div>
+    </section>
+
+    <!-- ================= НАКЛАДНЫЕ ПО ПЕРЕДАЧЕ ================= -->
+    <section id="v-transfers" hidden>
+      <div class="searchbar">
+        <div class="searchbox"><input id="qXfer" type="search" placeholder="Поиск по номеру, типу, складу, примечанию…"></div>
+      </div>
+      <div class="card">
+        <div class="tablewrap">
+          <table>
+            <colgroup><col style="width:3.4%"><col style="width:11%"><col style="width:11%">
+              <col style="width:16%"><col style="width:12%"><col style="width:12%">
+              <col class="hide-md" style="width:11%"><col style="width:13%"><col style="width:10.6%"></colgroup>
+            <thead><tr><th class="num">#</th><th>Когда</th><th>Инв. номер</th><th>Тип</th>
+              <th>Откуда</th><th>Куда</th><th class="hide-md">Кто</th><th>Примечание</th><th>Файл</th></tr></thead>
+            <tbody id="xferBody"></tbody>
+          </table>
+        </div>
+        <div class="empty" id="xferEmpty" hidden>Накладных по передаче пока нет.</div>
+      </div>
+      <div class="note">Здесь только передачи, к которым приложили накладную; все передачи подряд — на экране «История передач». Клик по строке открывает карточку передачи. Сама передача делается в карточке оборудования: галочка «Передать другому складу», склад-получатель, причина и скан накладной.</div>
     </section>
 
     <!-- ================= СВОДКА ПО УЧРЕЖДЕНИЯМ ================= -->
@@ -944,12 +1097,12 @@
       <div class="card">
         <div class="tablewrap">
           <table>
-            <colgroup><col style="width:3.4%"><col style="width:22%"><col style="width:11%">
-              <col style="width:12%"><col style="width:10%"><col style="width:10%">
-              <col style="width:10%"><col class="hide-md" style="width:11%"><col style="width:10%"></colgroup>
+            <colgroup><col style="width:3.4%"><col style="width:20%"><col style="width:9%">
+              <col style="width:11%"><col style="width:9%"><col style="width:9%">
+              <col style="width:10%"><col style="width:9%"><col class="hide-md" style="width:10%"><col style="width:9.6%"></colgroup>
             <thead><tr><th class="num">#</th><th>Учреждение</th><th>Записей</th>
-              <th>В эксплуатации</th><th>На складе</th><th>В ремонте</th><th>Списано</th>
-              <th class="hide-md">Пользователей</th><th>Сотрудников ИТ</th></tr></thead>
+              <th>В эксплуатации</th><th>На складе</th><th>В ремонте</th><th>На списание</th><th>Списано</th>
+              <th class="hide-md">Сотрудников</th><th>Пользователей ИТ</th></tr></thead>
             <tbody id="allBody"></tbody>
           </table>
         </div>
@@ -970,22 +1123,22 @@
             <colgroup><col style="width:3.4%"><col style="width:26%"><col style="width:30%">
               <col style="width:12%"><col style="width:18%"><col style="width:10%"></colgroup>
             <thead><tr><th class="num">#</th><th>Название</th><th>Примечание</th>
-              <th>Записей</th><th>Сотрудников ИТ</th><th></th></tr></thead>
+              <th>Записей</th><th>Пользователей ИТ</th><th></th></tr></thead>
             <tbody id="orgsBody"></tbody>
           </table>
         </div>
         <div class="empty" id="orgsEmpty" hidden>Учреждений пока нет.</div>
       </div>
-      <div class="note">У каждого учреждения свои разделы учёта, записи, пользователи, подразделения, отделы, материалы, IP-адреса и настройки домена. Новое учреждение сразу получает четыре заводских раздела. Удалить можно только пустое.</div>
+      <div class="note">У каждого учреждения свои разделы учёта, записи, сотрудники, подразделения, отделы, материалы, IP-адреса и настройки домена. Новое учреждение сразу получает четыре заводских раздела. Удалить можно только пустое.</div>
 
       <div class="card" style="margin-top:16px">
         <div class="pad" style="padding-bottom:0"><h2>Кто где работает</h2>
-          <div class="note" style="margin-top:4px">Сотрудник ИТ обслуживает одно учреждение. Администратору открыты все — его учреждение задаёт лишь то, что он видит при входе.</div>
+          <div class="note" style="margin-top:4px">Пользователь ИТ обслуживает одно учреждение. Администратору открыты все — его учреждение задаёт лишь то, что он видит при входе.</div>
         </div>
         <div class="tablewrap">
           <table>
             <colgroup><col style="width:3.4%"><col style="width:34%"><col style="width:26%"><col style="width:36%"></colgroup>
-            <thead><tr><th class="num">#</th><th>Сотрудник ИТ</th><th>Роль</th><th>Учреждение</th></tr></thead>
+            <thead><tr><th class="num">#</th><th>Пользователь ИТ</th><th>Роль</th><th>Учреждение</th></tr></thead>
             <tbody id="accBody"></tbody>
           </table>
         </div>
@@ -1002,6 +1155,11 @@
             атрибуте стоит условленное значение. Открыть его: «Пользователи и компьютеры
             Active Directory» → свойства пользователя → «Редактор атрибутов».
           </div>
+          <div class="field" style="margin-top:14px;max-width:420px">
+            <label for="ad_org">Куда грузить сотрудников</label>
+            <select id="ad_org"></select>
+          </div>
+          <div class="note" id="ad_orgHint" style="margin-top:4px"></div>
           <div class="grid2" style="margin-top:14px">
             <div class="field"><label for="ad_server">Контроллер домена</label>
               <input id="ad_server" placeholder="dc01.company.local"></div>
@@ -1037,6 +1195,39 @@
 
       <div class="card" style="margin-top:14px">
         <div class="pad">
+          <h2>Вход через Active Directory</h2>
+          <div class="note" style="margin-top:0">
+            Пользователи ИТ заходят своим доменным логином и паролем — тем же, что и в Windows.
+            Пароль у нас не хранится: его каждый раз проверяет контроллер домена, поэтому
+            смена пароля в домене ничего здесь не ломает. Кто ещё не заведён, заводится сам
+            при первом входе — с ролью и учреждением, указанными ниже; права потом меняете в
+            «Пользователях ИТ».
+          </div>
+          <div class="grid2" style="margin-top:14px">
+            <div class="field"><label>&nbsp;</label>
+              <label class="chk" style="margin:0"><input type="checkbox" id="aa_on"> Разрешить вход через домен</label></div>
+            <div class="field"><label for="aa_org">Настройки домена какого учреждения</label>
+              <select id="aa_org"></select></div>
+            <div class="field"><label for="aa_suffix">Домен для входа (хвост логина)</label>
+              <input id="aa_suffix" placeholder="company.local — тогда i.ivanov → i.ivanov@company.local"></div>
+            <div class="field"><label for="aa_group">Группа AD, кому открыт вход</label>
+              <input id="aa_group" placeholder="IT-Asset (пусто — всем, у кого есть учётка в домене)"></div>
+            <div class="field"><label for="aa_role">Роль для новых пользователей</label>
+              <select id="aa_role"></select></div>
+            <div class="field"><label for="aa_neworg">Учреждение для новых пользователей</label>
+              <select id="aa_neworg"></select></div>
+          </div>
+          <div class="row" style="margin-top:14px">
+            <button id="btnAaSave">Сохранить</button>
+            <button id="btnAaTest">Проверить вход</button>
+          </div>
+          <div class="note" id="aa_hint"></div>
+          <div class="err" id="aa_err"></div>
+        </div>
+      </div>
+
+      <div class="card" style="margin-top:14px">
+        <div class="pad">
           <h2>Что переносится</h2>
           <div class="kv" style="margin-top:10px">
             <div><span>Вкладка «Общие»</span><b>Имя, Инициалы, Фамилия → ФИО</b></div>
@@ -1045,7 +1236,7 @@
             <div><span>&nbsp;</span><b>Отдел → Отдел</b></div>
             <div><span>&nbsp;</span><b>Организация → Подразделение</b></div>
           </div>
-          <div class="note">Отделы и подразделения, которых в учёте ещё нет, заводятся сами. Никого не удаляем: сотрудник, пропавший из выборки домена, остаётся в справочнике — за ним может числиться техника.</div>
+          <div class="note">Отделы и подразделения, которых в учёте ещё нет, заводятся сами — <b>в том учреждении, которое выбрано выше</b>. Никого не удаляем: сотрудник, пропавший из выборки домена, остаётся в справочнике — за ним может числиться техника.</div>
         </div>
       </div>
 
@@ -1059,11 +1250,32 @@
       <div class="note" id="adLast"></div>
     </section>
 
+    <!-- ================= СКЛАДЫ ================= -->
+    <section id="v-warehouses" hidden>
+      <div class="searchbar">
+        <div class="searchbox"><input id="qWh" type="search" placeholder="Поиск по номеру или названию…"></div>
+        <button class="btn-primary" id="btnAddWh">+ Склад</button>
+      </div>
+      <div class="card">
+        <div class="tablewrap">
+          <table>
+            <colgroup><col style="width:3.4%"><col style="width:12%"><col style="width:30%">
+              <col style="width:30%"><col style="width:12%"><col style="width:10%"></colgroup>
+            <thead><tr><th class="num">#</th><th>Номер</th><th>Название</th>
+              <th>Примечание</th><th>Позиций</th><th></th></tr></thead>
+            <tbody id="whBody"></tbody>
+          </table>
+        </div>
+        <div class="empty" id="whEmpty" hidden>Склады пока не заведены.</div>
+      </div>
+      <div class="note">Номер склада приходит из накладной: из строки «Получатель» в требовании-накладной или из «Склад - получатель» в счёте-фактуре. Если такого номера ещё нет, склад заводится сам — название потом поправите здесь. У расходных материалов склада нет.</div>
+    </section>
+
     <!-- ================= СОТРУДНИКИ ИТ ================= -->
     <section id="v-staff" hidden>
       <div class="searchbar">
         <div class="searchbox"><input id="qStaff" type="search" placeholder="Поиск по ФИО, должности, логину…"></div>
-        <button class="btn-primary" id="btnAddStaff">+ Сотрудник ИТ</button>
+        <button class="btn-primary" id="btnAddStaff">+ Пользователь ИТ</button>
       </div>
       <div class="card">
         <div class="tablewrap">
@@ -1073,7 +1285,7 @@
             <tbody id="staffBody"></tbody>
           </table>
         </div>
-        <div class="empty" id="staffEmpty" hidden>Сотрудники ИТ пока не заведены.</div>
+        <div class="empty" id="staffEmpty" hidden>Пользователи ИТ пока не заведены.</div>
       </div>
       <div class="note">Клик по строке открывает профиль: что сейчас у мастера в ремонте и с какого числа. Галочка «мастер по ремонту» переключается прямо в строке — эти люди попадают в выбор при статусе «В ремонте». Логин и роль заполняются на будущее: вход в систему и разграничение доступа будут подключены отдельно, пароли здесь не хранятся.</div>
     </section>
@@ -1100,7 +1312,11 @@
 
     <!-- ================= ПОДРАЗДЕЛЕНИЯ ================= -->
     <section id="v-divisions" hidden>
-      <div class="card pad" style="margin-bottom:14px">
+      <div class="searchbar">
+        <div class="searchbox"></div>
+        <button class="btn-primary" id="btnShowDivisions">+ Подразделение</button>
+      </div>
+      <div class="card pad" style="margin-bottom:14px" id="addDivisions" hidden>
         <h2>Новое подразделение</h2>
         <div class="row">
           <input id="newDivisions" placeholder="Например: Управление" style="flex:1;min-width:240px">
@@ -1121,8 +1337,67 @@
     </section>
 
     <!-- ================= ОТДЕЛЫ ================= -->
+      <section id="v-models" hidden>
+        <div class="searchbar">
+          <div class="searchbox"></div>
+          <button class="btn-primary" id="btnShowModel">+ Модель</button>
+        </div>
+        <div class="card pad" style="margin-bottom:14px" id="addModel" hidden>
+          <h2>Новая модель</h2>
+          <div class="grid2">
+            <div class="field"><label for="newModelReg">Раздел учёта</label><select id="newModelReg"></select></div>
+            <div class="field"><label for="newModel">Модель</label>
+              <input id="newModel" placeholder="Например: HP ProBook 450 G9"></div>
+            <div class="field" style="grid-column:1/-1"><label for="newModelNote">Примечание</label>
+              <input id="newModelNote" placeholder="Необязательно"></div>
+          </div>
+          <div class="row" style="margin-top:12px"><button class="btn-primary" id="btnAddModel">Добавить модель</button></div>
+          <div class="note">Модель выбирается в карточке оборудования перед типом — из моделей своего раздела. Фотографию можно добавить кнопкой в строке — она видна только здесь, чтобы понимать, что это за техника.</div>
+        </div>
+        <div class="card">
+          <div class="tablewrap">
+            <table>
+              <colgroup><col style="width:3.4%"><col style="width:7%"><col style="width:27%"><col style="width:17%"><col style="width:23%"><col style="width:10%"><col style="width:12.6%"></colgroup>
+              <thead><tr><th class="num">#</th><th>Фото</th><th>Модель</th><th>Раздел</th><th>Примечание</th><th>Оборудования</th><th></th></tr></thead>
+              <tbody id="modelsBody"></tbody>
+            </table>
+          </div>
+          <div class="empty" id="modelsEmpty" hidden>Модели пока не заведены.</div>
+        </div>
+        <div class="note">Клик по модели открывает её карточку со всем оборудованием этой модели; наведите на миниатюру — фото покажется крупнее.</div>
+      </section>
+
+    <section id="v-places" hidden>
+      <div class="searchbar">
+        <div class="searchbox"></div>
+        <button class="btn-primary" id="btnShowPlaces">+ Место</button>
+      </div>
+      <div class="card pad" style="margin-bottom:14px" id="addPlaces" hidden>
+        <h2>Новое место</h2>
+        <div class="row">
+          <input id="newPlaces" placeholder="Например: Серверная, Кабинет 214, Пост охраны" style="flex:1;min-width:240px">
+          <button class="btn-primary" data-add="places">Добавить</button>
+        </div>
+        <div class="note">За местом закрепляют технику, у которой нет ответственного сотрудника: в карточке «За кем закреплено» → «За местом».</div>
+      </div>
+      <div class="card">
+        <div class="tablewrap">
+          <table>
+            <colgroup><col style="width:3.4%"><col style="width:61%"><col style="width:16%"><col style="width:18%"></colgroup>
+            <thead><tr><th class="num">#</th><th>Место</th><th>Позиций</th><th></th></tr></thead>
+            <tbody id="placesBody"></tbody>
+          </table>
+        </div>
+        <div class="empty" id="placesEmpty" hidden>Места пока не заведены.</div>
+      </div>
+    </section>
+
     <section id="v-departments" hidden>
-      <div class="card pad" style="margin-bottom:14px">
+      <div class="searchbar">
+        <div class="searchbox"></div>
+        <button class="btn-primary" id="btnShowDepartments">+ Отдел</button>
+      </div>
+      <div class="card pad" style="margin-bottom:14px" id="addDepartments" hidden>
         <h2>Новый отдел</h2>
         <div class="row">
           <input id="newDepartments" placeholder="Например: Бухгалтерия" style="flex:1;min-width:240px">
@@ -1149,16 +1424,31 @@
   <div class="dlg-head" id="dlgTitle">Запись</div>
   <div class="dlg-body">
     <div class="grid2">
-      <div class="field"><label for="f_inv">Инвентарный номер / Номенклатура</label>
-        <input id="f_inv" placeholder="может повторяться у нескольких единиц"></div>
+      <div class="field"><label for="f_inv">Номенклатурный / инвентарный номер</label>
+        <input id="f_inv" inputmode="numeric" placeholder="7 цифр — номенклатурный, 10 — инвентарный">
+        <div class="note" id="f_invHint" style="margin:3px 0 0;min-height:14px"></div></div>
       <div class="field"><label for="f_cat">Категория</label><select id="f_cat"></select></div>
       <div class="field col-sub" id="wrapSub"><label for="f_sub">Подкатегория</label><select id="f_sub"></select></div>
+      <div class="field" id="wrapModel"><label for="f_model">Модель</label><select id="f_model"></select></div>
       <div class="field"><label for="f_type">Тип</label><select id="f_type"></select></div>
       <div class="field"><label for="f_status">Статус</label><select id="f_status"></select></div>
+      <div class="field" id="wrapHolder"><label for="f_holder">За кем закреплено</label>
+        <select id="f_holder">
+          <option value="person">За сотрудником</option>
+          <option value="place">За местом</option>
+          <option value="item">За оборудованием</option>
+        </select></div>
       <div class="field" id="wrapOwner"><label for="f_owner">Ответственный сотрудник</label><select id="f_owner"></select></div>
       <div class="field" id="wrapDiv"><label for="f_div">Подразделение</label><select id="f_div"></select></div>
       <div class="field" id="wrapDep"><label for="f_dep">Отдел</label><select id="f_dep"></select></div>
+      <div class="field" id="wrapPlace" hidden><label for="f_place">Место</label><select id="f_place"></select></div>
+      <div class="field" id="wrapParent" hidden><label for="f_parent">Прикрепить к оборудованию</label><select id="f_parent"></select></div>
+      <div class="field" id="wrapHide" hidden><label>&nbsp;</label>
+        <label class="chk" style="margin:0"><input type="checkbox" id="f_hide"> Убрать из списка</label>
+        <div class="note" style="margin:4px 0 0">С галочкой запись видна только в карточке оборудования, к которому прикреплена, и у сотрудника. Без галочки остаётся в списке с показателями того оборудования.</div></div>
     </div>
+    <div class="note" id="attLockNote" hidden style="color:var(--warn)"></div>
+    <div class="sec" id="attBox" hidden><b>Прикреплённое оборудование</b><div id="attList"></div></div>
     <div class="sec" id="statusExtra" hidden>
       <b id="seTitle">Дополнительно к статусу</b>
       <div class="grid2" style="margin-top:10px">
@@ -1168,6 +1458,21 @@
         <div class="field" id="wrapSDate" hidden><label for="f_sdate">Дата</label><input id="f_sdate" type="date"></div>
         <div class="field" id="wrapSNote" hidden><label for="f_snote">Примечание к статусу</label>
           <input id="f_snote" placeholder="Причина, номер акта, что именно чинят"></div>
+      </div>
+    </div>
+    <div class="field" style="margin-top:12px" id="wrapWh"><label for="f_wh">Склад</label><select id="f_wh"></select></div>
+    <div id="xferWrap" hidden>
+      <label class="chk" style="margin-top:8px"><input type="checkbox" id="f_xfer"> Передать другому складу</label>
+      <div class="sec" id="xferBox" hidden>
+        <b>Передача между складами</b>
+        <div class="grid2" style="margin-top:10px">
+          <div class="field"><label for="f_xwh">Склад-получатель</label><select id="f_xwh"></select></div>
+          <div class="field"><label for="f_xnote">Примечание к передаче</label>
+            <input id="f_xnote" placeholder="Почему передают"></div>
+          <div class="field"><label for="f_xfile">Загрузить накладную</label>
+            <input type="file" id="f_xfile" accept=".pdf,.png,.jpg,.jpeg,.tif,.tiff,.bmp"></div>
+        </div>
+        <div class="note">Склад в карточке поменяется на получателя, статус станет «На складе», ответственный снимется; в истории останется запись с причиной и накладной. Если склад-получатель принадлежит другому учреждению, техника перейдёт в его учёт. Файл ложится в папку архива, в подпапку «передача».</div>
       </div>
     </div>
     <div class="field" style="margin-top:12px"><label for="f_notes">Примечание</label><textarea id="f_notes" rows="2"></textarea></div>
@@ -1217,6 +1522,122 @@
     <button id="btnRoleDel" class="btn-danger" hidden>Удалить роль</button>
     <button id="btnRoleCancel">Отмена</button>
     <button id="btnRoleSave" class="btn-primary">Сохранить</button>
+  </div>
+</dialog>
+
+<!-- ================= РАЗБОР НАКЛАДНОЙ ================= -->
+<dialog id="dlgDoc" class="xwide">
+  <div class="dlg-head" id="dlgDocTitle">Накладная</div>
+  <div class="dlg-body">
+    <div class="kv">
+      <div><span>Номер</span><b id="dr_num">—</b></div>
+      <div><span>Дата</span><b id="dr_date">—</b></div>
+      <div><span>Файл</span><b><a id="dr_file" href="#" target="_blank">открыть</a></b></div>
+      <div><span>Принял</span><b id="dr_who">—</b></div>
+      <div><span>Склад-получатель</span>
+        <input id="dr_wh" list="dr_whList" style="margin-top:2px" placeholder="номер, например 5004">
+        <datalist id="dr_whList"></datalist></div>
+    </div>
+    <div class="note" id="dr_whHint" style="margin-top:6px"></div>
+    <div class="note" id="dr_applied" hidden style="color:var(--warn)"></div>
+    <div class="row" style="margin-top:12px;align-items:center;gap:8px">
+      <span class="note" style="margin:0">Все оставшиеся строки:</span>
+      <select id="dr_bulk" style="max-width:280px"></select>
+      <button class="btn-sm" id="btnDrBulk">Применить</button>
+      <span class="cnt" id="dr_count"></span>
+    </div>
+    <div class="tablewrap" style="margin-top:10px">
+      <table>
+        <colgroup><col style="width:3%"><col style="width:12%"><col style="width:31%">
+          <col style="width:8%"><col style="width:21%"><col style="width:21%"><col style="width:4%"></colgroup>
+        <thead><tr><th class="num">#</th><th>Номенклатура</th><th>Наименование</th>
+          <th>Кол-во</th><th>Куда</th><th>Категория / материал</th><th></th></tr></thead>
+        <tbody id="drBody"></tbody>
+      </table>
+    </div>
+    <div class="empty" id="drEmpty" hidden>Строк не распознано — впишите их вручную кнопкой ниже.</div>
+    <div class="row" style="margin-top:10px">
+      <button class="btn-sm" id="btnDrAdd">+ Строка вручную</button>
+    </div>
+    <div class="err" id="dr_err"></div>
+    <div class="note">Оборудование заводится по отдельной записи на каждую единицу — у них разные инвентарные номера. Материалы приходуются одной строкой на всё количество. Выбор по номенклатуре запоминается: в следующей накладной подставится сам.</div>
+  </div>
+  <div class="dlg-foot">
+    <button id="btnDrDel" class="btn-danger">Удалить накладную</button>
+    <button id="btnDrReopen" hidden>Открыть заново</button>
+    <button id="btnDrCancel">Закрыть</button>
+    <button id="btnDrApply" class="btn-primary">Завести записи</button>
+  </div>
+</dialog>
+
+<!-- ================= СКЛАД ================= -->
+<dialog id="dlgXfer">
+  <div class="dlg-head" id="dlgXferTitle">Передача</div>
+  <div class="dlg-body" id="xf_body"></div>
+  <div class="dlg-foot">
+    <button id="btnXfDel" class="btn-danger" hidden>Удалить</button>
+    <button id="btnXfCard">Карточка оборудования</button>
+    <button id="btnXfClose">Закрыть</button>
+    <button id="btnXfFile" class="btn-primary">Посмотреть документ</button>
+  </div>
+</dialog>
+
+<div id="photoPop" hidden><img id="photoPopImg" alt=""></div>
+
+<dialog id="dlgModelItems" class="xwide">
+  <div class="dlg-head" id="dlgMiTitle">Модель</div>
+  <div class="dlg-body">
+    <img id="mi_photo" alt="" hidden>
+    <div class="kv" id="mi_kv"></div>
+    <div class="sec" style="margin-top:12px"><b>Оборудование этой модели</b> <span class="cnt" id="mi_count"></span>
+      <div id="mi_items" style="margin-top:8px"></div></div>
+  </div>
+  <div class="dlg-foot">
+    <button id="btnMiEdit" class="col-dict">Изменить, фото</button>
+    <button id="btnMiClose">Закрыть</button>
+    <button id="btnMiList" class="btn-primary">Показать в списке</button>
+  </div>
+</dialog>
+
+<dialog id="dlgModel">
+  <div class="dlg-head" id="dlgModelTitle">Модель</div>
+  <div class="dlg-body">
+    <div class="grid2">
+      <div class="field"><label for="m_name">Модель</label><input id="m_name"></div>
+      <div class="field"><label for="m_note">Примечание</label><input id="m_note"></div>
+    </div>
+    <div class="field" style="margin-top:12px"><label for="m_file">Фотография</label>
+      <input type="file" id="m_file" accept="image/*">
+      <div class="note" style="margin:4px 0 0">Хранится в базе, ужимается до 900 px. Видна только на вкладке «Модели».</div></div>
+    <div id="m_photoWrap" style="margin-top:12px" hidden>
+      <img id="m_preview" alt="">
+      <div class="row" style="margin-top:8px"><button class="btn-sm btn-danger" id="btnModelPhotoDel">Убрать фото</button></div>
+    </div>
+    <div class="err" id="m_err"></div>
+  </div>
+  <div class="dlg-foot">
+    <button id="btnModelDel" class="btn-danger" hidden>Удалить</button>
+    <button id="btnModelCancel">Отмена</button>
+    <button id="btnModelSave" class="btn-primary">Сохранить</button>
+  </div>
+</dialog>
+
+<dialog id="dlgWh">
+  <div class="dlg-head" id="dlgWhTitle">Склад</div>
+  <div class="dlg-body">
+    <div class="grid2">
+      <div class="field"><label for="w_code">Номер</label><input id="w_code" placeholder="5004"></div>
+      <div class="field"><label for="w_name">Название</label><input id="w_name" placeholder="Центральный склад Завод-1"></div>
+    </div>
+    <div class="field" style="margin-top:12px"><label for="w_note">Примечание</label><input id="w_note"></div>
+    <div class="field col-adm" style="margin-top:12px" id="wrapWhOrg"><label for="w_org">Учреждение</label><select id="w_org"></select>
+      <div class="note" style="margin:4px 0 0">Техника, переданная на этот склад, появится в учёте этого учреждения. Отдать склад другому учреждению можно, пока на нём не числится техника.</div></div>
+    <div class="err" id="w_err"></div>
+  </div>
+  <div class="dlg-foot">
+    <button id="btnWhDel" class="btn-danger" hidden>Удалить</button>
+    <button id="btnWhCancel">Отмена</button>
+    <button id="btnWhSave" class="btn-primary">Сохранить</button>
   </div>
 </dialog>
 
@@ -1345,7 +1766,7 @@
 
 <!-- ================= ПРОФИЛЬ СОТРУДНИКА ИТ ================= -->
 <dialog id="dlgStaffInfo" class="xwide">
-  <div class="dlg-head" id="siTitle">Сотрудник ИТ</div>
+  <div class="dlg-head" id="siTitle">Пользователь ИТ</div>
   <div class="dlg-body">
     <div class="kv">
       <div><span>Должность</span><b id="si_pos">—</b></div>
@@ -1421,7 +1842,7 @@
       <div class="field"><label for="rg_name">Название</label><input id="rg_name" placeholder="Например: Принтеры"></div>
       <div class="field"><label for="rg_icon">Значок</label><input id="rg_icon" maxlength="2" placeholder="▣"></div>
     </div>
-    <div class="note" id="rg_lock" hidden>Это заводской раздел — название и значок менять нельзя, удалить его тоже нельзя.</div>
+    <div class="note" id="rg_lock" hidden>Это заводской раздел: удалить его нельзя, а название и значок — можно.</div>
 
     <div class="sec" id="rg_kindSec">
       <b>Что будет внутри раздела</b>
@@ -1514,12 +1935,17 @@
 
 <!-- ================= КАРТОЧКА СОТРУДНИКА ИТ ================= -->
 <dialog id="dlgStaff">
-  <div class="dlg-head" id="dlgStaffTitle">Сотрудник ИТ</div>
+  <div class="dlg-head" id="dlgStaffTitle">Пользователь ИТ</div>
   <div class="dlg-body">
     <div class="grid2">
       <div class="field"><label for="st_name">ФИО</label><input id="st_name" placeholder="Халимов Б.Ш."></div>
       <div class="field"><label for="st_pos">Должность</label><input id="st_pos" placeholder="Инженер"></div>
-      <div class="field"><label for="st_login">Логин (на будущее)</label><input id="st_login" placeholder="b.halimov"></div>
+      <div class="field"><label for="st_login">Логин</label><input id="st_login" placeholder="i.ivanov"></div>
+      <div class="field"><label for="st_auth">Откуда пароль</label>
+        <select id="st_auth">
+          <option value="local">Свой пароль (задаёт администратор)</option>
+          <option value="ad">Active Directory — доменный пароль</option>
+        </select></div>
       <div class="field"><label for="st_org">Учреждение</label><select id="st_org"></select></div>
       <div class="field"><label for="st_role">Роль</label><select id="st_role"></select></div>
     </div>
@@ -1544,7 +1970,7 @@
 
 <!-- ================= ПРОФИЛЬ ПОЛЬЗОВАТЕЛЯ ================= -->
 <dialog id="dlgUserInfo">
-  <div class="dlg-head" id="uiTitle">Пользователь</div>
+  <div class="dlg-head" id="uiTitle">Сотрудник</div>
   <div class="dlg-body">
     <div class="kv">
       <div><span>Должность</span><b id="ui_pos">—</b></div>
@@ -1562,7 +1988,7 @@
 
 <!-- ================= КАРТОЧКА ПОЛЬЗОВАТЕЛЯ ================= -->
 <dialog id="dlgUser">
-  <div class="dlg-head" id="dlgUserTitle">Пользователь</div>
+  <div class="dlg-head" id="dlgUserTitle">Сотрудник</div>
   <div class="dlg-body">
     <div class="grid2">
       <div class="field"><label for="u_name">ФИО</label><input id="u_name" placeholder="Иванов Иван Иванович"></div>
@@ -1612,7 +2038,7 @@
   var nav = "dash", curReg = "equipment", regTab = "items", supTab = "stock";
   var sortKey = "inv", sortDir = 1, editingId = null, editingUser = null;
   var curSpecScope = "", curPreset = "", curPool = "";
-  var me = null, permList = [], downloads = null;
+  var me = null, permList = [], downloads = null, screenRestored = false;
   /* Учреждение — верхний уровень: всё остальное приходит уже отфильтрованным
      сервером, поэтому здесь нужен только список и текущий выбор. */
   var orgs = [], orgId = "", orgStaff = [], orgOverview = [];
@@ -1843,7 +2269,8 @@
       ipPools:v.ipPools||[], ipReserved:v.ipReserved||[],
       supplies:v.supplies||[], receipts:v.receipts||[], issues:v.issues||[],
       staff:v.staff||[], roles:v.roles||[], repairs:v.repairs||[], notices:v.notices||[],
-      netStatus:v.netStatus||{},
+      netStatus:v.netStatus||{}, warehouses:v.warehouses||[],
+      models:v.models||[], places:v.places||[],
       units:(v.units && v.units.length) ? v.units.slice() : DEF_UNITS.slice() };
 
     c.supplies.forEach(function(m){
@@ -1867,7 +2294,7 @@
 
   /* Версия интерфейса. Сервер отдаёт свою в /api/state; расходятся —
      значит файлы обновили, а сервер не перезапустили. */
-  var UI_BUILD = "2026-09-16.3";
+  var UI_BUILD = "2026-09-18.12";
 
   /* ================== связь с сервером ================== */
   function api(path, data){
@@ -1904,6 +2331,7 @@
     toast(e.error === "read_only"
             ? (e.message || "Вам открыт только просмотр")
             : e.error === "forbidden" ? "Недостаточно прав для этого действия"
+            : e.error === "bad_inv" || e.error === "bad_value" ? (e.message || "Неправильное значение")
                                       : "Сервер недоступен — изменения не сохранены");
     loadState();
   }
@@ -1922,11 +2350,15 @@
       $("meRole").textContent = (me.roleName || "роль не назначена") +
         (me.canEdit ? "" : " · только просмотр");
       document.body.classList.toggle("noadmin", !isAdmin());
+      document.body.classList.toggle("nodict", !can("dict.edit"));
+      if(!screenRestored){ screenRestored = true; restoreScreen(); }
       renderAll();
       loadDeletions();
       loadAd();
       loadOrgs();
       loadOverview();
+      loadDocs();
+      loadTransfers();
     }).catch(function(e){
       if(e && e.error === "no_org"){
         $("loginScreen").hidden = true; $("appRoot").hidden = false;
@@ -1981,7 +2413,7 @@
   function saveItems(list){
     if(!list.length) return Promise.resolve();
     list.forEach(putLocal); renderAll();
-    return api("/api/items", {items:list}).catch(apiError);
+    return api("/api/items", {items:list}).then(function(){ return loadState(); }).catch(apiError);
   }
   /* Причина обязательна: сервер без неё отвечает отказом, а журнал удалений
      существует ради вопроса «кто и зачем это убрал». */
@@ -2040,12 +2472,13 @@
     e.preventDefault();
     $("lg_err").textContent = "";
     api("/api/login", {login:$("lg_login").value.trim(), password:$("lg_pass").value})
-      .then(function(){ $("lg_pass").value = ""; return loadState(); })
+      .then(function(){ $("lg_pass").value = ""; forgetScreen(); return loadState(); })
       .catch(function(err){
         $("lg_err").textContent = (err && err.auth) ? "" : "Неверный логин или пароль";
       });
   };
   $("btnLogout").onclick = function(){
+    forgetScreen();
     api("/api/logout", {}).then(function(){ location.reload(); })
       .catch(function(){ location.reload(); });
   };
@@ -2066,8 +2499,12 @@
       var base = (id || "").indexOf("_") !== -1 ? id.slice(id.indexOf("_") + 1) : id;
       lvl = acc[base] || "none";
     }
+    /* «Учёт» видят все; ledger.edit даёт правку во всех разделах */
+    if(lvl === "none") lvl = "view";
+    if(can("ledger.edit")) lvl = "edit";
     if(lvl === "edit" && !me.canEdit) return "view";
-    if(lvl === "none" && me.seesAllOrgs) return "view";
+    /* чужое учреждение: правка только с org.editall */
+    if(lvl === "edit" && orgId && me.org_id && orgId !== me.org_id && !can("org.editall")) return "view";
     return lvl;
   }
   function canEdit(id){ return regLevel(id || curReg) === "edit"; }
@@ -2089,6 +2526,19 @@
     hide("btnAddUser", usr);
     hide("btnCollectUsers", usr);
     hide("btnAddStaff", can("staff.manage"));
+    hide("btnAddRole", can("staff.manage"));
+    hide("btnAdSync", can("ad.sync") && !!(me && me.canEdit));
+    hide("btnAdSave", can("ad.sync"));
+    hide("btnAdTest", can("ad.sync"));
+    hide("btnAddOrg", can("org.manage"));
+    hide("btnAddWh", usr);
+    hide("btnAddModel", can("dict.edit"));
+    hide("btnShowModel", can("dict.edit"));
+    ["btnShowDivisions","btnShowDepartments","btnShowPlaces"].forEach(function(id){ hide(id, usr); });
+    if(!usr) ["addDivisions","addDepartments","addPlaces"].forEach(function(id){ var e = $(id); if(e) e.hidden = true; });
+    if(!can("dict.edit") && $("addModel")) $("addModel").hidden = true;
+    hide("docDrop", can("docs.scan"));
+    hide("btnDocCfg", can("docs.scan"));
     hide("btnPools", can("ip.manage"));
     hide("btnAddIp", can("ip.manage"));
     hide("btnAddSup", can("supply.receive"));
@@ -2096,7 +2546,7 @@
      "btnAddPresetSpec","btnRenPreset","btnDelPreset"].forEach(function(id){ hide(id, reg); });
     var c = document.querySelector('[data-add="categories"]'); if(c) c.hidden = !reg;
     var pr = document.querySelector('[data-add="presets"]');   if(pr) pr.hidden = !reg;
-    ['[data-add="divisions"]','[data-add="departments"]'].forEach(function(sel){
+    ['[data-add="divisions"]','[data-add="departments"]','[data-add="places"]'].forEach(function(sel){
       var el = document.querySelector(sel); if(el) el.hidden = !usr;
     });
   }
@@ -2120,7 +2570,7 @@
   })();
 
   /* ================== навигация ================== */
-  var VIEWS = ["dash","all","orgs","notices","repairs","dels","reg","sup","ips","users","ad","staff","roles","divisions","departments"];
+  var VIEWS = ["dash","all","orgs","notices","repairs","dels","reg","sup","ips","docs","transfers","xhist","users","warehouses","ad","staff","roles","divisions","departments","places","models"];
   var RTABS = ["dash","items","categories","subcategories","types","specs","presets"];
 
   function renderNav(){
@@ -2137,15 +2587,22 @@
     $("cntUsers").textContent = cfg.users.length;
     $("cntStaff").textContent = (cfg.staff||[]).length;
     $("cntRoles").textContent = (cfg.roles||[]).length;
+    $("navDocs").hidden = !navAllowed("docs");
+    $("cntWh").textContent = (cfg.warehouses || []).length || "";
+    $("cntDocs").textContent = docs.length ? String(docs.length) : "";
+    $("cntXfer").textContent = transfers.length ? String(transfers.length) : "";
     $("navAd").hidden = !navAllowed("ad");
     $("navOrgs").hidden = !navAllowed("orgs");
     $("navAll").hidden = !navAllowed("all");
     $("cntOrgs").textContent = orgs.length ? String(orgs.length) : "";
     $("navDels").hidden = !navAllowed("dels");
+    $("navXhist").hidden = !navAllowed("xhist");
     $("cntDels").textContent = dels.length ? String(dels.length) : "";
     $("navStaff").hidden = !navAllowed("staff");
     $("navRoles").hidden = !navAllowed("roles");
     $("cntDivs").textContent  = cfg.divisions.length;
+    $("cntPlaces").textContent = cfg.places.length || "";
+    $("cntModels").textContent = cfg.models.length || "";
     $("cntDeps").textContent  = cfg.departments.length;
     document.querySelectorAll("aside.side button[data-nav]").forEach(function(b){
       var v = b.dataset.nav;
@@ -2161,25 +2618,48 @@
   }
   function openReg(id, tab){
     if(id !== curReg){ curReg = id; resetRegState(); }
+    setTimeout(rememberScreen, 0);
     nav = "reg"; if(tab) regTab = tab;
     renderAll();
   }
   /* Разделы, закрытые правами, не просто прячем — в них нельзя войти вовсе,
-     иначе пользователь правит форму и получает отказ только при сохранении. */
-  var NAV_PERM = {staff:"staff.manage", roles:"staff.manage", dels:"deletions.view",
-                  ad:"staff.manage", orgs:"org.manage"};
+     иначе сотрудник правит форму и получает отказ только при сохранении. */
+  /* Закрытых страниц немного: пользователи ИТ и роли, AD, журнал удалений и
+     «Все учреждения». Остальное видят все — права нужны, чтобы править. */
+  var NAV_PERM = {staff:"staff.view", roles:"staff.view", dels:"deletions.view", ad:"ad.view"};
   function navAllowed(v){
     /* сводка по всем учреждениям — начальнику отдела, а не только администратору */
     if(v === "all") return !!(me && me.seesAllOrgs);
     var need = NAV_PERM[v];
     return !need || can(need);
   }
+  /* Где человек находится — помним на время вкладки. Обновление страницы
+     должно оставлять его на том же экране; «Общий дашборд» — только при входе,
+     поэтому при входе эта память очищается. */
+  function rememberScreen(){
+    try{ sessionStorage.setItem("it_inv_screen",
+      JSON.stringify({nav:nav, reg:curReg, tab:regTab, sup:supTab})); }catch(e){}
+  }
+  function restoreScreen(){
+    var v = null;
+    try{ v = JSON.parse(sessionStorage.getItem("it_inv_screen") || "null"); }catch(e){}
+    if(!v || !v.nav) return;
+    if(VIEWS.indexOf(v.nav) === -1 || !navAllowed(v.nav)) return;
+    if(v.reg && cfg.registries.some(function(r){ return r.id === v.reg; })) curReg = v.reg;
+    if(v.tab && RTABS.indexOf(v.tab) !== -1) regTab = v.tab;
+    if(v.sup) supTab = v.sup;
+    nav = v.nav;
+  }
+  function forgetScreen(){
+    try{ sessionStorage.removeItem("it_inv_screen"); }catch(e){}
+  }
+
   function go(v){
     if(v.indexOf("reg:")===0){ openReg(v.slice(4)); return; }
     if(!navAllowed(v)){ toast("Раздел закрыт: нет прав"); return; }
-    nav = v; renderAll();
+    nav = v; rememberScreen(); renderAll();
   }
-  function goTab(t){ regTab = t; renderAll(); }
+  function goTab(t){ regTab = t; rememberScreen(); renderAll(); }
   document.querySelectorAll("#regTabs button").forEach(function(b){
     b.onclick = function(){ goTab(b.dataset.rt); };
   });
@@ -2221,15 +2701,21 @@
               notices:["Уведомления","События по ремонту оборудования"],
               repairs:["Ремонты","Что поступало в ремонт, по какой причине и сколько пробыло"],
               dels:["История удалений","Кто, когда и зачем удалил запись — вместе со снимком карточки"],
+              xhist:["История передач","Что, когда и кем передавалось между складами — с накладной и без"],
               ips:["IP-адреса","Занятые и зарезервированные адреса по всем разделам"],
-              users:["Пользователи","Общий справочник сотрудников"],
+              users:["Сотрудники","Общий справочник сотрудников"],
+              docs:["Приходные накладные","Скан накладной разбирается на строки и заводится в учёт"],
+              transfers:["Накладные по передаче","Что и когда переходило с одного склада на другой; передача делается в карточке"],
+              warehouses:["Склады","Номер склада приходит из накладной и хранится в карточке"],
               all:["Все учреждения","Сводка по всем сразу: техника, ремонты, люди"],
               orgs:["Учреждения","Каждое ведёт свой учёт; доступ выдаёт администратор"],
               ad:["Active Directory","Сотрудники, подразделения и отделы приходят из домена"],
-              staff:["Сотрудники ИТ","Кто обслуживает технику; мастера видны при статусе «В ремонте»"],
+              staff:["Пользователи ИТ","Кто обслуживает технику; мастера видны при статусе «В ремонте»"],
               roles:["Роли и доступ","Наборы прав, которые назначаются сотрудникам"],
               divisions:["Подразделения","Общий справочник"],
-              departments:["Отделы","Общий справочник"]};
+              departments:["Отделы","Общий справочник"],
+              places:["Место","Кабинеты, серверные, посты — за ними закрепляют технику без ответственного"],
+              models:["Модели","Справочник моделей с фото; в карточке модель выбирается перед типом"]};
     if(nav==="reg"){
       var r = reg();
       $("ttl").textContent = r.name;
@@ -2518,7 +3004,8 @@
     $("dlgRegTitle").textContent = r ? ("Настройки раздела: "+r.name) : "Новый раздел учёта";
     $("rg_name").value = r ? r.name : "";
     $("rg_icon").value = r ? (r.icon||"▣") : "▣";
-    $("rg_name").disabled = locked; $("rg_icon").disabled = locked;
+    /* название и значок правит администратор у любого раздела, и у заводского тоже */
+    $("rg_name").disabled = false; $("rg_icon").disabled = false;
     $("rg_lock").hidden = !locked;
     var kind = r ? (r.kind||"assets") : "assets";
     document.querySelectorAll('input[name="rgkind"]').forEach(function(el){
@@ -2567,12 +3054,9 @@
   $("btnRegSave").onclick = function(){
     var r = editingReg ? cfg.registries.find(function(x){ return x.id===editingReg; }) : null;
     var kind = currentKind(), nm = $("rg_name").value.trim();
-    var locked = !!(r && r.builtin);
-    if(!locked){
-      if(!nm){ toast("Введите название раздела"); return; }
-      if(cfg.registries.some(function(x){ return x.name.toLowerCase()===nm.toLowerCase() && x.id!==editingReg; })){
-        toast("Раздел с таким названием уже есть"); return; }
-    }
+    if(!nm){ toast("Введите название раздела"); return; }
+    if(cfg.registries.some(function(x){ return x.name.toLowerCase()===nm.toLowerCase() && x.id!==editingReg; })){
+      toast("Раздел с таким названием уже есть"); return; }
     if(kind==="assets" && !regStatusDraft.length){ toast("Добавьте хотя бы один статус"); return; }
     var layout = {subs:$("rg_subs").checked, specs:$("rg_specs").checked,
                   presets:$("rg_presets").checked, dash:$("rg_dash").checked};
@@ -2586,7 +3070,7 @@
       toast("Раздел создан");
       return;
     }
-    if(!locked){ r.name = nm; r.icon = $("rg_icon").value.trim()||"▣"; }
+    r.name = nm; r.icon = $("rg_icon").value.trim()||"▣";
     r.layout = layout;
     var touched = [];
     if((r.kind||"assets")==="assets"){
@@ -2660,10 +3144,59 @@
       o.subId = subOfType(it.type);
       o.subName = nameById("subcategories", o.subId);
       o.typeName = typeName(it.type);
-      o.ownerName = ownerName(it.owner);
-      o.divName = nameById("divisions", it.division);
-      o.depName = nameById("departments", it.department);
+      o.modelName = modelName(it.model);
+      o.whName = whCode(it.warehouse);
+      /* За местом — в колонке ответственного стоит место; за оборудованием —
+         показатели того, к чему прикреплено, с пометкой (заказчик так просил:
+         «с теми же показателями, что и то оборудование»). */
+      var h = holderOf(it);
+      if(h.kind === "place"){
+        o.ownerName = "⌖ " + (h.placeName || "место не указано");
+        o.divName = ""; o.depName = "";
+      } else if(h.kind === "item"){
+        var pr = h.root;
+        o.ownerName = (pr ? ownerName(pr.owner) : "") + (h.parent ? " (за инв. " + (h.parent.inv || "—") + ")" : "");
+        o.divName = pr ? nameById("divisions", pr.division) : "";
+        o.depName = pr ? nameById("departments", pr.department) : "";
+        o.attachedTo = h.parent ? (h.parent.inv || "") : "";
+      } else {
+        o.ownerName = ownerName(it.owner);
+        o.divName = nameById("divisions", it.division);
+        o.depName = nameById("departments", it.department);
+      }
       return o;
+    });
+  }
+  /* За кем закреплена единица. Для прикреплённого оборудования поднимаемся к
+     корню цепочки (диск → компьютер → сотрудник), не глубже пяти шагов. */
+  function holderOf(it){
+    var kind = it.holder || "person";
+    if(kind === "place") return {kind:"place", placeName:nameById("places", it.place)};
+    if(kind === "item"){
+      var parent = it.parent ? items.find(function(x){ return x.id===it.parent; }) : null;
+      if(!parent) return {kind:"person"};
+      var root = parent, n = 0;
+      while(root && (root.holder||"person")==="item" && root.parent && n < 5){
+        var up = items.find(function(x){ return x.id===root.parent; });
+        if(!up) break;
+        root = up; n++;
+      }
+      return {kind:"item", parent:parent, root:root};
+    }
+    return {kind:"person"};
+  }
+  /* всё, что прикреплено к записи, и то, что прикреплено к прикреплённому */
+  function attachedTo(id){
+    return items.filter(function(x){ return (x.holder||"person")==="item" && x.parent===id; });
+  }
+  /* техника сотрудника: своя плюс прикреплённая к его технике */
+  function itemsOfPerson(uid){
+    return items.filter(function(i){
+      if(i.status===ST_OFF) return false;
+      var h = holderOf(i);
+      if(h.kind === "person") return i.owner===uid;
+      if(h.kind === "item") return !!(h.root && (h.root.holder||"person")==="person" && h.root.owner===uid);
+      return false;
     });
   }
   function specVal(it, sp){
@@ -2676,11 +3209,17 @@
       var v = specVal(it, s); return v ? s.name+": "+v : "";
     }).filter(Boolean).join("; ");
   }
+  var xferOnly = false;      /* показывать только переданное; живёт до перезагрузки */
+  var showHiddenAttached = false;   /* выгрузка берёт и скрытое прикреплённое */
   function filtered(){
     var q = $("q").value.trim().toLowerCase(), qf = $("qField").value;
     var fc = $("fCat").value, fg = $("fSub").value, ft = $("fType").value,
-        fs = $("fStatus").value, fd = $("fDiv").value, fp = $("fDep").value;
+        fs = $("fStatus").value, fd = $("fDiv").value, fp = $("fDep").value, fm = $("fModel").value;
     var list = decorated().filter(function(it){
+      /* прикреплённое с галочкой «убрать из списка» живёт в карточке того, к чему прикреплено */
+      if(it.holder==="item" && it.hideAttached && it.parent && !showHiddenAttached) return false;
+      if(xferOnly && !it.transferred) return false;
+      if(fm && it.model !== fm) return false;
       if(fc && it.catId !== fc) return false;
       if(fg && it.subId !== fg) return false;
       if(ft && it.type !== ft) return false;
@@ -2689,7 +3228,7 @@
       if(fp && it.department !== fp) return false;
       if(!q) return true;
       var hay = qf ? (it[qf] || "")
-        : [it.inv,it.catName,it.subName,it.typeName,it.status,it.ownerName,it.divName,it.depName,it.notes,specText(it)].join(" ");
+        : [it.inv,it.catName,it.subName,it.typeName,it.modelName,it.status,it.ownerName,it.divName,it.depName,it.notes,specText(it)].join(" ");
       return String(hay).toLowerCase().indexOf(q) !== -1;
     });
     list.sort(function(a,b){
@@ -2707,6 +3246,20 @@
           : s==="Закончилось" ? "b-danger" : "b-mute";
     return '<td title="'+esc(s||"")+'"><span class="badge '+c+'">'+esc(s||"—")+'</span></td>';
   }
+  /* Подсказка к бейджу «передано»: откуда и когда — из последней передачи,
+     если список передач уже загружен; без него — просто «передано». */
+  function xferHint(it){
+    var t = null;
+    (transfers || []).forEach(function(x){ if(x.itemId === it.id && (!t || x.at > t.at)) t = x; });
+    return t ? ("Передано " + fmtWhen(t.at) + " со склада " + (t.fromLabel || "—") +
+                " на склад " + (t.toLabel || "—") + (t.note ? ". Примечание: " + t.note : ""))
+             : "Передано с другого склада";
+  }
+  function statusCell(it){
+    if(!it.transferred) return statusBadge(it.status);
+    return '<td class="st-x" title="'+esc(it.status||"")+'"><span class="badge b-info">'+esc(it.status||"—")+'</span>'+
+           '<span class="badge b-xfer" title="'+esc(xferHint(it))+'">⇢ передано</span></td>';
+  }
   function renderItems(){
     var list = filtered();
     $("tbody").innerHTML = list.map(function(it, i){
@@ -2716,11 +3269,17 @@
         cellText(it.catName) +
         '<td class="hide-md" title="'+esc(it.subName||"")+'">'+esc(it.subName||"")+'</td>'+
         cellText(it.typeName) +
-        statusBadge(it.status) +
+        statusCell(it) +
         cellText(it.ownerName) +
+        '<td class="mono" title="'+esc(it.whName||"")+'">'+esc(it.whName||"")+'</td>'+
         '<td class="hide-md" title="'+esc(it.divName||"")+'">'+esc(it.divName||"")+'</td>'+
         '<td class="hide-sm" title="'+esc(it.depName||"")+'">'+esc(it.depName||"")+'</td></tr>';
     }).join("");
+    var nx = regItems().filter(function(x){ return x.transferred; }).length;
+    if(!nx) xferOnly = false;
+    $("btnXferOnly").hidden = !nx;
+    $("btnXferOnly").textContent = "⇢ Переданные" + (nx ? ": " + nx : "");
+    $("btnXferOnly").classList.toggle("on", xferOnly);
     var e = $("itemsEmpty"), total = regItems().length;
     $("itemsCount").textContent = !total ? ""
       : (list.length===total ? "Всего записей: "+total
@@ -2865,6 +3424,168 @@
     }).join("");
     $("typesEmpty").hidden = regTypes().length > 0;
   }
+  /* ================== модели ==================
+     Модель — справочник раздела, как и тип, но отдельный: в карточке она идёт
+     перед типом. Фото хранится на сервере и в состояние не попадает. */
+  function regModels(id){ id = id||curReg; return cfg.models.filter(function(m){ return rid(m)===id; }); }
+  function modelName(id){ return nameById("models", id); }
+  var editingModel = null;
+  function renderModels(){
+    if(!$("modelsBody")) return;
+    var keepReg = $("newModelReg").value;
+    $("newModelReg").innerHTML = assetRegs().map(function(r){
+      return '<option value="'+esc(r.id)+'">'+esc(r.name)+'</option>'; }).join("");
+    if(keepReg) $("newModelReg").value = keepReg;
+    var list = cfg.models.slice().sort(function(a,b){
+      var ka = (nameById("registries", rid(a)) + "|" + a.name).toLowerCase(), kb = (nameById("registries", rid(b)) + "|" + b.name).toLowerCase();
+      return ka<kb?-1:ka>kb?1:0; });
+    var mayEdit = can("dict.edit");
+    $("modelsBody").innerHTML = list.map(function(m, i){
+      var used = items.filter(function(x){ return x.model===m.id; }).length;
+      var pic = m.hasPhoto
+        ? '<img class="mthumb js-thumb" data-m="'+esc(m.id)+'" src="/api/models/'+encodeURIComponent(m.id)+'/photo?v='+Date.now()+'" alt="" title="">'
+        : '<div class="mthumb-none" title="фото нет">▣</div>';
+      return '<tr data-m="'+esc(m.id)+'"><td class="num">'+(i+1)+'</td><td>'+pic+'</td>'+
+        '<td class="pick js-open" title="Показать оборудование этой модели">'+esc(m.name)+'</td>'+
+        cellText(nameById("registries", rid(m))||"—") +
+        cellText(m.note||"")+'<td class="pick js-open">'+used+'</td>'+
+        acts(mayEdit
+          ? ['<button class="ic js-edit" title="Изменить, фото">✎</button>',
+             '<button class="ic btn-danger js-del"'+(used?' disabled title="Модель используется"':' title="Удалить"')+'>✕</button>']
+          : [])+'</tr>';
+    }).join("");
+    $("modelsEmpty").hidden = list.length > 0;
+  }
+  $("btnAddModel").onclick = function(){
+    var n = $("newModel").value.trim(), rg = $("newModelReg").value;
+    if(!rg){ toast("Выберите раздел учёта"); return; }
+    if(!n){ toast("Введите название модели"); return; }
+    if(regModels(rg).some(function(m){ return m.name.toLowerCase()===n.toLowerCase(); })){ toast("Такая модель уже есть в этом разделе"); return; }
+    cfg.models.push({id:uid("mdl"), name:n, note:$("newModelNote").value.trim(), registryId:rg, hasPhoto:false});
+    $("newModel").value=""; $("newModelNote").value="";
+    $("addModel").hidden = true;
+    saveCfg(); toast("Модель добавлена");
+  };
+  $("btnShowModel").onclick = function(){
+    $("addModel").hidden = !$("addModel").hidden;
+    if(!$("addModel").hidden) $("newModel").focus();
+  };
+  $("newModel").addEventListener("keydown", function(e){ if(e.key==="Enter") $("btnAddModel").click(); });
+  $("modelsBody").addEventListener("click", function(e){
+    var tr = e.target.closest("tr[data-m]"); if(!tr) return;
+    var m = byId("models", tr.dataset.m); if(!m) return;
+    if(e.target.closest(".js-del")){
+      if(!confirm("Удалить модель «"+m.name+"»?")) return;
+      cfg.models = cfg.models.filter(function(x){ return x.id!==m.id; });
+      saveCfg(); toast("Удалено"); return;
+    }
+    if(e.target.closest(".js-edit")){ openModel(m); return; }
+    if(e.target.closest(".js-open") || e.target.closest(".js-thumb")){ openModelItems(m); }
+  });
+  /* наведение на миниатюру — фото побольше рядом с курсором */
+  (function(){
+    var pop = $("photoPop"), img = $("photoPopImg");
+    function move(e){
+      var w = pop.offsetWidth || 380, h = pop.offsetHeight || 380;
+      var x = e.clientX + 18, y = e.clientY + 18;
+      if(x + w > window.innerWidth - 8) x = e.clientX - w - 18;
+      if(y + h > window.innerHeight - 8) y = Math.max(8, window.innerHeight - h - 8);
+      pop.style.left = x + "px"; pop.style.top = y + "px";
+    }
+    $("modelsBody").addEventListener("mouseover", function(e){
+      var t = e.target.closest(".js-thumb"); if(!t) return;
+      img.src = t.src; pop.hidden = false; move(e);
+    });
+    $("modelsBody").addEventListener("mousemove", function(e){
+      if(!pop.hidden && e.target.closest(".js-thumb")) move(e);
+    });
+    $("modelsBody").addEventListener("mouseout", function(e){
+      if(e.target.closest(".js-thumb")) pop.hidden = true;
+    });
+  })();
+  /* карточка модели: фото, сведения и всё оборудование этой модели */
+  var curModelItems = null;
+  function openModelItems(m){
+    curModelItems = m.id;
+    $("dlgMiTitle").textContent = "Модель: " + m.name;
+    $("mi_photo").hidden = !m.hasPhoto;
+    if(m.hasPhoto) $("mi_photo").src = "/api/models/"+encodeURIComponent(m.id)+"/photo?v="+Date.now();
+    var list = items.filter(function(x){ return x.model===m.id; });
+    var kv = function(k, v){ return '<div><span>'+esc(k)+'</span><b>'+esc(v||"—")+'</b></div>'; };
+    $("mi_kv").innerHTML = kv("Раздел", nameById("registries", rid(m))) + kv("Примечание", m.note) +
+      kv("Единиц", String(list.length)) +
+      kv("В эксплуатации", String(list.filter(function(x){ return x.status===ST_USE; }).length)) +
+      kv("На складе", String(list.filter(function(x){ return x.status===ST_STOCK; }).length));
+    $("mi_count").textContent = list.length ? "всего: " + list.length : "";
+    $("mi_items").innerHTML = miniTable(
+      ["Инв. номер","Тип","Статус","Ответственный","Склад","Подразделение"],
+      list.map(function(x){
+        var h = holderOf(x), who = h.kind==="place" ? "⌖ " + (h.placeName||"") : h.kind==="item" ? (h.root ? ownerName(h.root.owner) : "") + (h.parent ? " (за инв. " + (h.parent.inv||"—") + ")" : "") : ownerName(x.owner);
+        return [x.inv||"", typeName(x.type)||"", x.status||"", who, whCode(x.warehouse)||"", nameById("divisions", (h.kind==="item" && h.root) ? h.root.division : x.division)||""];
+      }),
+      "Оборудования этой модели пока нет.", list.map(function(x){ return x.id; }));
+    $("btnMiEdit").hidden = !can("dict.edit");
+    $("dlgModelItems").showModal();
+  }
+  $("mi_items").addEventListener("click", function(e){
+    var tr = e.target.closest("tr[data-open]"); if(!tr) return;
+    var it = items.find(function(x){ return x.id===tr.dataset.open; }); if(!it) return;
+    $("dlgModelItems").close();
+    if(rid(it) !== curReg) openReg(rid(it), "items");
+    openDlg(it);
+  });
+  $("btnMiClose").onclick = function(){ $("dlgModelItems").close(); };
+  $("btnMiEdit").onclick = function(){
+    var m = byId("models", curModelItems); $("dlgModelItems").close(); if(m) openModel(m); };
+  $("btnMiList").onclick = function(){
+    var m = byId("models", curModelItems); $("dlgModelItems").close(); if(!m) return;
+    openReg(rid(m), "items");
+    $("fModel").value = m.id; markFilters(); renderItems();
+  };
+  function openModel(m){
+    editingModel = m.id;
+    $("dlgModelTitle").textContent = "Модель: " + m.name;
+    $("m_name").value = m.name; $("m_note").value = m.note||""; $("m_file").value = "";
+    $("m_err").textContent = "";
+    $("m_photoWrap").hidden = !m.hasPhoto;
+    if(m.hasPhoto) $("m_preview").src = "/api/models/"+encodeURIComponent(m.id)+"/photo?v="+Date.now();
+    $("btnModelDel").hidden = items.some(function(x){ return x.model===m.id; });
+    $("dlgModel").showModal();
+  }
+  $("btnModelCancel").onclick = function(){ $("dlgModel").close(); };
+  $("btnModelDel").onclick = function(){
+    var m = byId("models", editingModel); if(!m) return;
+    if(!confirm("Удалить модель «"+m.name+"»?")) return;
+    cfg.models = cfg.models.filter(function(x){ return x.id!==m.id; });
+    $("dlgModel").close(); saveCfg(); toast("Удалено");
+  };
+  $("btnModelPhotoDel").onclick = function(){
+    var m = byId("models", editingModel); if(!m) return;
+    api("/api/models/"+encodeURIComponent(m.id)+"/photo/delete", {})
+      .then(function(){ m.hasPhoto = false; $("m_photoWrap").hidden = true; renderModels(); toast("Фото убрано"); })
+      .catch(apiError);
+  };
+  $("btnModelSave").onclick = function(){
+    var m = byId("models", editingModel); if(!m) return;
+    var n = $("m_name").value.trim();
+    if(!n){ $("m_err").textContent = "Введите название"; return; }
+    if(regModels(rid(m)).some(function(x){ return x.id!==m.id && x.name.toLowerCase()===n.toLowerCase(); })){
+      $("m_err").textContent = "Такая модель уже есть"; return; }
+    m.name = n; m.note = $("m_note").value.trim();
+    var f = $("m_file").files && $("m_file").files[0];
+    var p = saveCfg();
+    if(f){
+      var fd = new FormData(); fd.append("file", f);
+      p = p.then(function(){
+        return fetch("/api/models/"+encodeURIComponent(m.id)+"/photo", {method:"POST", body:fd, credentials:"same-origin"})
+          .then(function(r){ return r.json().catch(function(){ return {}; })
+            .then(function(j){ if(!r.ok){ j.status = r.status; throw j; } return j; }); })
+          .then(function(){ m.hasPhoto = true; renderModels(); toast("Фото сохранено"); });
+      }).catch(function(e){ toast("Фото не загрузилось" + (e && e.message ? " — " + e.message : apiWhy(e))); });
+    }
+    $("dlgModel").close(); toast("Сохранено");
+  };
+
   $("btnAddType").onclick = function(){
     var n = $("newType").value.trim();
     if(!n){ toast("Введите название типа"); return; }
@@ -3414,7 +4135,8 @@
         '<td class="hide-md" title="'+esc(x.typeName||"")+'">'+esc(x.typeName||"")+'</td>'+
         cellText(x.status || "") +
         '<td class="hide-md" title="'+esc(x.ownerName||"")+'">'+esc(x.ownerName||"")+'</td>'+
-        cellText(x.reason || "") + '</tr>';
+        cellText(x.reason || "") +
+        '<td>'+(can("deletions.manage") ? '<button class="ic btn-danger js-dldel" title="Убрать запись из журнала">✕</button>' : '')+'</td></tr>';
     }).join("");
     var e = $("delsEmpty"); e.hidden = list.length > 0;
     e.textContent = all.length ? "Ничего не найдено по фильтрам." : "Удалений пока не было.";
@@ -3434,6 +4156,14 @@
   };
   $("delsBody").addEventListener("click", function(e){
     var tr = e.target.closest("tr[data-dl]"); if(!tr) return;
+    if(e.target.closest(".js-dldel")){
+      var x = delSource().find(function(d){ return d.id === tr.dataset.dl; });
+      if(!confirm("Убрать запись из журнала удалений" + (x && x.inv ? " (инв. " + x.inv + ")" : "") + "?\n\nСледа от этого не останется.")) return;
+      api("/api/deletions/delete", {id:tr.dataset.dl})
+        .then(function(){ toast("Запись убрана"); return loadDeletions(); })
+        .catch(apiError);
+      return;
+    }
     openDelInfo(tr.dataset.dl);
   });
   function openDelInfo(id){
@@ -3459,7 +4189,7 @@
     var h = x.history || [];
     $("di_hist").innerHTML = h.length
       ? h.slice().reverse().map(function(ev){
-          return "<li>"+esc(ev.d)+(ev.who ? ", <b>"+esc(ev.who)+"</b>" : "")+" — "+esc(ev.t)+"</li>";
+          return "<li>"+esc(histWhen(ev))+(ev.who ? ", <b>"+esc(ev.who)+"</b>" : "")+" — "+esc(ev.t)+"</li>";
         }).join("")
       : "<li>История пуста</li>";
     $("dlgDelInfo").showModal();
@@ -3479,6 +4209,526 @@
     saveTable({sheet:"Удаления", head:head, rows:rows, textCols:[3]},
               "удаления-" + new Date().toISOString().slice(0,10));
   }
+
+  /* ================== склады ==================
+     Номер приходит из накладной; если такого ещё нет, склад заводится сам,
+     а название потом правится здесь. */
+  function renderWh(){
+    if(!$("whBody")) return;
+    var q = $("qWh").value.trim().toLowerCase();
+    var list = (cfg.warehouses || []).filter(function(w){
+      return !q || ((w.code||"") + " " + (w.name||"") + " " + (w.note||""))
+        .toLowerCase().indexOf(q) !== -1;
+    });
+    $("whBody").innerHTML = list.map(function(w, i){
+      var used = items.filter(function(x){ return x.warehouse === w.id; }).length;
+      return '<tr data-w="'+esc(w.id)+'"><td class="num">'+(i+1)+'</td>'+
+        '<td class="mono">'+esc(w.code||"—")+'</td>'+
+        cellText(w.name||"—") + cellText(w.note||"") +
+        '<td>'+used+'</td>'+
+        acts(can("users.manage")
+          ? ['<button class="ic js-whedit" title="Изменить">✎</button>',
+             '<button class="ic btn-danger js-whdel"'+
+               (used ? ' disabled title="На складе числится техника"' : ' title="Удалить"')+
+               '>✕</button>']
+          : [])+'</tr>';
+    }).join("");
+    $("whEmpty").hidden = list.length > 0;
+  }
+  $("qWh").oninput = renderWh;
+
+  var editingWh = null;
+  function openWh(w){
+    editingWh = w ? w.id : null;
+    $("dlgWhTitle").textContent = w ? ("Склад " + (w.code || "")) : "Новый склад";
+    $("w_code").value = w ? (w.code||"") : "";
+    $("w_name").value = w ? (w.name||"") : "";
+    $("w_note").value = w ? (w.note||"") : "";
+    $("w_org").innerHTML = orgs.map(function(o){
+      return '<option value="'+esc(o.id)+'">'+esc(o.name)+'</option>'; }).join("");
+    $("w_org").value = (w && w.orgId) || orgId;
+    $("w_org").disabled = !isAdmin();
+    $("w_err").textContent = "";
+    $("btnWhDel").hidden = !w;
+    $("dlgWh").showModal();
+    setTimeout(function(){ $("w_code").focus(); }, 30);
+  }
+  $("btnAddWh").onclick = function(){ openWh(null); };
+  $("whBody").addEventListener("click", function(e){
+    var tr = e.target.closest("tr[data-w]"); if(!tr) return;
+    var w = (cfg.warehouses || []).find(function(x){ return x.id === tr.dataset.w; });
+    if(!w) return;
+    if(e.target.closest(".js-whdel")){
+      if(!confirm("Удалить склад «" + (w.code || w.name) + "»?")) return;
+      cfg.warehouses = cfg.warehouses.filter(function(x){ return x.id !== w.id; });
+      saveCfg(); toast("Удалено"); return;
+    }
+    openWh(w);
+  });
+  $("btnWhCancel").onclick = function(){ $("dlgWh").close(); };
+  $("btnWhSave").onclick = function(){
+    var code = $("w_code").value.trim(), nm = $("w_name").value.trim();
+    if(!code && !nm){ $("w_err").textContent = "Нужен хотя бы номер или название"; return; }
+    var dup = (cfg.warehouses || []).find(function(x){
+      return x.id !== editingWh && code && (x.code||"").trim() === code; });
+    if(dup){ $("w_err").textContent = "Склад с номером " + code + " уже есть"; return; }
+    var rec = editingWh ? cfg.warehouses.find(function(x){ return x.id === editingWh; })
+                        : {id: uid("w")};
+    rec.code = code; rec.name = nm; rec.note = $("w_note").value.trim();
+    if(isAdmin()) rec.orgId = $("w_org").value || orgId;
+    if(!editingWh) cfg.warehouses.push(rec);
+    var moved = rec.orgId && rec.orgId !== orgId;
+    saveCfg().then(function(){ if(moved) return loadState(); });
+    $("dlgWh").close(); toast(moved ? "Склад передан другому учреждению" : "Сохранено");
+  };
+  $("btnWhDel").onclick = function(){
+    if(!editingWh) return;
+    cfg.warehouses = cfg.warehouses.filter(function(x){ return x.id !== editingWh; });
+    saveCfg(); $("dlgWh").close(); toast("Удалено");
+  };
+
+  /* ================== накладные ==================
+     Браузер не умеет управлять сканером — такого стандарта нет. Поэтому файл
+     приходит перетаскиванием: сканируете привычной программой, а сюда бросаете
+     готовый PDF. Дальше сервер кладёт его в архив и распознаёт. */
+  var docs = [], docsCfg = null, docsOcr = null, curDoc = null;
+
+  /* ================== накладные по передаче ================== */
+  var transfers = [];
+  function loadTransfers(){
+    return api("/api/transfers").then(function(d){
+      transfers = d.transfers || [];
+      renderTransfers();
+      if(nav === "reg" && $("tbody")) renderItems();
+    }).catch(function(){});
+  }
+  function xferFileLink(t, label){
+    return t.hasFile
+      ? '<a href="/api/transfers/'+encodeURIComponent(t.id)+'/file" target="_blank" title="'+esc(t.origName||"")+'">'+esc(label||"открыть")+'</a>'
+      : '<span class="note" style="margin:0">—</span>';
+  }
+  function renderTransfers(){
+    if(!$("xferBody")) return;
+    /* Здесь — только передачи с документом: без накладной показывать нечего.
+       Все передачи подряд — на экране «История передач». */
+    var docs = transfers.filter(function(t){ return t.hasFile; });
+    var q = ($("qXfer").value || "").trim().toLowerCase();
+    var list = docs.filter(function(t){
+      return !q || [t.inv, t.typeName, t.fromLabel, t.toLabel, t.note, t.who, t.origName]
+        .join(" ").toLowerCase().indexOf(q) !== -1;
+    });
+    $("xferBody").innerHTML = list.map(function(t, i){
+      return xferRow(t, i, true);
+    }).join("");
+    $("xferEmpty").hidden = docs.length > 0;
+    $("cntXfer").textContent = docs.length ? String(docs.length) : "";
+    renderXhist();
+  }
+  function xferRow(t, i, withFile){
+    return '<tr class="pick" data-t="'+esc(t.id)+'"><td class="num">'+(i+1)+'</td>'+
+      '<td class="mono" title="'+esc(fmtWhen(t.at))+'">'+esc(fmtWhen(t.at))+'</td>'+
+      '<td class="mono">'+esc(t.inv||"—")+'</td>'+
+      cellText(t.typeName||"—") + cellText(t.fromLabel||"—") + cellText(t.toLabel||"—") +
+      '<td class="hide-md" title="'+esc(t.who||"")+'">'+esc(t.who||"")+'</td>'+
+      cellText(t.note||"") +
+      '<td>'+(withFile ? xferFileLink(t) : (t.hasFile ? xferFileLink(t, "есть") : '<span class="note" style="margin:0">нет</span>'))+
+      (!isAdmin() ? ''
+        : (!withFile && t.hasFile)
+          ? '<button class="ic" disabled title="Есть накладная: удаляется на экране «Накладные по передаче»">✕</button>'
+          : '<button class="ic btn-danger js-xdel" title="Удалить запись о передаче">✕</button>')+'</td></tr>';
+  }
+  /* история передач: всё подряд, с документом и без */
+  function renderXhist(){
+    if(!$("xhistBody")) return;
+    var q = ($("qXhist").value || "").trim().toLowerCase();
+    var list = transfers.filter(function(t){
+      return !q || [t.inv, t.typeName, t.fromLabel, t.toLabel, t.note, t.who, t.origName]
+        .join(" ").toLowerCase().indexOf(q) !== -1;
+    });
+    $("xhistBody").innerHTML = list.map(function(t, i){ return xferRow(t, i, false); }).join("");
+    $("xhistEmpty").hidden = transfers.length > 0;
+    $("cntXhist").textContent = transfers.length ? String(transfers.length) : "";
+    var withDoc = transfers.filter(function(t){ return t.hasFile; }).length;
+    $("xhistStats").innerHTML = tile("Передач", transfers.length) + tile("С накладной", withDoc) +
+      tile("Без накладной", transfers.length - withDoc);
+  }
+  $("qXhist").oninput = function(){ renderXhist(); };
+  /* убрать запись о передаче может только администратор — и только с причиной,
+     которая уходит в журнал удалений */
+  /* Из «Истории передач» нельзя удалить передачу с накладной — только через
+     «Накладные по передаче», где документ виден; оттуда запись уходит из обоих списков. */
+  function askDeleteXfer(t, source){
+    if(source === "hist" && t.hasFile){
+      toast("У этой передачи есть накладная — удаляйте её на экране «Накладные по передаче»"); return; }
+    askDeleteReason("передача инв. " + (t.inv || "—") + " · " + (t.fromLabel || "—") + " → " + (t.toLabel || "—"),
+      function(reason){
+        api("/api/transfers/delete", {id:t.id, reason:reason, source:source || "docs"})
+          .then(function(){ toast("Запись о передаче удалена"); return loadTransfers().then(loadDeletions); })
+          .catch(function(e){ toast(e && e.message ? e.message : ("Не удалось удалить" + apiWhy(e))); });
+      });
+  }
+  $("xhistBody").addEventListener("click", function(e){
+    if(e.target.closest("a")) return;
+    var tr = e.target.closest("tr[data-t]"); if(!tr) return;
+    var t = transfers.find(function(x){ return x.id === tr.dataset.t; }); if(!t) return;
+    if(e.target.closest(".js-xdel")){ askDeleteXfer(t, "hist"); return; }
+    openXfer(t, "hist");
+  });
+  $("qXfer").oninput = function(){ renderTransfers(); };
+  function openXfer(t, source){
+    var kv = function(k, v){ return '<div><span>'+esc(k)+'</span><b>'+(v||"—")+'</b></div>'; };
+    $("dlgXferTitle").textContent = "Передача · инв. " + (t.inv || "—") +
+      (t.typeName ? " · " + t.typeName : "");
+    $("xf_body").innerHTML = '<div class="kv">' +
+      kv("Когда", esc(fmtWhen(t.at))) + kv("Кто передал", esc(t.who)) +
+      kv("Инвентарный номер", esc(t.inv)) + kv("Тип", esc(t.typeName)) +
+      kv("Откуда", esc(t.fromLabel)) + kv("Куда", esc(t.toLabel)) +
+      kv("Накладная", t.hasFile ? esc(t.origName || "файл") : "не прикладывали") +
+      '</div>' +
+      (t.note ? '<div class="sec" style="margin-top:12px"><b>Примечание</b><div style="margin-top:6px">'+esc(t.note)+'</div></div>' : '');
+    var it = items.find(function(x){ return x.id === t.itemId; });
+    $("btnXfCard").hidden = !it;
+    $("btnXfCard").onclick = function(){ $("dlgXfer").close(); if(it) openDlg(it); };
+    $("btnXfFile").hidden = !t.hasFile;
+    $("dlgXfer").dataset.t = t.id;
+    $("dlgXfer").dataset.src = source || "docs";
+    $("btnXfDel").hidden = !isAdmin() || (source === "hist" && t.hasFile);
+    $("btnXfFile").onclick = function(){
+      window.open("/api/transfers/" + encodeURIComponent(t.id) + "/file", "_blank"); };
+    $("dlgXfer").showModal();
+  }
+  $("xferBody").addEventListener("click", function(e){
+    if(e.target.closest("a")) return;
+    var tr = e.target.closest("tr[data-t]"); if(!tr) return;
+    var t = transfers.find(function(x){ return x.id === tr.dataset.t; }); if(!t) return;
+    if(e.target.closest(".js-xdel")){ askDeleteXfer(t, "docs"); return; }
+    openXfer(t, "docs");
+  });
+  $("btnXfDel").onclick = function(){
+    var t = transfers.find(function(x){ return x.id === $("dlgXfer").dataset.t; });
+    var src = $("dlgXfer").dataset.src || "docs";
+    $("dlgXfer").close();
+    if(t) askDeleteXfer(t, src);
+  };
+  $("btnXfClose").onclick = function(){ $("dlgXfer").close(); };
+
+  function loadDocs(){
+    return api("/api/docs").then(function(d){
+      docs = d.docs || []; docsCfg = d.config || {}; docsOcr = d.ocr || {};
+      $("dc_path").value = docsCfg.path || "";
+      $("dc_lang").value = docsCfg.lang || "rus+eng";
+      $("dc_dpi").value  = docsCfg.dpi || 300;
+      renderDocs();
+    }).catch(function(){});
+  }
+
+  function ocrNote(){
+    if(!docsOcr) return "";
+    if(docsOcr.ready)
+      return "Распознавание готово: " + esc(docsOcr.version || "Tesseract") +
+             ", языки — " + esc((docsOcr.langs || []).join(", ")) +
+             (docsOcr.tessdata ? "<br>Словари: <code>" + esc(docsOcr.tessdata) + "</code>" +
+               (docsOcr.own ? " (из пакета)" : " (системные)") : "");
+    if((docsOcr.missingLibs || []).length)
+      return "Распознавание выключено: на сервере не хватает библиотек — " +
+             esc(docsOcr.missingLibs.join(", ")) +
+             ". Так бывает после обновления: запустите на сервере install.bat, " +
+             "он доставит их из папки wheels, интернет не нужен.";
+    if(!docsOcr.exe)
+      return "Распознавание выключено: на сервере не установлен Tesseract. " +
+             "Запустите install-ocr.bat от имени администратора.";
+    return "Распознавание установлено, но не хватает языков: " +
+           esc((docsOcr.missing || []).join(", ")) + ".";
+  }
+
+  function renderDocs(){
+    if(!$("docsBody")) return;
+    $("docOcr").innerHTML = ocrNote();
+    var ST = {"new":"принята", parsed:"разобрана", applied:"заведена"};
+    $("docsBody").innerHTML = docs.map(function(d, i){
+      var cnt = (d.rows || []).length;
+      return '<tr class="pick" data-doc="'+esc(d.id)+'"><td class="num">'+(i+1)+'</td>'+
+        '<td class="mono" title="'+esc(fmtWhen(d.at))+'">'+esc(fmtWhen(d.at))+'</td>'+
+        '<td class="mono">'+esc(d.number || "—")+'</td>'+
+        cellText(d.origName) +
+        '<td>'+cnt+'</td>'+
+        '<td><span class="badge '+(d.status==="applied"?"b-ok":"b-info")+'">'+
+          esc(ST[d.status] || d.status)+'</span></td>'+
+        '<td class="hide-md" title="'+esc(d.who||"")+'">'+esc(d.who||"")+'</td>'+
+        acts(can("docs.scan")
+          ? ['<button class="ic js-docopen" title="Разобрать">✎</button>',
+             '<button class="ic btn-danger js-docdel" title="Удалить накладную">✕</button>']
+          : ['<button class="ic js-docopen" title="Посмотреть">👁</button>'])+'</tr>';
+    }).join("");
+    $("docsEmpty").hidden = docs.length > 0;
+  }
+
+  /* ---------- приём файла ---------- */
+  function sendDoc(file){
+    if(!file) return;
+    $("docErr").textContent = "";
+    var dz = $("docDrop");
+    dz.classList.add("busy");
+    dz.querySelector("b").textContent = "Загружаю и распознаю: " + file.name;
+    var fd = new FormData();
+    fd.append("file", file);
+    fetch("/api/docs/upload", {method:"POST", body:fd, credentials:"same-origin"})
+      .then(function(r){ return r.json().catch(function(){ return {}; })
+        .then(function(j){ if(!r.ok){ j.status = r.status; throw j; } return j; }); })
+      .then(function(d){
+        docsOcr = d.ocr || docsOcr;
+        toast("Накладная принята");
+        return loadDocs().then(function(){ openDoc(d.doc && d.doc.id); });
+      })
+      .catch(function(e){
+        $("docErr").textContent = "Не удалось принять файл" +
+          (e && e.message ? " — " + e.message : apiWhy(e));
+      })
+      .then(function(){
+        dz.classList.remove("busy");
+        dz.querySelector("b").textContent = "Перетащите сюда скан накладной";
+      });
+  }
+  (function(){
+    var dz = $("docDrop");
+    dz.addEventListener("dragover", function(e){
+      e.preventDefault(); dz.classList.add("over"); });
+    dz.addEventListener("dragleave", function(){ dz.classList.remove("over"); });
+    dz.addEventListener("drop", function(e){
+      e.preventDefault(); dz.classList.remove("over");
+      sendDoc(e.dataTransfer.files && e.dataTransfer.files[0]);
+    });
+    dz.onclick = function(){ $("docFile").click(); };
+    $("docPick").onclick = function(e){ e.preventDefault(); e.stopPropagation(); $("docFile").click(); };
+    $("docFile").onchange = function(){ sendDoc($("docFile").files[0]); $("docFile").value = ""; };
+  })();
+
+  $("btnDocCfg").onclick = function(){
+    var c = $("docCfgCard"); c.hidden = !c.hidden;
+  };
+  $("btnDocCfgSave").onclick = function(){
+    api("/api/docs/config", {path:$("dc_path").value.trim(), lang:$("dc_lang").value.trim(),
+                             dpi:parseInt($("dc_dpi").value, 10) || 300})
+      .then(function(){ toast("Сохранено"); return loadDocs(); })
+      .catch(function(e){ $("docErr").textContent = "Не удалось сохранить" + apiWhy(e); });
+  };
+
+  /* ---------- разбор строк ---------- */
+  function assetRegs(){ return cfg.registries.filter(function(r){ return r.kind !== "supplies"; }); }
+  function targetOptions(sel){
+    return '<option value="">— выберите раздел —</option>' +
+      cfg.registries.map(function(r){
+        return '<option value="'+esc(r.id)+'"'+(sel===r.id?" selected":"")+'>'+esc(r.name)+'</option>';
+      }).join("");
+  }
+  /* Вторая колонка зависит от первой: для оборудования это тип, для материалов —
+     существующий материал или новый по наименованию из накладной. */
+  /* Для оборудования выбирается категория или подкатегория, а тип заводится
+     из наименования материала — так просил заказчик: «наименование должно
+     добавиться в Тип». Для материалов выбирается сам материал. */
+  function secondOptions(row){
+    var r = reg(row.target);
+    if(!r) return '<option value="">—</option>';
+    if(r.kind === "supplies"){
+      return '<option value="">создать «'+esc((row.name||"").slice(0,40))+'»</option>' +
+        cfg.supplies.map(function(m){
+          return '<option value="'+esc(m.id)+'"'+(row.supplyId===m.id?" selected":"")+'>'+
+                 esc(m.name)+'</option>'; }).join("");
+    }
+    var out = '<option value="">— выберите категорию —</option>';
+    cfg.categories.filter(function(c){ return rid(c) === r.id; }).forEach(function(c){
+      var v = "cat:" + c.id;
+      out += '<option value="'+esc(v)+'"'+(row.catId===v?" selected":"")+'>'+esc(c.name)+'</option>';
+      cfg.subcategories.filter(function(g){ return (g.categoryId||"") === c.id; })
+        .forEach(function(g){
+          var gv = "sub:" + g.id;
+          out += '<option value="'+esc(gv)+'"'+(row.catId===gv?" selected":"")+'>'+
+                 "\u00a0\u00a0\u00a0" + esc(g.name)+'</option>';
+        });
+    });
+    return out;
+  }
+  function renderDocRows(){
+    var rows = (curDoc && curDoc.rows) || [];
+    $("drBody").innerHTML = rows.map(function(r, i){
+      var done = !!r.done;
+      return '<tr data-r="'+i+'"'+(done ? ' class="row-done" title="уже заведено"' : '')+
+        '><td class="num">'+(i+1)+(done ? " ✓" : "")+'</td>'+
+        '<td><input class="js-sku" value="'+esc(r.sku||"")+'"'+
+          (reg(r.target) && reg(r.target).kind === "supplies"
+            ? ' disabled title="у расходных материалов номенклатура не нужна"' : '')+'></td>'+
+        '<td><input class="js-name" value="'+esc(r.name||"")+'"></td>'+
+        '<td><input class="js-qty" type="number" min="1" value="'+esc(r.qty||"1")+'"></td>'+
+        '<td><select class="js-target">'+targetOptions(r.target)+'</select></td>'+
+        '<td><select class="js-second">'+secondOptions(r)+'</select></td>'+
+        '<td>'+(done ? '' : '<button class="ic js-rowdel" title="Убрать строку: её не заводить">✕</button>')+
+        '</td></tr>';
+    }).join("");
+    $("drEmpty").hidden = rows.length > 0;
+    var left = rows.filter(function(r){ return !r.done && !r.target; }).length;
+    $("dr_count").textContent = rows.length
+      ? ("строк: " + rows.length + (left ? ", без раздела: " + left : ", все размечены"))
+      : "";
+  }
+  function readDocRows(){
+    var out = [];
+    document.querySelectorAll("#drBody tr").forEach(function(tr){
+      var idx = parseInt(tr.dataset.r, 10);
+      var was = (curDoc && curDoc.rows && curDoc.rows[idx]) || {};
+      out.push({sku: tr.querySelector(".js-sku").value.trim(),
+                name: tr.querySelector(".js-name").value.trim(),
+                qty: tr.querySelector(".js-qty").value || "1",
+                target: tr.querySelector(".js-target").value,
+                done: !!was.done,
+                catId: "", typeId: "", supplyId: ""});
+      var r = out[out.length - 1];
+      var second = tr.querySelector(".js-second").value;
+      var rg = reg(r.target);
+      if(rg && rg.kind === "supplies") r.supplyId = second; else r.catId = second;
+    });
+    return out;
+  }
+  function openDoc(id){
+    var d = docs.find(function(x){ return x.id === id; });
+    if(!d) return;
+    curDoc = {id:d.id, rows:(d.rows || []).slice()};
+    var applied = d.status === "applied";
+    $("dlgDocTitle").textContent = "Накладная" + (d.number ? " № " + d.number : "") +
+      (applied ? " · уже заведена" : "");
+    /* По заведённой накладной второй раз проводить нельзя: иначе та же техника
+       появится в учёте дважды. Открыть её обратно может только администратор. */
+    var mayScan = can("docs.scan");
+    $("btnDrApply").hidden = applied || !mayScan;
+    $("btnDrReopen").hidden = !(applied && isAdmin());
+    $("btnDrDel").hidden = !mayScan;
+    $("btnDrAdd").hidden = !mayScan;
+    $("btnDrBulk").hidden = !mayScan;
+    $("dr_applied").hidden = !applied;
+    $("dr_applied").textContent = applied
+      ? ("Записи по этой накладной уже заведены" +
+         (d.appliedAt ? " " + fmtWhen(d.appliedAt) : "") + "." +
+         (isAdmin() ? " Чтобы дописать пропущенное, нажмите «Открыть заново»: " +
+                      "заведённые строки повторно не проводятся."
+                    : " Чтобы дописать пропущенное, обратитесь к администратору."))
+      : "";
+    $("dr_num").textContent  = d.number || "—";
+    $("dr_date").textContent = d.date ? fmtDate(d.date) : "—";
+    $("dr_who").textContent  = d.who || "—";
+    /* В плохих сканах номер склада не пропечатывается — тогда его вписывают
+       руками, иначе техника осядет без склада. Поэтому здесь поле с подсказками,
+       а не список: незнакомый номер сервер заведёт сам. */
+    $("dr_wh").value = d.warehouse || "";
+    $("dr_whList").innerHTML = (cfg.warehouses || []).map(function(w){
+      return '<option value="' + esc(w.code || "") + '">' +
+             esc((w.code ? w.code + " · " : "") + (w.name || "")) + '</option>'; }).join("");
+    $("dr_whHint").textContent = d.warehouse
+      ? ((cfg.warehouses || []).some(function(w){ return (w.code||"").trim() === d.warehouse.trim(); })
+          ? "" : "Склада " + d.warehouse + " ещё нет — заведётся при сохранении.")
+      : "Номер склада в документе не прочитался — впишите его сами.";
+    $("dr_file").href = "/api/docs/" + encodeURIComponent(d.id) + "/file";
+    $("dr_file").textContent = d.origName || "открыть";
+    $("dr_bulk").innerHTML = targetOptions("");
+    $("dr_err").textContent = "";
+    renderDocRows();
+    $("dlgDoc").showModal();
+  }
+  $("docsBody").addEventListener("click", function(e){
+    var tr = e.target.closest("tr[data-doc]"); if(!tr) return;
+    if(e.target.closest(".js-docdel")){ askDeleteDoc(tr.dataset.doc); return; }
+    openDoc(tr.dataset.doc);
+  });
+
+  /* Ошибочно загруженный документ убирается только с объяснением — запись
+     уходит в тот же журнал удалений, что и записи учёта. */
+  function askDeleteDoc(id){
+    var d = docs.find(function(x){ return x.id === id; });
+    if(!d) return;
+    askDeleteReason("накладная " + (d.number ? "№ " + d.number + " · " : "") +
+                    (d.origName || ""), function(reason){
+      api("/api/docs/delete", {id:id, reason:reason})
+        .then(function(){ toast("Накладная удалена"); return loadDocs(); })
+        .catch(function(e){
+          toast(e && e.message ? e.message : ("Не удалось удалить" + apiWhy(e)));
+        });
+    });
+  }
+  $("drBody").addEventListener("change", function(e){
+    if(!e.target.closest(".js-target")) return;
+    curDoc.rows = readDocRows();
+    renderDocRows();
+  });
+  $("drBody").addEventListener("click", function(e){
+    var b = e.target.closest(".js-rowdel"); if(!b) return;
+    var tr = b.closest("tr"), idx = parseInt(tr.dataset.r, 10);
+    curDoc.rows = readDocRows();
+    curDoc.rows.splice(idx, 1);
+    renderDocRows();
+  });
+  $("btnDrBulk").onclick = function(){
+    var t = $("dr_bulk").value;
+    curDoc.rows = readDocRows().map(function(r){
+      if(!r.target) r.target = t;
+      return r;
+    });
+    renderDocRows();
+  };
+  $("btnDrAdd").onclick = function(){
+    curDoc.rows = readDocRows();
+    curDoc.rows.push({sku:"", name:"", qty:"1", target:"", catId:"", typeId:"", supplyId:""});
+    renderDocRows();
+  };
+  $("btnDrCancel").onclick = function(){ $("dlgDoc").close(); };
+  $("btnDrReopen").onclick = function(){
+    var id = curDoc && curDoc.id;
+    if(!id) return;
+    if(!confirm("Открыть накладную заново, чтобы дописать пропущенное?\n\n" +
+                "Строки, заведённые в прошлый раз, второй раз проведены не будут.")) return;
+    api("/api/docs/reopen", {id:id})
+      .then(function(){
+        toast("Накладная открыта");
+        $("dlgDoc").close();
+        return loadDocs().then(function(){ openDoc(id); });
+      })
+      .catch(function(e){ $("dr_err").textContent = "Не удалось открыть" + apiWhy(e); });
+  };
+  $("btnDrDel").onclick = function(){
+    var id = curDoc && curDoc.id;
+    $("dlgDoc").close();
+    if(id) askDeleteDoc(id);
+  };
+  $("btnDrApply").onclick = function(){
+    var all = readDocRows(), rows = all.filter(function(r){ return !r.done; });
+    var err = "";
+    /* Всё обязательно: раздел, категория и склад — иначе техника заводится
+       «в никуда», а потом её не найти. Лишнюю строку убирают крестиком. */
+    if(!$("dr_wh").value.trim()) err = "Укажите склад-получатель";
+    else if(!rows.length) err = "Все строки уже заведены или убраны";
+    else rows.some(function(r, i){
+      var n = all.indexOf(r) + 1, rg = reg(r.target);
+      if(!r.target){ err = "Строка " + n + ": выберите, куда заводить"; return true; }
+      if(rg && rg.kind !== "supplies"){
+        if(!r.catId){ err = "Строка " + n + ": выберите категорию"; return true; }
+        var bad = invProblem(r.sku);
+        if(!r.sku.trim()){ err = "Строка " + n + ": впишите номенклатурный номер"; return true; }
+        if(bad){ err = "Строка " + n + ": " + bad; return true; }
+      }
+      return false;
+    });
+    if(err){ $("dr_err").textContent = err; return; }
+    $("dr_err").textContent = "";
+    $("btnDrApply").disabled = true;
+    api("/api/docs/apply", {id:curDoc.id, rows:all,
+                            warehouse:$("dr_wh").value.trim()})
+      .then(function(d){
+        var m = d.made || {};
+        toast("Заведено: оборудования " + (m.items||0) + ", приходов " + (m.receipts||0) +
+              (m.already ? ", пропущено уже заведённых: " + m.already : ""));
+        $("dlgDoc").close();
+        return loadState().then(loadDocs);
+      })
+      .catch(function(e){ $("dr_err").textContent = "Не удалось завести" + apiWhy(e); })
+      .then(function(){ $("btnDrApply").disabled = false; });
+  };
 
   /* ================== область просмотра для администратора ==================
      На дашборде, ремонтах, уведомлениях и в журнале удалений администратор может
@@ -3554,7 +4804,6 @@
   }
 
   function loadOrgs(){
-    if(!can("org.manage")) return Promise.resolve();
     return api("/api/orgs/access").then(function(d){
       orgStaff = d.staff || [];
       renderOrgsScreen(d.orgs || []);
@@ -3591,7 +4840,7 @@
     $("accBody").innerHTML = orgStaff.map(function(st, i){
       return '<tr><td class="num">'+(i+1)+'</td>'+ cellText(st.name) +
         cellText(st.roleName || "—") +
-        '<td><select class="js-staff-org" data-s="'+esc(st.id)+'">' +
+        '<td><select class="js-staff-org" data-s="'+esc(st.id)+'"'+(can("org.manage") ? '' : ' disabled')+'>' +
           orgList.map(function(o){
             return '<option value="'+esc(o.id)+'"'+(st.orgId === o.id ? " selected" : "")+'>'+
                    esc(o.name)+'</option>'; }).join("") +
@@ -3613,12 +4862,13 @@
     $("allStats").innerHTML =
       tile("Учреждений", orgOverview.length) + tile("Всего записей", sum("items")) +
       tile("В эксплуатации", sum("inUse")) + tile("В ремонте", sum("repair")) +
-      tile("Пользователей", sum("people"));
+      tile("Сотрудников", sum("people"));
     $("allBody").innerHTML = orgOverview.map(function(o, i){
       return '<tr class="pick" data-go="'+esc(o.id)+'"><td class="num">'+(i+1)+'</td>'+
         cellText(o.name + (o.id === orgId ? " · вы здесь" : "")) +
         '<td>'+o.items+'</td><td>'+o.inUse+'</td><td>'+o.stock+'</td>'+
         '<td>'+o.repair+(o.openRepairs ? ' <span class="chip">откр. '+o.openRepairs+'</span>' : '')+'</td>'+
+        '<td>'+(o.toOff||0)+'</td>'+
         '<td>'+o.off+'</td><td class="hide-md">'+o.people+'</td><td>'+o.staff+'</td></tr>';
     }).join("");
     $("allEmpty").hidden = orgOverview.length > 0;
@@ -3640,7 +4890,7 @@
     $("o_err").textContent = "";
     $("o_hint").textContent = o
       ? "Удалить можно только учреждение без записей учёта."
-      : "Новое учреждение сразу получит четыре заводских раздела. Справочники, пользователи и настройки домена у него свои.";
+      : "Новое учреждение сразу получит четыре заводских раздела. Справочники, сотрудники и настройки домена у него свои.";
     $("btnOrgDel").hidden = !o || orgList.length < 2;
     $("dlgOrg").showModal();
     setTimeout(function(){ $("o_name").focus(); }, 30);
@@ -3750,11 +5000,82 @@
      Пароль служебной учётной записи живёт только на сервере: сюда он не приходит
      никогда, а пустое поле при сохранении означает «оставить прежний». */
   var adCfg = null;
+  /* Учреждение-получатель. Настройки домена у каждого свои, поэтому выбор здесь
+     одновременно и «чьи настройки показываем», и «куда попадут люди». */
+  var adOrg = "";
+
+  function adOrgFill(){
+    var sel = $("ad_org");
+    sel.innerHTML = orgs.map(function(o){
+      return '<option value="'+esc(o.id)+'">'+esc(o.name)+'</option>'; }).join("");
+    if(!adOrg || !orgs.some(function(o){ return o.id === adOrg; })) adOrg = orgId;
+    sel.value = adOrg;
+    sel.disabled = orgs.length < 2;
+    $("ad_orgHint").textContent = orgs.length < 2
+      ? "Учреждение одно — сотрудники попадут в него."
+      : "У каждого учреждения свои настройки домена. Сотрудники, подразделения и отделы " +
+        "попадут именно в выбранное — проверьте перед загрузкой.";
+  }
+  $("ad_org").onchange = function(){
+    adOrg = $("ad_org").value;
+    loadAd();
+  };
+
+  /* ---------- вход через домен ---------- */
+  var aaCfg = null;
+  function loadAdAuth(){
+    if(!can("ad.view")) return Promise.resolve();
+    return api("/api/adauth").then(function(d){
+      aaCfg = d.config || {};
+      var orgOpts = orgs.map(function(o){ return '<option value="'+esc(o.id)+'">'+esc(o.name)+'</option>'; }).join("");
+      $("aa_org").innerHTML = orgOpts; $("aa_neworg").innerHTML = orgOpts;
+      $("aa_role").innerHTML = '<option value="">— без роли (только просмотр) —</option>' +
+        (cfg.roles||[]).map(function(r){ return '<option value="'+esc(r.id)+'">'+esc(r.name)+'</option>'; }).join("");
+      $("aa_on").checked = !!aaCfg.enabled;
+      $("aa_org").value = aaCfg.orgId || orgId;
+      $("aa_neworg").value = aaCfg.newOrgId || orgId;
+      $("aa_suffix").value = aaCfg.suffix || "";
+      $("aa_group").value = aaCfg.group || "";
+      $("aa_role").value = aaCfg.roleId || "";
+      var adm = isAdmin();
+      ["aa_on","aa_org","aa_neworg","aa_suffix","aa_group","aa_role"].forEach(function(id){ $(id).disabled = !adm; });
+      hide("btnAaSave", adm); hide("btnAaTest", adm);
+      $("aa_hint").textContent = aaCfg.enabled ? "Вход через домен включён." : "Вход через домен выключен — заходят только по паролям, выданным администратором.";
+    }).catch(function(){});
+  }
+  function aaBody(){
+    return {enabled:$("aa_on").checked, orgId:$("aa_org").value, newOrgId:$("aa_neworg").value,
+            suffix:$("aa_suffix").value.trim(), group:$("aa_group").value.trim(), roleId:$("aa_role").value};
+  }
+  $("btnAaSave").onclick = function(){
+    $("aa_err").textContent = "";
+    api("/api/adauth", aaBody()).then(function(){ toast("Сохранено"); return loadAdAuth(); })
+      .catch(function(e){ $("aa_err").textContent = "Не удалось сохранить" + apiWhy(e); });
+  };
+  $("btnAaTest").onclick = function(){
+    var lg = prompt("Доменный логин для проверки (например, i.ivanov):", me ? (me.login || "") : "");
+    if(!lg) return;
+    var pw = prompt("Пароль этой учётной записи (не сохраняется):", "");
+    if(pw === null) return;
+    $("aa_err").textContent = "";
+    api("/api/adauth/test", {login:lg, password:pw, config:aaBody()})
+      .then(function(d){
+        var w = d.who || {};
+        toast("Домен принял: " + (w.name || w.login));
+        $("aa_hint").textContent = "Проверка прошла: " + (w.name || "") + " (" + (w.login || "") + ")" +
+          (w.position ? ", " + w.position : "") + "; групп: " + ((w.groups || []).length);
+      })
+      .catch(function(e){ $("aa_err").textContent = (e && e.message) ? e.message : ("Проверка не прошла" + apiWhy(e)); });
+  };
 
   function loadAd(){
-    if(!can("staff.manage")) return Promise.resolve();
-    return api("/api/ldap").then(function(d){
+    loadAdAuth();
+    if(!can("ad.sync")) return Promise.resolve();
+    adOrgFill();
+    return api("/api/ldap?orgId=" + encodeURIComponent(adOrg)).then(function(d){
       adCfg = d.config || {};
+      adOrg = d.orgId || adOrg;
+      $("ad_org").value = adOrg;
       $("ad_server").value = adCfg.server || "";
       $("ad_base").value   = adCfg.baseDn || "";
       $("ad_user").value   = adCfg.user || "";
@@ -3771,14 +5092,16 @@
       $("cntAd").textContent = adCfg.server ? "✓" : "";
       var L = d.last;
       $("adLast").textContent = L
-        ? ("Последняя загрузка: " + fmtWhen(L.at) + (L.by ? ", " + L.by : "") +
-           " — найдено " + L.found + ", добавлено " + L.added + ", обновлено " + L.updated)
-        : "Загрузка из домена ещё не выполнялась.";
+        ? ("Последняя загрузка в «" + orgName(adOrg) + "»: " + fmtWhen(L.at) +
+           (L.by ? ", " + L.by : "") + " — найдено " + L.found +
+           ", добавлено " + L.added + ", обновлено " + L.updated)
+        : ("В «" + orgName(adOrg) + "» загрузка из домена ещё не выполнялась.");
     }).catch(function(){});
   }
 
   function adPayload(){
-    var o = {server:$("ad_server").value.trim(), baseDn:$("ad_base").value.trim(),
+    var o = {orgId:adOrg,
+             server:$("ad_server").value.trim(), baseDn:$("ad_base").value.trim(),
              ou:$("ad_ou").value.trim(), subtree:$("ad_sub").checked,
              user:$("ad_user").value.trim(), markAttr:$("ad_attr").value.trim() || "employeeType",
              markValue:$("ad_val").value.trim() || "ok",
@@ -3818,7 +5141,7 @@
   };
   $("btnAdTest").onclick = function(){
     $("ad_err").textContent = ""; adBusy(true, "btnAdTest");
-    adSave().then(function(){ return api("/api/ldap/test", {}); }).then(function(d){
+    adSave().then(function(){ return api("/api/ldap/test", {orgId:adOrg}); }).then(function(d){
       var lines = (d.sample || []).map(function(x){
         return x.name + " · " + (x.position || "должность не указана") +
                " · " + (x.department || "без отдела") + " · " + (x.company || "без организации") +
@@ -3833,14 +5156,14 @@
   };
   $("btnAdSync").onclick = function(){
     $("ad_err").textContent = ""; adBusy(true, "btnAdSync");
-    adSave().then(function(){ return api("/api/ldap/sync", {}); }).then(function(d){
+    adSave().then(function(){ return api("/api/ldap/sync", {orgId:adOrg}); }).then(function(d){
       var t = d.stats || {};
-      adShow("Загрузка завершена",
+      adShow("Загрузка завершена — " + orgName(adOrg),
         tile("Найдено в домене", t.found || 0) + tile("Добавлено", t.added || 0) +
         tile("Обновлено", t.updated || 0) + tile("Новых подразделений", t.divisions || 0) +
         tile("Новых отделов", t.departments || 0),
         d.log && d.log.length ? d.log : ["Новых сотрудников и справочников не появилось."]);
-      toast("Загружено из домена: " + (t.found || 0));
+      toast("Загружено в «" + orgName(adOrg) + "»: " + (t.found || 0));
       return loadState();
     }).catch(adError).then(function(){ adBusy(false); $("btnAdSync").textContent = AD_LABEL.btnAdSync; });
   };
@@ -3966,9 +5289,13 @@
       var un = prompt("Единица измерения ("+cfg.units.join(", ")+"):", m.unit||cfg.units[0]||"шт");
       if(un!==null){
         un = String(un).trim();
-        if(un){
-          m.unit = un;
-          if(cfg.units.indexOf(un) === -1) cfg.units.push(un);
+        var known = cfg.units.find(function(u){ return u.toLowerCase()===un.toLowerCase(); });
+        /* новые единицы — только администратор: иначе список расползётся на «шт», «шт.», «штук» */
+        if(un && !known && !isAdmin()){
+          toast("Такой единицы нет. Новую может добавить только администратор");
+        } else if(un){
+          m.unit = known || un;
+          if(!known) cfg.units.push(un);
         }
       }
       saveCfg(); toast("Количество меняется приходами — вкладка «История поступлений»"); return;
@@ -4031,7 +5358,7 @@
       ? '<option value="">— выберите сотрудника —</option>' + cfg.users.slice().sort(function(a,b){
           return a.name.toLowerCase()<b.name.toLowerCase()?-1:1; }).map(function(u){
           return '<option value="'+esc(u.id)+'">'+esc(u.name)+'</option>'; }).join("")
-      : '<option value="">— пользователи не заведены —</option>';
+      : '<option value="">— сотрудники не заведены —</option>';
     if(keepU && byId("users", keepU)) $("isUser").value = keepU;
     if(!$("isDate").value) $("isDate").value = today();
 
@@ -4603,7 +5930,7 @@
     openReg(tr.dataset.reg, "items"); openDlg(it);
   });
 
-  /* ================== пользователи ================== */
+  /* ================== сотрудники ================== */
   function renderUsers(){
     var q = $("qUser").value.trim().toLowerCase();
     var list = cfg.users.slice().sort(function(a,b){ return a.name.toLowerCase()<b.name.toLowerCase()?-1:1; })
@@ -4632,7 +5959,7 @@
                   : ' title="Удалить"')+'>✕</button>'])+'</tr>';
     }).join("");
     var e = $("usersEmpty"); e.hidden = list.length>0;
-    e.textContent = cfg.users.length ? "Ничего не найдено." : "Пользователи пока не заведены.";
+    e.textContent = cfg.users.length ? "Ничего не найдено." : "Сотрудники пока не заведены.";
   }
   $("qUser").oninput = renderUsers;
 
@@ -4678,10 +6005,14 @@
     $("ui_pos").textContent = u.position || "—";
     $("ui_div").textContent = nameById("divisions", u.divisionId) || "—";
     $("ui_dep").textContent = nameById("departments", u.departmentId) || "—";
-    var own = items.filter(function(i){ return i.owner===u.id && i.status!==ST_OFF; });
+    var own = itemsOfPerson(u.id);
     $("ui_items").innerHTML = miniTable(
       ["Раздел","Инв. номер","Тип","Статус"],
-      own.map(function(i){ return [(reg(rid(i))||{}).name||"", i.inv||"", typeName(i.type)||"", i.status||""]; }),
+      own.map(function(i){
+        var h = holderOf(i);
+        return [(reg(rid(i))||{}).name||"", i.inv||"",
+                (typeName(i.type)||"") + (h.kind==="item" && h.parent ? " · прикреплено к инв. " + (h.parent.inv||"—") : ""),
+                i.status||""]; }),
       "За сотрудником ничего не закреплено.",
       own.map(function(i){ return i.id; }));
     var iss = cfg.issues.filter(function(x){ return x.userId===u.id; })
@@ -4702,7 +6033,7 @@
 
   function openUser(u){
     editingUser = u ? u.id : null;
-    $("dlgUserTitle").textContent = u ? "Пользователь: "+u.name : "Новый пользователь";
+    $("dlgUserTitle").textContent = u ? "Сотрудник: "+u.name : "Новый сотрудник";
     $("u_name").value = u ? u.name : "";
     $("u_pos").value = u ? (u.position||"") : "";
     $("u_phone").value = u ? (u.phone||"") : "";
@@ -4712,6 +6043,10 @@
     $("u_div").value = u ? (u.divisionId||"") : "";
     $("u_dep").value = u ? (u.departmentId||"") : "";
     $("btnUserDel").hidden = !u;
+    var mayUsers = can("users.manage");
+    $("dlgUser").querySelectorAll("input,select,textarea").forEach(function(el){ el.disabled = !mayUsers; });
+    $("btnUserSave").hidden = !mayUsers;
+    if(!mayUsers) $("btnUserDel").hidden = true;
     $("dlgUser").showModal();
     setTimeout(function(){ $("u_name").focus(); }, 30);
   }
@@ -4737,7 +6072,7 @@
       return;
     }
     var used = itemsOfUser(u.id), iss = cfg.issues.filter(function(x){ return x.userId===u.id; }).length;
-    if(!confirm("Удалить пользователя «"+u.name+"»?"+
+    if(!confirm("Удалить сотрудника «"+u.name+"»?"+
       (used?"\nВ "+used+" списанных позициях он останется только в истории.":"")+
       (iss?"\nЗаписей о выданных материалах: "+iss+" — сотрудник в них перестанет отображаться.":""))) return;
     cfg.users = cfg.users.filter(function(x){ return x.id!==u.id; });
@@ -4763,7 +6098,7 @@
     });
     var keys = Object.keys(names);
     if(!keys.length){ toast("Новых имён в записях не нашлось"); return; }
-    if(!confirm("Создать пользователей из записей: "+keys.length+"?\nВ карточках вместо текста будет ссылка на справочник.")) return;
+    if(!confirm("Создать сотрудников из записей: "+keys.length+"?\nВ карточках вместо текста будет ссылка на справочник.")) return;
     var map = {};
     keys.forEach(function(k){
       var exist = cfg.users.find(function(u){ return u.name.toLowerCase()===k; });
@@ -4776,10 +6111,10 @@
       if(id){ it.owner = id; touched.push(it); }
     });
     saveCfg(); saveItems(touched);
-    toast("Готово: пользователей "+keys.length+", обновлено записей "+touched.length);
+    toast("Готово: сотрудников "+keys.length+", обновлено записей "+touched.length);
   };
 
-  /* ================== сотрудники ИТ ================== */
+  /* ================== пользователи ИТ ================== */
   function renderStaff(){
     var q = $("qStaff").value.trim().toLowerCase();
     var list = (cfg.staff||[]).slice().sort(function(a,b){
@@ -4790,7 +6125,8 @@
       });
     $("staffBody").innerHTML = list.map(function(x, i){
       return '<tr class="pick" data-s="'+esc(x.id)+'"><td class="num">'+(i+1)+'</td>'+
-        cellText(x.name)+cellText(x.position||"—")+
+        '<td title="'+esc(x.name)+'">'+esc(x.name)+(x.auth==="ad" ? ' <span class="chip" title="входит с доменным паролем">AD</span>' : '')+'</td>'+
+        cellText(x.position||"—")+
         '<td><label class="chk"><input type="checkbox" data-master'+(x.isMaster?' checked':'')+
           (isAdmin()?'':' disabled title="назначает администратор"')+'> мастер</label></td>'+
         '<td>'+(function(){
@@ -4803,16 +6139,23 @@
               '<button class="ic btn-danger js-del" title="Удалить">✕</button>'])+'</tr>';
     }).join("");
     var e = $("staffEmpty"); e.hidden = list.length>0;
-    e.textContent = (cfg.staff||[]).length ? "Ничего не найдено." : "Сотрудники ИТ пока не заведены.";
+    e.textContent = (cfg.staff||[]).length ? "Ничего не найдено." : "Пользователи ИТ пока не заведены.";
   }
   $("qStaff").oninput = renderStaff;
   var editingStaff = null;
+  $("st_auth").onchange = function(){
+    var ad = this.value === "ad";
+    $("st_pass").disabled = ad;
+    $("st_pass").placeholder = ad ? "проверяет домен — здесь не нужен" : "оставьте пустым, чтобы не менять";
+  };
   function openStaff(x){
     editingStaff = x ? x.id : null;
-    $("dlgStaffTitle").textContent = x ? ("Сотрудник ИТ: "+x.name) : "Новый сотрудник ИТ";
+    $("dlgStaffTitle").textContent = x ? ("Пользователь ИТ: "+x.name) : "Новый пользователь ИТ";
     $("st_name").value = x ? x.name : "";
     $("st_pos").value = x ? (x.position||"") : "";
     $("st_login").value = x ? (x.login||"") : "";
+    $("st_auth").value = x ? (x.auth||"local") : "local";
+    $("st_auth").onchange();
     $("st_org").innerHTML = orgs.map(function(o){
       return '<option value="'+esc(o.id)+'">'+esc(o.name)+'</option>'; }).join("");
     $("st_org").value = (x && x.orgId) || orgId;
@@ -4825,6 +6168,10 @@
     $("st_master").checked = !!(x && x.isMaster);
     $("st_active").checked = x ? (x.active !== false) : true;
     $("btnStaffDel").hidden = !x;
+    var mayStaff = can("staff.manage");
+    $("dlgStaff").querySelectorAll("input,select,textarea").forEach(function(el){ el.disabled = !mayStaff; });
+    $("btnStaffSave").hidden = !mayStaff;
+    if(!mayStaff) $("btnStaffDel").hidden = true;
     $("dlgStaff").showModal();
     setTimeout(function(){ $("st_name").focus(); }, 30);
   }
@@ -4890,7 +6237,9 @@
     };
     body.orgId = $("st_org").value;
     body.canEdit = $("st_edit").checked;
-    if($("st_pass").value) body.password = $("st_pass").value;
+    body.auth = $("st_auth").value;
+    if(body.auth === "ad" && !lg){ toast("Для входа через домен нужен доменный логин"); return; }
+    if(body.auth !== "ad" && $("st_pass").value) body.password = $("st_pass").value;
     api("/api/staff", body)
       .then(function(){ $("dlgStaff").close(); toast("Сохранено"); return loadState(); })
       .catch(apiError);
@@ -4970,7 +6319,7 @@
   $("qRole").oninput = renderRoles;
 
   function openRole(r){
-    if(!can("staff.manage")){ toast("Роли настраивает администратор"); return; }
+    if(!can("staff.manage") && !r){ toast("Роли настраивает тот, кому выдано право"); return; }
     editingRole = r ? r.id : null;
     $("dlgRoleTitle").textContent = r ? ("Роль: "+r.name) : "Новая роль";
     $("rl_name").value = r ? r.name : "";
@@ -4988,6 +6337,10 @@
                  esc(a[1])+'</option>'; }).join("")+'</select></td></tr>';
     }).join("");
     $("btnRoleDel").hidden = !r || r.builtin;
+    var mayRoles = can("staff.manage");
+    $("dlgRole").querySelectorAll("input,select,textarea").forEach(function(el){ el.disabled = !mayRoles; });
+    $("btnRoleSave").hidden = !mayRoles;
+    if(!mayRoles) $("btnRoleDel").hidden = true;
     $("dlgRole").showModal();
     setTimeout(function(){ $("rl_name").focus(); }, 30);
   }
@@ -5036,17 +6389,21 @@
   /* ================== подразделения и отделы ================== */
   var SIMPLE = {
     divisions: {field:"division", userField:"divisionId", title:"подразделение"},
-    departments:{field:"department", userField:"departmentId", title:"отдел"}
+    departments:{field:"department", userField:"departmentId", title:"отдел"},
+    places:     {field:"place", userField:"", title:"место"}
   };
   function renderSimple(key){
     var conf = SIMPLE[key];
+    if(!$(key+"Body")) return;
     $(key+"Body").innerHTML = cfg[key].map(function(o, i){
       var used = items.filter(function(i){ return i[conf.field]===o.id; }).length;
-      var staff = cfg.users.filter(function(u){ return u[conf.userField]===o.id; }).length;
+      var staff = conf.userField ? cfg.users.filter(function(u){ return u[conf.userField]===o.id; }).length : null;
       return '<tr data-id="'+esc(o.id)+'"><td class="num">'+(i+1)+'</td>'+
-        cellText(o.name)+'<td>'+staff+'</td><td>'+used+'</td>'+
-        acts(['<button class="ic js-ren" title="Переименовать">✎</button>',
-              '<button class="ic btn-danger js-del" title="Удалить">✕</button>'])+'</tr>';
+        cellText(o.name)+(staff===null ? '' : '<td>'+staff+'</td>')+'<td>'+used+'</td>'+
+        acts(can("users.manage")
+          ? ['<button class="ic js-ren" title="Переименовать">✎</button>',
+             '<button class="ic btn-danger js-del" title="Удалить">✕</button>']
+          : [])+'</tr>';
     }).join("");
     $(key+"Empty").hidden = cfg[key].length > 0;
   }
@@ -5057,8 +6414,16 @@
       if(!n){ toast("Введите название"); return; }
       if(cfg[key].some(function(o){ return o.name.toLowerCase()===n.toLowerCase(); })){ toast("Уже есть в списке"); return; }
       cfg[key].push({id:uid(key[0]), name:n}); $(inpId).value=""; saveCfg(); toast("Добавлено");
+      var card = $("add"+key.charAt(0).toUpperCase()+key.slice(1)); if(card) card.hidden = true;
     };
     document.querySelector('[data-add="'+key+'"]').onclick = add;
+    /* форма добавления показывается по кнопке, а не висит постоянно */
+    var showBtn = $("btnShow"+key.charAt(0).toUpperCase()+key.slice(1));
+    if(showBtn) showBtn.onclick = function(){
+      var card = $("add"+key.charAt(0).toUpperCase()+key.slice(1));
+      card.hidden = !card.hidden;
+      if(!card.hidden) $(inpId).focus();
+    };
     $(inpId).addEventListener("keydown", function(e){ if(e.key==="Enter") add(); });
     $(key+"Body").addEventListener("click", function(e){
       var tr = e.target.closest("tr"); if(!tr) return;
@@ -5068,7 +6433,7 @@
         var used = items.filter(function(i){ return i[conf.field]===o.id; }).length;
         if(!confirm("Удалить "+conf.title+" «"+o.name+"»?"+(used?"\nИспользуется в "+used+" позициях.":""))) return;
         cfg[key] = cfg[key].filter(function(x){ return x.id!==o.id; });
-        cfg.users.forEach(function(u){ if(u[conf.userField]===o.id) u[conf.userField]=""; });
+        if(conf.userField) cfg.users.forEach(function(u){ if(u[conf.userField]===o.id) u[conf.userField]=""; });
         saveCfg();
       }
     });
@@ -5081,7 +6446,9 @@
   }
   function refreshFilters(){
     var keep = {c:$("fCat").value, g:$("fSub").value, t:$("fType").value, s:$("fStatus").value,
-                d:$("fDiv").value, p:$("fDep").value};
+                d:$("fDiv").value, p:$("fDep").value, m:$("fModel").value};
+    $("fModel").innerHTML = opts(regModels(), "Все модели"); $("fModel").value = keep.m;
+    $("fModel").hidden = !regModels().length;
     $("fCat").innerHTML = opts(regCats(), "Все категории"); $("fCat").value = keep.c;
     $("fSub").innerHTML = opts(subsOf(keep.c), "Все подкатегории"); $("fSub").value = keep.g;
     $("fType").innerHTML = opts(typesOf(keep.c, $("fSub").value), "Все типы"); $("fType").value = keep.t;
@@ -5094,12 +6461,13 @@
   }
   /* подписей у фильтров нет — активные подсвечиваем, чтобы было видно, что список сужен */
   function markFilters(){
-    var ids = ["fCat","fSub","fType","fStatus","fDiv","fDep"], active = 0;
+    var ids = ["fCat","fSub","fType","fModel","fStatus","fDiv","fDep"], active = 0;
     ids.forEach(function(id){
       var el = $(id), on = !!el.value;
       el.classList.toggle("act", on);
       if(on) active++;
     });
+    if(xferOnly) active++;
     $("btnReset").hidden = !active;
     $("btnReset").textContent = active>1 ? ("Сбросить · "+active) : "Сбросить";
   }
@@ -5186,6 +6554,7 @@
     var cur = {}, none = currentNone();
     document.querySelectorAll("#specFields [data-spec]").forEach(function(el){ cur[el.dataset.spec]=fieldValue(el); });
     renderSpecFields($("f_type").value, cur, none);
+    if($("attLockNote")) lockAttached();
   }
   function fieldValue(el){
     if(!el) return "";
@@ -5275,14 +6644,34 @@
      из подразделения её уже забрали, а решения комиссии ждут месяцами.
      Кто был ответственным — остаётся в истории записи. */
   function ownerless(st){ return st===ST_STOCK || st===ST_OFF || st===ST_TOOFF; }
+  function whCode(id){
+    var w = (cfg.warehouses || []).find(function(x){ return x.id === id; });
+    return w ? (w.code || w.name || "") : "";
+  }
+  function whName(id){
+    var w = (cfg.warehouses || []).find(function(x){ return x.id === id; });
+    return w ? ((w.code ? w.code + " · " : "") + (w.name || "")) : "";
+  }
+  function fillWarehouses(sel){
+    $("f_wh").innerHTML = '<option value="">— не указан —</option>' +
+      (cfg.warehouses || []).map(function(w){
+        return '<option value="'+esc(w.id)+'"'+(sel===w.id?" selected":"")+'>'+
+               esc((w.code ? w.code + " · " : "") + (w.name || ""))+'</option>'; }).join("");
+    /* у расходных материалов склада нет — они лежат общей кучей */
+    $("wrapWh").hidden = isSupplyReg(curReg);
+  }
   function syncStatusFields(){
     var st = $("f_status").value, isNew = !editingId;
     var prevIt = editingId ? items.find(function(x){ return x.id===editingId; }) : null;
     var back = !!(prevIt && prevIt.status===ST_REPAIR && st!==ST_REPAIR);   /* вернули из ремонта */
-    var noOwner = ownerless(st);
-    $("wrapOwner").hidden = noOwner;
-    $("wrapDiv").hidden   = noOwner;
-    $("wrapDep").hidden   = noOwner;
+    var noOwner = ownerless(st), holder = $("f_holder").value || "person";
+    $("wrapHolder").hidden = noOwner;
+    $("wrapOwner").hidden = noOwner || holder !== "person";
+    $("wrapDiv").hidden   = noOwner || holder !== "person";
+    $("wrapDep").hidden   = noOwner || holder !== "person";
+    $("wrapPlace").hidden = noOwner || holder !== "place";
+    $("wrapParent").hidden = noOwner || holder !== "item";
+    $("wrapHide").hidden   = noOwner || holder !== "item";
     var wantQty = (st===ST_STOCK && isNew), wantRep = (st===ST_REPAIR);
     var wantOff = (st===ST_OFF), wantReady = (st===ST_READY);
     var wantToOff = (st===ST_TOOFF);   /* передали комиссии, ждём решения */
@@ -5300,6 +6689,8 @@
     document.querySelector('label[for="f_owner"]').innerHTML = "Ответственный сотрудник" + useMark;
     document.querySelector('label[for="f_div"]').innerHTML   = "Подразделение" + useMark;
     document.querySelector('label[for="f_dep"]').innerHTML   = "Отдел" + useMark;
+    document.querySelector('label[for="f_place"]').innerHTML = "Место" + useMark;
+    document.querySelector('label[for="f_parent"]').innerHTML = "Прикрепить к оборудованию" + useMark;
     document.querySelector('label[for="f_sdate"]').textContent =
       (back || wantReady) ? "Дата возврата" : wantToOff ? "Дата передачи" : "Дата";
     document.querySelector('label[for="f_snote"]').textContent =
@@ -5317,12 +6708,63 @@
       $("f_master").innerHTML = ms.length
         ? '<option value="">— не назначен —</option>' + ms.map(function(m){
             return '<option value="'+esc(m.id)+'">'+esc(m.name)+(m.position?" — "+esc(m.position):"")+'</option>'; }).join("")
-        : '<option value="">— мастера не отмечены в разделе «Сотрудники ИТ» —</option>';
+        : '<option value="">— мастера не отмечены в разделе «Пользователи ИТ» —</option>';
       if(keep && ms.some(function(m){ return m.id===keep; })) $("f_master").value = keep;
     }
     if((wantRep || wantOff) && !$("f_sdate").value) $("f_sdate").value = today();
   }
   $("f_status").onchange = function(){ syncStatusFields(); refreshSpecFields(); validateSpecs(); };
+  /* Прикреплённое повторяет основное: статус, склад, ремонт и характеристики у
+     него не правятся — они приходят от оборудования, к которому оно прикреплено.
+     Чтобы что-то менять, сначала открепляют (выбирают «За сотрудником»). */
+  var cardEditable = true;
+  function lockAttached(){
+    var it = editingId ? items.find(function(x){ return x.id===editingId; }) : null;
+    var parent = ($("f_holder").value === "item" && $("f_parent").value)
+      ? items.find(function(x){ return x.id===$("f_parent").value; }) : null;
+    var lock = !!(it && parent);
+    if(lock){
+      $("f_status").value = parent.status || $("f_status").value;
+      $("f_wh").value = parent.warehouse || "";
+    }
+    ["f_status","f_wh","f_master","f_sdate","f_snote","f_qty"].forEach(function(id){
+      $(id).disabled = !cardEditable || lock;
+    });
+    document.querySelectorAll("#specFields input, #specFields select, #specFields textarea").forEach(function(el){
+      el.disabled = !cardEditable || lock;
+    });
+    $("attLockNote").hidden = !lock;
+    $("attLockNote").textContent = lock
+      ? "Прикреплено к инв. " + (parent.inv || "—") + ": статус, склад, ремонт и характеристики берутся " +
+        "от него и здесь не меняются. Чтобы править — сначала открепите (выберите «За сотрудником»)."
+      : "";
+  }
+  $("f_holder").onchange = function(){ syncStatusFields(); lockAttached(); };
+  $("f_parent").onchange = function(){ lockAttached(); };
+  $("f_xfer").onchange = function(){
+    var on = this.checked;
+    $("xferBox").hidden = !on;
+    /* пока передаём — склад-отправитель не трогаем, его меняет сама передача */
+    $("f_wh").disabled = on;
+    if(on){
+      /* склады всех учреждений: передача на чужой склад увозит технику в то учреждение */
+      var cur = $("f_wh").value;
+      var fill = function(list){
+        var byOrg = {};
+        list.filter(function(w){ return w.id !== cur; }).forEach(function(w){
+          (byOrg[w.orgName || ""] = byOrg[w.orgName || ""] || []).push(w); });
+        var html = '<option value="">— выберите склад —</option>';
+        Object.keys(byOrg).forEach(function(on){
+          html += '<optgroup label="'+esc(on || "Учреждение")+'">' + byOrg[on].map(function(w){
+            return '<option value="'+esc(w.id)+'">'+esc((w.code ? w.code + " · " : "") + (w.name || ""))+'</option>';
+          }).join("") + '</optgroup>';
+        });
+        $("f_xwh").innerHTML = html;
+      };
+      fill((cfg.warehouses || []).map(function(w){ return {id:w.id, code:w.code, name:w.name, orgName:""}; }));
+      api("/api/warehouses/all").then(function(d){ fill(d.warehouses || []); }).catch(function(){});
+    }
+  };
 
   function openDlg(it){
     if(!regTypes().length && !it){
@@ -5332,6 +6774,35 @@
     editingId = it ? it.id : null;
     $("f_cat").innerHTML = opts(regCats(), "— все категории —");
     $("f_cat").value = it ? catOfType(it.type) : "";
+    $("f_model").innerHTML = regModels().length ? opts(regModels(), "— не указана —")
+                                                : '<option value="">— моделей ещё нет —</option>';
+    $("f_model").value = it ? (it.model||"") : "";
+    $("f_holder").value = it ? (it.holder||"person") : "person";
+    $("f_place").innerHTML = cfg.places.length ? opts(cfg.places, "— выберите место —")
+                                               : '<option value="">— места ещё не заведены —</option>';
+    $("f_place").value = it ? (it.place||"") : "";
+    /* прикрепить можно к любой записи этого раздела, кроме самой себя и тех,
+       что прикреплены к ней (иначе цепочка замкнётся) */
+    var selfId = it ? it.id : "", below = {};
+    if(selfId){
+      var stack = [selfId];
+      while(stack.length){ var cur = stack.pop(); attachedTo(cur).forEach(function(c){ if(!below[c.id]){ below[c.id] = true; stack.push(c.id); } }); }
+    }
+    $("f_parent").innerHTML = '<option value="">— выберите оборудование —</option>' +
+      regItems().filter(function(x){ return x.id !== selfId && !below[x.id]; })
+        .sort(function(a,b){ return (a.inv||"").localeCompare(b.inv||""); })
+        .map(function(x){
+          var who = ownerName(x.owner);
+          return '<option value="'+esc(x.id)+'">'+esc((x.inv||"—") + " · " + (typeName(x.type)||"") + (who ? " · " + who : ""))+'</option>';
+        }).join("");
+    $("f_parent").value = it ? (it.parent||"") : "";
+    $("f_hide").checked = !!(it && it.hideAttached);
+    var att = it ? attachedTo(it.id) : [];
+    $("attBox").hidden = !att.length;
+    $("attList").innerHTML = miniTable(["Инв. номер","Модель","Тип","Статус","В списке"],
+      att.map(function(x){ return [x.inv||"", modelName(x.model)||"", typeName(x.type)||"", x.status||"",
+                                    x.hideAttached ? "скрыто" : "видно"]; }),
+      "", att.map(function(x){ return x.id; }));
     refreshSubSelect($("f_cat").value, it ? subOfType(it.type) : "");
     refreshTypeSelect($("f_cat").value, $("f_sub").value, it ? it.type : "");
     refreshOwnerSelect(it ? (it.owner||"") : "");
@@ -5345,6 +6816,7 @@
     $("f_dep").value = it ? (it.department||"") : "";
     $("dlgTitle").textContent = (it ? "Карточка: " + (it.inv || typeName(it.type) || "") : "Новая запись") + " · " + reg().name;
     $("f_inv").value = it ? (it.inv||"") : "";
+    showInvHint();
     $("f_status").value = it && it.status ? it.status : sts[0];
     $("f_qty").value = "1";
     $("f_sdate").value = it ? (it.statusDate||"") : "";
@@ -5353,6 +6825,13 @@
     syncStatusFields();
     if(it && it.masterId) $("f_master").value = it.masterId;
     $("f_notes").value = it ? (it.notes||"") : "";
+    fillWarehouses(it ? (it.warehouse||"") : "");
+    /* передача — только у уже заведённой единицы оборудования: новой сразу
+       ставят нужный склад, а у материалов складов нет */
+    $("xferWrap").hidden = !it || isSupplyReg(curReg);
+    $("f_xfer").checked = false; $("xferBox").hidden = true;
+    $("f_xnote").value = ""; $("f_xfile").value = "";
+    $("f_wh").disabled = false;
     $("btnDel").hidden = !it;
     renderSpecFields($("f_type").value, it ? it.specs : null, it ? it.specsNone : null);
     var reps = it ? cfg.repairs.filter(function(r){ return r.itemId===it.id; })
@@ -5369,16 +6848,21 @@
     var h = (it && it.history) || [];
     $("histBox").hidden = !h.length;
     $("hist").innerHTML = h.slice().reverse().map(function(e){
-      return "<li>"+esc(e.d)+(e.who ? ", <b>"+esc(e.who)+"</b>" : "")+" — "+esc(e.t)+"</li>";
+      /* ссылка приходит только у той передачи, к которой прикладывали файл */
+      var link = e.transferId
+        ? ' <a href="/api/transfers/'+encodeURIComponent(e.transferId)+'/file" target="_blank">открыть накладную</a>' : "";
+      return "<li>"+esc(histWhen(e))+(e.who ? ", <b>"+esc(e.who)+"</b>" : "")+" — "+esc(e.t)+link+"</li>";
     }).join("");
     $("lastEdit").textContent = it && it.updatedBy
       ? ("последнее изменение: " + it.updatedBy + (it.updatedAt ? ", " + fmtWhen(it.updatedAt) : ""))
       : "";
     var editable = canEdit(it ? rid(it) : curReg);
+    cardEditable = editable;
     $("dlg").querySelectorAll("input,select,textarea").forEach(function(el){
       if(el.closest("#specFields") || el.id.indexOf("f_")===0) el.disabled = !editable;
     });
     if(editable) syncStatusFields();
+    lockAttached();
     $("btnSave").hidden = !editable;
     $("btnDel").hidden = !it || !editable;
     if(!editable) $("dlgTitle").textContent += " · только просмотр";
@@ -5412,9 +6896,41 @@
     var d = new Date().toLocaleDateString("ru-RU");
     o.history = o.history || [];
     o.historyAdd = o.historyAdd || [];
-    o.history.push({d:d, t:text, who: me ? me.name : ""});
+    o.history.push({d:d, t:text, who: me ? me.name : "", at:new Date().toISOString()});
     o.historyAdd.push({d:d, t:text});
   }
+  /* дата и время события; у старых строк времени нет — только дата */
+  function histWhen(e){ return e.at ? fmtWhen(e.at) : (e.d || ""); }
+
+  /* Номер в учёте бывает двух видов: номенклатурный — 7 цифр, он общий для
+     одинаковых единиц (сервер сам допишет /2, /3…), и инвентарный — 10 цифр,
+     свой у каждой единицы. Всё остальное — опечатка, и о ней говорим сразу,
+     разными словами для разных промахов: так человеку понятнее, что поправить. */
+  var RE_INV_SUFFIX = new RegExp("/[0-9]+$");
+  function invKind(v){
+    var base = String(v||"").trim().replace(RE_INV_SUFFIX, "");
+    if(!base) return "";
+    if(!/^[0-9]+$/.test(base)) return "bad";
+    return base.length === 7 ? "nom" : base.length === 10 ? "inv" : "bad";
+  }
+  function invProblem(v){
+    var base = String(v||"").trim().replace(RE_INV_SUFFIX, "");
+    if(!base) return "";
+    if(!/^[0-9]+$/.test(base)) return "Номер состоит только из цифр: 7 — номенклатурный, 10 — инвентарный";
+    var n = base.length;
+    if(n < 7)  return "Неправильный номенклатурный номер: в нём 7 цифр, а здесь " + n;
+    if(n === 8 || n === 9) return "Что вы хотели написать: номенклатурный (7 цифр) или инвентарный (10 цифр)?";
+    if(n > 10) return "Извините, такого инвентарного номера в вашей конторе нет: их 10 цифр, а здесь " + n;
+    return "";
+  }
+  function showInvHint(){
+    var v = $("f_inv").value, h = $("f_invHint"), bad = invProblem(v), k = invKind(v);
+    h.style.color = bad ? "var(--danger)" : "";
+    h.textContent = bad ? bad
+      : k === "nom" ? "номенклатурный номер — у одинаковых единиц сервер допишет /2, /3…"
+      : k === "inv" ? "инвентарный номер — свой у каждой единицы" : "";
+  }
+  $("f_inv").addEventListener("input", showInvHint);
 
   function collect(){
     var prev = editingId ? items.find(function(x){ return x.id===editingId; }) : null;
@@ -5423,21 +6939,30 @@
       var val = fieldValue(el);
       if(!none[el.dataset.spec] && val!=="") specs[el.dataset.spec] = val;
     });
+    var attached = !!(prev && $("f_holder").value === "item" && $("f_parent").value &&
+                      items.some(function(x){ return x.id===$("f_parent").value; }));
+    var parentWh = function(){ var pp = items.find(function(x){ return x.id===$("f_parent").value; }); return pp ? (pp.warehouse||"") : ""; };
     var o = {
       id: editingId || undefined,
       registryId: prev ? rid(prev) : curReg,
       inv: $("f_inv").value.trim(),
       type: $("f_type").value,
-      status: $("f_status").value,
-      owner:      ownerless($("f_status").value) ? "" : $("f_owner").value,
-      division:   ownerless($("f_status").value) ? "" : $("f_div").value,
-      department: ownerless($("f_status").value) ? "" : $("f_dep").value,
+      status: attached ? (prev.status || $("f_status").value) : $("f_status").value,
+      owner:      ownerless($("f_status").value) || $("f_holder").value !== "person" ? "" : $("f_owner").value,
+      division:   ownerless($("f_status").value) || $("f_holder").value !== "person" ? "" : $("f_div").value,
+      department: ownerless($("f_status").value) || $("f_holder").value !== "person" ? "" : $("f_dep").value,
+      model:      $("f_model").value,
+      holder:     ownerless($("f_status").value) ? "person" : $("f_holder").value,
+      place:      $("f_holder").value === "place" ? $("f_place").value : "",
+      parent:     $("f_holder").value === "item" ? $("f_parent").value : "",
+      hideAttached: $("f_holder").value === "item" && $("f_hide").checked,
       notes: $("f_notes").value.trim(),
+      warehouse: isSupplyReg(curReg) ? "" : (attached ? (parentWh() || prev.warehouse || "") : $("f_wh").value),
       masterId:   $("f_status").value===ST_REPAIR ? $("f_master").value : "",
       statusDate: $("wrapSDate").hidden ? "" : $("f_sdate").value,
       statusNote: $("wrapSNote").hidden ? "" : $("f_snote").value.trim(),
-      specs: specs,
-      specsNone: none,
+      specs: attached ? (prev.specs || {}) : specs,
+      specsNone: attached ? (prev.specsNone || {}) : none,
       history: (prev && prev.history) ? prev.history.slice() : []
     };
     var now = new Date().toLocaleDateString("ru-RU");
@@ -5466,6 +6991,14 @@
         if((prev.department||"") !== o.department) addHistory(o, "Отдел: "+(nameById("departments",prev.department)||"—")+" → "+(nameById("departments",o.department)||"—"));
       }
       if((prev.type||"") !== o.type) addHistory(o, "Тип: "+(typeName(prev.type)||"—")+" → "+(typeName(o.type)||"—"));
+      if((prev.model||"") !== o.model) addHistory(o, "Модель: "+(modelName(prev.model)||"—")+" → "+(modelName(o.model)||"—"));
+      var hk = function(x){
+        var k = x.holder||"person";
+        if(k==="place") return "за местом " + (nameById("places", x.place)||"—");
+        if(k==="item"){ var pp = items.find(function(y){ return y.id===x.parent; }); return "за оборудованием инв. " + (pp ? pp.inv : "—"); }
+        return "за сотрудником";
+      };
+      if(hk(prev) !== hk(o) && !(ownerless(o.status) && ownerless(prev.status||""))) addHistory(o, "Закреплено: " + hk(prev) + " → " + hk(o));
     }
     return o;
   }
@@ -5474,29 +7007,82 @@
   $("btnCancel").onclick = function(){ $("dlg").close(); };
   $("btnSave").onclick = function(){
     var o = collect();
+    var prevIt = editingId ? items.find(function(x){ return x.id===editingId; }) : null;
+    /* Старые записи с номерами другого вида не трогаем: проверяем только то,
+       что человек ввёл или поменял сейчас. */
+    if(o.inv && (!prevIt || (prevIt.inv||"") !== o.inv)){
+      var invErr = invProblem(o.inv);
+      if(invErr){ showInvHint(); toast(invErr); $("f_inv").focus(); return; }
+    }
     if(!o.inv && !o.type){ toast("Укажите номенклатуру или тип"); return; }
+    /* Без категории, типа и склада запись потом не найти и не посчитать —
+       заказчик просил сделать их обязательными. Подкатегорию спрашиваем лишь
+       там, где она у категории есть. */
+    var need = [];
+    if(regCats().length && !$("f_cat").value) need.push(["f_cat", "категорию"]);
+    else if(regLayout(curReg).subs && subsOf($("f_cat").value).length && !$("f_sub").value) need.push(["f_sub", "подкатегорию"]);
+    if(!o.type) need.push(["f_type", "тип"]);
+    /* у прикреплённого склад — от основного, его не спрашиваем */
+    if(!isSupplyReg(curReg) && !o.warehouse && !(o.holder === "item" && o.parent)) need.push(["f_wh", "склад"]);
+    if(need.length){
+      var noWh = !isSupplyReg(curReg) && !(cfg.warehouses || []).length;
+      toast("Укажите: " + need.map(function(x){ return x[1]; }).join(", ") +
+            (noWh ? " (склад сначала заведите на экране «Склады»)" : ""));
+      $(need[0][0]).focus();
+      return;
+    }
     if(can("repair.assign") && o.status===ST_REPAIR && masters().length && !o.masterId){
       toast("Выберите мастера"); return; }
     if(o.status===ST_USE){
       var miss = [];
-      if(!o.owner)      miss.push("ответственного сотрудника");
-      if(!o.division)   miss.push("подразделение");
-      if(!o.department) miss.push("отдел");
-      if(miss.length){
-        toast("Для статуса «В эксплуатации» укажите: " + miss.join(", "));
-        $(!o.owner ? "f_owner" : !o.division ? "f_div" : "f_dep").focus();
-        return;
+      if(o.holder === "place"){
+        if(!o.place){ toast("Для статуса «В эксплуатации» укажите место"); $("f_place").focus(); return; }
+      } else if(o.holder === "item"){
+        if(!o.parent){ toast("Укажите оборудование, к которому прикрепляете"); $("f_parent").focus(); return; }
+      } else {
+        if(!o.owner)      miss.push("ответственного сотрудника");
+        if(!o.division)   miss.push("подразделение");
+        if(!o.department) miss.push("отдел");
+        if(miss.length){
+          toast("Для статуса «В эксплуатации» укажите: " + miss.join(", "));
+          $(!o.owner ? "f_owner" : !o.division ? "f_div" : "f_dep").focus();
+          return;
+        }
       }
     }
+    if(o.holder === "item" && !o.parent && !ownerless(o.status)){ toast("Укажите оборудование, к которому прикрепляете"); $("f_parent").focus(); return; }
+    if(o.holder === "place" && !o.place && !ownerless(o.status)){ toast("Выберите место"); $("f_place").focus(); return; }
     var bad = validateSpecs();
     if(bad.length){
       toast(bad.length===1 ? bad[0] : "Проверьте характеристики — проблем: "+bad.length);
       var first = document.querySelector("#specFields .bad"); if(first) first.focus();
       return;
     }
+    var xfer = null;
+    if(editingId && !$("xferWrap").hidden && $("f_xfer").checked){
+      if(!$("f_xwh").value){ toast("Выберите склад-получатель"); $("f_xwh").focus(); return; }
+      if(!$("f_xnote").value.trim()){ toast("Напишите, почему передаёте"); $("f_xnote").focus(); return; }
+      xfer = {toWh:$("f_xwh").value, note:$("f_xnote").value.trim(),
+              file:($("f_xfile").files && $("f_xfile").files[0]) || null};
+    }
     if(!o.id) o.id = uid();
     var prevItem = editingId ? items.find(function(x){ return x.id===editingId; }) : null;
     if(syncRepairLog(prevItem, o)) saveCfg();
+    if(xfer){
+      var xid = o.id;
+      putLocal(o); renderAll();
+      api("/api/items", {items:[o]}).then(function(){
+        var fd = new FormData();
+        fd.append("itemId", xid); fd.append("toWh", xfer.toWh); fd.append("note", xfer.note);
+        if(xfer.file) fd.append("file", xfer.file);
+        return fetch("/api/transfer", {method:"POST", body:fd, credentials:"same-origin"})
+          .then(function(r){ return r.json().catch(function(){ return {}; })
+            .then(function(j){ if(!r.ok){ j.status = r.status; throw j; } return j; }); });
+      }).then(function(){ toast("Передано на другой склад"); })
+        .catch(function(e){ toast("Передача не выполнена" + (e && e.message ? " — " + e.message : apiWhy(e))); })
+        .then(function(){ return loadState().then(loadTransfers); });
+      $("dlg").close(); return;
+    }
     var qty = (!editingId && o.status===ST_STOCK) ? Math.max(1, parseInt($("f_qty").value,10)||1) : 1;
     if(qty > 1){
       var uf = specsOf(o.type).filter(function(sp){ return sp.uniq && o.specs[sp.id]; });
@@ -5512,6 +7098,11 @@
     }
     saveItem(o); $("dlg").close();
   };
+  $("attList").addEventListener("click", function(e){
+    var tr = e.target.closest("tr[data-open]"); if(!tr) return;
+    var it = items.find(function(x){ return x.id===tr.dataset.open; });
+    if(it){ $("dlg").close(); openDlg(it); }
+  });
   $("btnDel").onclick = function(){
     if(!editingId) return;
     var it = items.find(function(x){ return x.id===editingId; }) || {};
@@ -5545,8 +7136,9 @@
   $("fDep").onchange = renderItems;
   $("btnReset").onclick = function(){
     $("fCat").value=""; $("fSub").value=""; $("fType").value=""; $("fStatus").value="";
-    $("fDiv").value=""; $("fDep").value=""; refreshFilters(); renderItems();
+    $("fDiv").value=""; $("fDep").value=""; $("fModel").value=""; xferOnly = false; refreshFilters(); renderItems();
   };
+  $("btnXferOnly").onclick = function(){ xferOnly = !xferOnly; markFilters(); renderItems(); };
 
 
   /* ================== выгрузка в Excel (.xlsx) ==================
@@ -5763,7 +7355,7 @@
 
   /* ================== CSV ================== */
   var BASE = [["inv","Инвентарный номер/Номенклатура"],["catName","Категория"],["subName","Подкатегория"],
-    ["typeName","Тип"],["status","Статус"],["ownerName","Ответственный сотрудник"],
+    ["modelName","Модель"],["typeName","Тип"],["status","Статус"],["ownerName","Ответственный сотрудник"],
     ["divName","Подразделение"],["depName","Отдел"],["notes","Примечание"]];
 
   /* Каждая характеристика уезжает в собственную колонку: ОЗУ, диск, IP, имя ПК —
@@ -5792,7 +7384,9 @@
   }
 
   function exportCSV(){
-    var list = filtered(), ft = $("fType").value, fg = $("fSub").value;
+    showHiddenAttached = true;
+    var list = filtered(); showHiddenAttached = false;
+    var ft = $("fType").value, fg = $("fSub").value;
     var cols = specColumns(list, ft ? specsOf(ft) : fg ? subSpecs(fg) : []);
     var head = BASE.map(function(c){ return c[1]; })
       .concat(cols.map(function(c){ return c.title; }));
@@ -5854,7 +7448,7 @@
         });
       suffix = "поступления";
     } else if(supTab==="issued"){
-      head = ["Дата","Материал","Кол-во","Пользователь","Подразделение","Отдел","Примечание"];
+      head = ["Дата","Материал","Кол-во","Сотрудник","Подразделение","Отдел","Примечание"];
       rows = cfg.issues.slice()
         .sort(function(a,b){ return (b.date||"").localeCompare(a.date||""); })
         .map(function(x){
@@ -6019,8 +7613,8 @@
     rows.push(["Материалов на складе", onStock]);
     rows.push(["Поступлений материалов", cfg.receipts.length]);
     rows.push(["Списаний материалов", cfg.issues.length]);
-    rows.push(["Пользователей", cfg.users.length]);
-    rows.push(["Сотрудников ИТ", (cfg.staff||[]).length]);
+    rows.push(["Сотрудников", cfg.users.length]);
+    rows.push(["Пользователей ИТ", (cfg.staff||[]).length]);
     rows.push(["Подразделений", cfg.divisions.length]);
     rows.push(["Отделов", cfg.departments.length]);
     rows.push(["Занятых IP", usedIps().length]);
@@ -6106,9 +7700,9 @@
     render();
     renderDash(); renderRegDash();
     refreshFilters(); renderItems();
-    renderCategories(); renderSubcategories(); renderTypes(); renderSpecs(); renderPresets();
+    renderCategories(); renderSubcategories(); renderTypes(); renderModels(); renderSpecs(); renderPresets();
     renderSup(); renderIps(); renderUsers(); renderStaff(); renderNotices(); renderRepairs();
-    renderRoles(); renderDels(); renderOverview();
+    renderRoles(); renderDels(); renderOverview(); renderDocs(); renderWh();
     Object.keys(SIMPLE).forEach(renderSimple);
   }
 

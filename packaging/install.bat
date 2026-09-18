@@ -49,7 +49,7 @@ if exist ".venv\Scripts\python.exe" (
 )
 
 echo   Ставлю библиотеки из папки wheels. Интернет не нужен ...
-".venv\Scripts\python.exe" -m pip install --no-index --find-links wheels flask "psycopg[binary]" waitress ldap3
+".venv\Scripts\python.exe" -m pip install --no-index --find-links wheels flask "psycopg[binary]" waitress ldap3 pypdfium2 pytesseract pillow
 if errorlevel 1 (
   echo.
   echo   Библиотеки установить не удалось.
