@@ -544,7 +544,6 @@
             <select id="qField" title="Где искать">
               <option value="">Везде</option>
               <option value="inv">Инвентарный номер</option>
-              <option value="sku">Номенклатурный номер</option>
               <option value="catName">Категория</option>
               <option value="subName">Подкатегория</option>
               <option value="typeName">Тип</option>
@@ -574,15 +573,14 @@
           <div class="tablewrap">
             <table id="tbl">
               <colgroup>
-                <col style="width:3.4%"><col style="width:9%"><col class="hide-sm" style="width:8%"><col class="hide-sm" style="width:9%">
-                <col style="width:10%"><col class="hide-md col-sub" style="width:9%">
-                <col style="width:14%"><col style="width:10%"><col style="width:10%">
-                <col style="width:6%"><col class="hide-md" style="width:6%"><col class="hide-sm" style="width:5.6%">
+                <col style="width:3.4%"><col style="width:9%"><col class="hide-sm" style="width:9%">
+                <col style="width:11%"><col class="hide-md col-sub" style="width:10%">
+                <col style="width:15%"><col style="width:11%"><col style="width:11%">
+                <col style="width:6.6%"><col class="hide-md" style="width:7%"><col class="hide-sm" style="width:7%">
               </colgroup>
               <thead><tr>
                 <th class="num">#</th>
                 <th data-s="inv">Инв. номер<span class="arr"></span></th>
-                <th data-s="sku" class="hide-sm">Номенкл.<span class="arr"></span></th>
                 <th data-s="cost" class="hide-sm">Стоимость<span class="arr"></span></th>
                 <th data-s="catName">Категория<span class="arr"></span></th>
                 <th data-s="subName" class="hide-md col-sub">Подкатегория<span class="arr"></span></th>
@@ -1538,8 +1536,6 @@
       <div class="field"><label for="f_inv">Инвентарный номер</label>
         <input id="f_inv" inputmode="numeric" placeholder="7 цифр — номенклатурный, 10 — инвентарный">
         <div class="note" id="f_invHint" style="margin:3px 0 0;min-height:14px"></div></div>
-      <div class="field"><label for="f_sku">Номенклатурный номер</label>
-        <input id="f_sku" inputmode="numeric" placeholder="как в накладной: 7086302"></div>
       <div class="field"><label for="f_cost">Стоимость</label>
         <input id="f_cost" inputmode="decimal" placeholder="цена из накладной"></div>
       <div class="field"><label for="f_cat">Категория</label><select id="f_cat"></select></div>
@@ -3593,7 +3589,7 @@
       if(fp && it.department !== fp) return false;
       if(!q) return true;
       var hay = qf ? (it[qf] || "")
-        : [it.inv,it.sku,it.catName,it.subName,it.typeName,it.modelName,it.status,it.ownerName,it.divName,it.depName,it.notes,specText(it)].join(" ");
+        : [it.inv,it.catName,it.subName,it.typeName,it.modelName,it.status,it.ownerName,it.divName,it.depName,it.notes,specText(it)].join(" ");
       return String(hay).toLowerCase().indexOf(q) !== -1;
     });
     list.sort(function(a,b){
@@ -3639,7 +3635,6 @@
       return '<tr class="pick" data-id="'+esc(it.id)+'">'+
         '<td class="num">'+(i+1)+'</td>'+
         '<td class="mono" title="'+esc(it.inv||"")+'">'+esc(it.inv||"")+'</td>'+
-        '<td class="mono hide-sm" title="'+esc(it.sku||"")+'">'+esc(it.sku||"")+'</td>'+
         '<td class="mono hide-sm" title="'+esc(money(it.cost))+'">'+esc(money(it.cost))+'</td>'+
         cellText(it.catName) +
         '<td class="hide-md" title="'+esc(it.subName||"")+'">'+esc(it.subName||"")+'</td>'+
@@ -7537,7 +7532,6 @@
     $("f_dep").value = it ? (it.department||"") : "";
     $("dlgTitle").textContent = (it ? "Карточка: " + (it.inv || typeName(it.type) || "") : "Новая запись") + " · " + reg().name;
     $("f_inv").value = it ? (it.inv||"") : "";
-    $("f_sku").value  = it ? (it.sku||"") : "";
     $("f_cost").value = it && it.cost != null ? money(it.cost) : "";
     showInvHint();
     $("f_status").value = it && it.status ? it.status : sts[0];
@@ -7669,7 +7663,6 @@
       id: editingId || undefined,
       registryId: prev ? rid(prev) : curReg,
       inv: $("f_inv").value.trim(),
-      sku: $("f_sku").value.trim(),
       cost: numVal($("f_cost").value),
       type: $("f_type").value,
       status: attached ? (prev.status || $("f_status").value) : $("f_status").value,
@@ -8079,7 +8072,7 @@
   }
 
   /* ================== CSV ================== */
-  var BASE = [["inv","Инвентарный номер"],["sku","Номенклатурный номер"],["cost","Стоимость"],
+  var BASE = [["inv","Инвентарный номер"],["cost","Стоимость"],
     ["catName","Категория"],["subName","Подкатегория"],
     ["modelName","Модель"],["typeName","Тип"],["status","Статус"],["ownerName","Ответственный сотрудник"],
     ["divName","Подразделение"],["depName","Отдел"],["notes","Примечание"]];
@@ -8313,7 +8306,7 @@
         else specs[sp.id] = v;
       });
       var row = {
-        registryId: curReg, inv: inv, sku: g("sku"), cost: numVal(g("cost")), type: typeId,
+        registryId: curReg, inv: inv, cost: numVal(g("cost")), type: typeId,
         status: sts.indexOf(g("status"))!==-1 ? g("status") : sts[0],
         owner: ownerId,
         division: findOrAdd("divisions", g("divName")),

@@ -662,7 +662,7 @@ def load_state(user, org_id):
             for r in rows("select * from item where registry_id = any(%s) order by inv", (reg_ids,)):
                 items.append({
                     "id": r["id"], "registryId": r["registry_id"], "inv": r["inv"],
-                    "sku": r["sku"] or "", "cost": js_num(r["cost"]),
+                    "cost": js_num(r["cost"]),
                     "type": r["type_id"] or "", "status": r["status"],
                     "owner": r["owner_id"] or "", "division": r["division_id"] or "",
                     "department": r["department_id"] or "", "notes": r["notes"],
@@ -1031,16 +1031,16 @@ def save_items(items, user, org_id):
             if parent == it["id"]:
                 parent = ""                      # к самой себе не прикрепить
             cur.execute("""
-                insert into item (id, registry_id, inv, sku, cost, type_id, status, owner_id,
+                insert into item (id, registry_id, inv, cost, type_id, status, owner_id,
                                   division_id,
                                   department_id, notes, specs, specs_none, master_id,
                                   status_date, status_note, warehouse_id,
                                   model_id, holder, place_id, parent_id, hide_attached,
                                   updated_by, updated_by_name, updated_at)
-                values (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s, now())
+                values (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s, now())
                 on conflict (id) do update set
                   registry_id = excluded.registry_id, inv = excluded.inv,
-                  sku = excluded.sku, cost = excluded.cost, type_id = excluded.type_id,
+                  cost = excluded.cost, type_id = excluded.type_id,
                   status = excluded.status, owner_id = excluded.owner_id,
                   division_id = excluded.division_id, department_id = excluded.department_id,
                   notes = excluded.notes, specs = excluded.specs, specs_none = excluded.specs_none,
@@ -1053,7 +1053,7 @@ def save_items(items, user, org_id):
                   updated_by_name = excluded.updated_by_name, updated_at = now(),
                   transferred_at = case when excluded.status = 'На складе'
                                         then item.transferred_at else null end
-            """, (it["id"], reg, it.get("inv", ""), (it.get("sku") or "").strip(),
+            """, (it["id"], reg, it.get("inv", ""),
                   to_num(it.get("cost")), it.get("type") or None, it.get("status", ""),
                   it.get("owner") or None, it.get("division") or None, it.get("department") or None,
                   it.get("notes", ""), json.dumps(it.get("specs", {})),
@@ -1982,11 +1982,11 @@ def api_docs_apply():
                     # одинаковая номенклатура на несколько единиц: 12345678, /2, /3…
                     inv = next_inv(cur, org_id, sku)
                     cur.execute("""
-                        insert into item (id, registry_id, inv, sku, cost, type_id, status, notes,
+                        insert into item (id, registry_id, inv, cost, type_id, status, notes,
                                           specs, specs_none, document_id, warehouse_id,
                                           updated_by, updated_by_name)
-                        values (%s,%s,%s,%s,%s,%s,'На складе',%s,'{}','{}',%s,%s,%s,%s)
-                    """, (item_id, target, inv, sku, to_num(r.get("cost")), tid,
+                        values (%s,%s,%s,%s,%s,'На складе',%s,'{}','{}',%s,%s,%s,%s)
+                    """, (item_id, target, inv, to_num(r.get("cost")), tid,
                           "накладная " + doc["number"] if doc["number"] else "",
                           did, wh_id, request.user["id"], request.user["name"]))
                     # в истории записи должно быть видно, кто и по какому
