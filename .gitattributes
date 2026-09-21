@@ -9,3 +9,9 @@
 *.md  text eol=lf
 *.html text
 *.txt text
+
+# Файлы Docker — всегда LF, они уезжают на Linux
+Dockerfile text eol=lf
+docker-compose.yml text eol=lf
+.dockerignore text eol=lf
+.env.example text eol=lf
