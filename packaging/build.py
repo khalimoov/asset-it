@@ -17,6 +17,9 @@
 Dockerfile, docker-compose.yml, .env.example и УСТАНОВКА-DOCKER.txt. Библиотеки
 и словари в него не кладутся — их ставит сборка образа (нужен интернет на сервере).
 
+Третий, asset-it-docker-offline (готовые образы, ~500 МБ) собирает не этот скрипт,
+а packaging/build-offline.sh — ему нужен Docker, которого здесь может не быть.
+
 Колёса берутся из уже собранного пакета, если он есть; иначе качаются через pip —
 для этого нужен интернет на той машине, где собирают. На сервере интернет не нужен.
 """
@@ -132,6 +135,10 @@ def build_docker():
     for name in ("Dockerfile", "docker-compose.yml", ".dockerignore", ".env.example"):
         shutil.copy2(ROOT / name, DOCK / name)
     shutil.copy2(PKG / "УСТАНОВКА-DOCKER.txt", DOCK / "УСТАНОВКА-DOCKER.txt")
+    # сборщик офлайн-пакета и его файлы: из этого пакета на машине с Docker
+    # и интернетом собирается asset-it-docker-offline для сервера без сети
+    shutil.copy2(PKG / "build-offline.sh", DOCK / "build-offline.sh")
+    shutil.copytree(PKG / "offline", DOCK / "offline")
     print("  asset-it-docker/ — собран")
     if "--no-zip" not in sys.argv:
         shutil.make_archive(str(ROOT / "dist" / "asset-it-docker"), "zip",

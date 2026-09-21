@@ -1006,6 +1006,28 @@ state → повторный setup → вход, и делает rollback (ло�
 `sc_setup.js` на стенде (подмена `fetch` вставляется в `<head>` через маркер `<!--BODY-->`
 в `stand.py`, иначе `loadState()` успевает отработать до подмены).
 
+### Офлайн-пакет Docker (21.09.2026)
+
+На сервере с Docker интернета тоже нет, поэтому третий пакет — готовые образы.
+`packaging/build-offline.sh` (запускать там, где есть Docker и интернет, из репозитория
+или из распакованного `asset-it-docker`): `docker build` → `docker pull postgres:16` →
+`docker save` обоих в `images.tar`, рядом `packaging/offline/{docker-compose.yml,
+install.sh, install-docker.sh, УСТАНОВКА-OFFLINE.txt}` и `.env.example`; ключ
+`--debs noble|jammy|bookworm` докачивает пять `.deb` Docker Engine с
+download.docker.com (`sort -V | tail -1` по каждому имени, ~90 МБ) — для сервера, где
+Docker ещё не стоит. Итог — `dist/asset-it-docker-offline.tar.gz` (~500 МБ).
+
+На сервере: `sudo sh install-docker.sh` (если нужен Docker, `dpkg -i docker-debs/*.deb`),
+затем `sudo sh install.sh`: `docker load -i images.tar`, папка `/opt/asset-it/documents`,
+`.env` со случайным паролем (если ещё нет), `docker compose up -d`. Офлайн-compose тот же,
+что и обычный, но без `build:` и с `pull_policy: never` — чтобы compose не полез в сеть.
+
+**Проверено без Docker**: сборщик прогнан с заглушкой `docker` в `PATH` (`fakebin`),
+скачивание `.deb` настоящее (noble: containerd 2.3.5, docker-ce 29.8.1, compose 5.5.1),
+архив собрался. Настоящий `docker build/save` и `install.sh` на сервере не проверялись —
+первый прогон смотреть по выводу скриптов. Тестовый `dist/asset-it-docker-offline*` с
+поддельным `images.tar` удалён, чтобы его случайно не увезли на сервер.
+
 ## 6. Что осталось сделать
 
 - **Админ-панель**: вход по логину/паролю и разграничение прав. Поля `login` и `role`

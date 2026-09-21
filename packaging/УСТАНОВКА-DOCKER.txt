@@ -20,6 +20,13 @@
     postgres:16, пакеты Debian (tesseract) и библиотеки Python.
     После сборки интернет не нужен.
 
+    Если на сервере интернета нет вовсе — используйте офлайн-пакет:
+    на любой машине с Docker и интернетом выполните из этой папки
+        sh build-offline.sh --debs noble      (noble — Ubuntu 24.04,
+                                               jammy — 22.04, bookworm — Debian 12)
+    и отвезите на сервер dist/asset-it-docker-offline.tar.gz.
+    Дальше — по offline/УСТАНОВКА-OFFLINE.txt (он же внутри архива).
+
 
 УСТАНОВКА
 ---------

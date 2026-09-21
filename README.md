@@ -47,6 +47,11 @@ python packaging/build.py
 репозитория образ поднимается напрямую: `cp .env.example .env`, вписать `PGPASSWORD`,
 `docker compose up -d --build`. Подробности — `packaging/УСТАНОВКА-DOCKER.txt`.
 
+Для сервера **без интернета** есть третий пакет с готовыми образами: на машине с Docker
+и интернетом `sh packaging/build-offline.sh --debs noble` → `dist/asset-it-docker-offline.tar.gz`
+(образы, compose, установщик, при `--debs` — ещё и .deb-пакеты самого Docker).
+Инструкция — `packaging/offline/УСТАНОВКА-OFFLINE.txt`.
+
 ## Чего нет в репозитории
 
 `server/.env` с паролем базы, собранный пакет `dist/`, датированные копии `backup/`.

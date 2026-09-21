@@ -1,0 +1,135 @@
+УЧЁТ ИТ-ОТДЕЛА — УСТАНОВКА В DOCKER БЕЗ ИНТЕРНЕТА (Linux)
+=========================================================
+
+Этот пакет (asset-it-docker-offline.tar.gz) уже содержит всё:
+  images.tar          готовые образы: приложение (asset-it) и PostgreSQL 16
+  docker-compose.yml  описание двух контейнеров, ничего не скачивает
+  install.sh          установка одной командой
+  install-docker.sh   установка самого Docker из папки docker-debs (если она есть)
+  docker-debs/        .deb-пакеты Docker Engine под конкретный выпуск ОС
+                      (появляется, если пакет собирали с ключом --debs)
+  .env.example        образец настроек
+  УСТАНОВКА-OFFLINE.txt — этот файл
+
+Интернет на сервере не нужен ни на одном шаге.
+
+
+ЧТО ДОЛЖНО БЫТЬ НА СЕРВЕРЕ
+--------------------------
+
+  * Linux x86-64: Ubuntu 22.04 / 24.04 или Debian 12
+  * Docker Engine с плагином compose.
+    Если его нет — ставится из этого же пакета (шаг 2), но выпуск ОС должен
+    совпадать с тем, под который собирали: смотрите docker-debs/VERSION.
+  * Свободно ~2 ГБ на диске под образы и базу.
+
+
+УСТАНОВКА
+---------
+
+  1. Скопируйте архив на сервер (флешка, scp) и распакуйте:
+
+       sudo mkdir -p /opt/asset-it
+       sudo tar -xzf asset-it-docker-offline.tar.gz -C /opt/asset-it
+       cd /opt/asset-it/asset-it-docker-offline
+
+  2. Если Docker ещё не установлен:
+
+       sudo sh install-docker.sh
+
+     Проверка:  docker --version   и   docker compose version
+
+  3. Установка приложения:
+
+       sudo sh install.sh
+
+     Скрипт загрузит образы из images.tar, создаст папку документов
+     /opt/asset-it/documents, файл .env со случайным паролем базы и поднимет
+     контейнеры. В конце напишет адрес.
+
+  4. Откройте в браузере  http://адрес-сервера:8000
+
+     Пока в базе нет ни одной учётной записи, страница показывает экран
+     первого запуска: впишите имя, придумайте логин и пароль — это будет
+     администратор. Остальных пользователей он заводит в разделе
+     «Пользователи ИТ».
+
+
+ЧТО ГДЕ ЛЕЖИТ ПОСЛЕ УСТАНОВКИ
+-----------------------------
+
+  /opt/asset-it/documents            архив накладных (файлы на диске сервера)
+  том docker «pgdata»                база данных
+  /opt/asset-it/asset-it-docker-offline/.env   пароль базы — не пересылать
+
+  Контейнеры перезапускаются сами после перезагрузки сервера.
+
+
+ОБНОВЛЕНИЕ НА НОВУЮ ВЕРСИЮ
+--------------------------
+
+  Распакуйте новый архив поверх старого (ваш .env останется) и снова:
+
+       sudo sh install.sh
+
+  Новые образы загрузятся, контейнеры пересоздадутся, схема базы доведётся
+  до актуальной сама. Данные и документы не трогаются.
+
+
+РЕЗЕРВНЫЕ КОПИИ
+---------------
+
+  База (файл складывать на другой диск):
+
+       docker compose exec -T db pg_dump -U asset_it -F c asset_it > asset-it-$(date +%F).dump
+
+  Восстановление в пустую базу:
+
+       docker compose exec -T db pg_restore -U asset_it -d asset_it -c < файл.dump
+
+  Документы — копия папки /opt/asset-it/documents.
+
+
+ПОВСЕДНЕВНОЕ (из папки с docker-compose.yml)
+--------------------------------------------
+
+  состояние             docker compose ps
+  журнал                docker compose logs -f app
+  остановить            docker compose stop
+  запустить             docker compose start
+  перезапустить app     docker compose restart app
+  снести контейнеры     docker compose down      (база и документы остаются)
+  снести с базой        docker compose down -v   (БЕЗВОЗВРАТНО удаляет базу)
+
+  Забыли пароль администратора:
+       docker compose exec app python server/reset_password.py <логин>
+
+
+ЕСЛИ ЧТО-ТО НЕ ТАК
+------------------
+
+  «pull access denied» / «image not found»
+      Образы не загрузились. Выполните вручную:  docker load -i images.tar
+      и проверьте:  docker images  (должны быть asset-it и postgres).
+
+  install-docker.sh ругается на зависимости
+      Выпуск ОС не совпадает с docker-debs/VERSION. Пересоберите пакет с нужным
+      ключом (--debs jammy для Ubuntu 22.04, noble — 24.04, bookworm — Debian 12)
+      или поставьте Docker любым другим способом.
+
+  Адреса в разделе «IP-адреса» не отвечают, хотя машины в сети
+      Опрос идёт через сеть Docker. Вариант — режим сети хоста: в
+      docker-compose.yml у app заменить блок ports на  network_mode: host
+      и выполнить  docker compose up -d.
+
+
+КАК СОБРАТЬ ЭТОТ ПАКЕТ (на машине с Docker и интернетом)
+--------------------------------------------------------
+
+  Из репозитория или из распакованного asset-it-docker.zip:
+
+       sh packaging/build-offline.sh --debs noble
+
+  Ключ --debs добавляет .deb-пакеты Docker Engine под указанный выпуск ОС
+  сервера; без ключа пакет содержит только образы. Результат —
+  dist/asset-it-docker-offline.tar.gz (около 500 МБ).
