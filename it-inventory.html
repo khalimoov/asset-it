@@ -5326,15 +5326,27 @@
     var pw = prompt("Пароль этой учётной записи (не сохраняется):", "");
     if(pw === null) return;
     $("aa_err").textContent = "";
-    api("/api/adauth/test", {login:lg, password:pw, config:aaBody()})
+    /* сначала сохраняем: иначе проверка идёт по тому, что набрано на странице,
+       и «проверка прошла» при невключённом входе сбивает с толку */
+    api("/api/adauth", aaBody())
+      .then(function(){ return api("/api/adauth/test", {login:lg, password:pw, config:aaBody()}); })
       .then(function(d){
         var w = d.who || {};
         toast("Домен принял: " + (w.name || w.login));
-        var g = d.group;
-        $("aa_hint").textContent = "Проверка прошла: " + (w.name || "") + " (" + (w.login || "") + ")" +
+        var g = d.group, txt = "Проверка прошла: " + (w.name || "") + " (" + (w.login || "") + ")" +
           (w.position ? ", " + w.position : "") + "; групп: " + ((w.groups || []).length) +
           (g && g.dn ? ". Доступ по группе " + g.dn + " — в ней " + (g.members || 0) + " чел."
                      : ". Группа не задана: вход открыт всем, у кого есть учётка в домене.");
+        $("aa_hint").textContent = txt;
+        var warn = [];
+        if(!d.enabled) warn.push("Вход через домен выключен: поставьте галочку «Разрешить вход " +
+          "через домен» и нажмите «Сохранить» — иначе на экране входа доменный пароль не примут.");
+        if(d.clash) warn.push("Под логином «" + (w.login || "") + "» уже заведена учётная запись с " +
+          "паролем от нас (" + d.clash.name + "). Через домен такие не пускаем — откройте её в " +
+          "«Пользователях ИТ» и переключите способ входа на «AD».");
+        $("aa_err").textContent = warn.join(" ");
+        /* loadAdAuth() здесь не зовём: он пишет в aa_hint свою строку и затирает итог
+           проверки, а форма и так совпадает с тем, что только что сохранили */
       })
       .catch(function(e){ $("aa_err").textContent = (e && e.message) ? e.message : ("Проверка не прошла" + apiWhy(e)); });
   };

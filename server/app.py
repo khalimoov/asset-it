@@ -2591,7 +2591,17 @@ def api_adauth_test():
                    "не состоит в группе %s (в ней сейчас %d чел.)"
                    % (group["dn"], group.get("members") or 0))
         return jsonify({"error": "bad_credentials", "message": msg, "group": group}), 401
-    return jsonify({"ok": True, "who": who, "group": group})
+    # домен-то принял, а войти на странице всё равно не выйдет, если под этим логином
+    # уже заведена учётка с нашим паролем: через домен пускаем только «ad»-учётки
+    with db() as conn, conn.cursor() as cur:
+        cur.execute("""select full_name, auth, active from staff
+                        where lower(login) = lower(%s)""", (who["login"],))
+        row = cur.fetchone()
+    clash = None
+    if row and (row["auth"] or "local") != "ad":
+        clash = {"name": row["full_name"], "active": bool(row["active"])}
+    return jsonify({"ok": True, "who": who, "group": group,
+                    "enabled": bool(auth.get("enabled")), "clash": clash})
 
 
 @app.get("/api/ldap")
