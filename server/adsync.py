@@ -25,6 +25,7 @@ import datetime
 import secrets
 
 from ldap3 import Server, Connection, ALL, SUBTREE, LEVEL, BASE, SIMPLE
+from ldap3.utils.dn import parse_dn
 
 # Атрибуты, которые забираем из домена
 ATTRS = ["givenName", "initials", "sn", "telephoneNumber", "mail",
@@ -112,12 +113,20 @@ def build_filter(cfg):
     return "(&(objectCategory=person)(objectClass=user)(%s=%s))" % (attr, val)
 
 
-def search_base(cfg):
-    """Откуда искать.
+def ou_parts(ou):
+    """«Заводы/Завод-1» или «Заводы\Завод-1» -> ["Заводы", "Завод-1"] (сверху вниз)."""
+    return [x.strip() for x in str(ou or "").replace("\\", "/").split("/") if x.strip()]
 
-    Тянуть всё дерево домена незачем: обычно люди завода лежат в своём OU.
-    Можно указать либо полный DN («OU=PLANT1,DC=company,DC=local»), либо просто
-    название подразделения — тогда оно подставится перед базой поиска.
+
+def search_base(cfg):
+    """Откуда искать — без обращения к домену.
+
+    Годится, когда указан полный DN («OU=PLANT1,DC=company,DC=local») или когда OU
+    не задан вовсе. Если написано просто название подразделения, настоящий DN
+    знает только сам домен — его находит resolve_base(). Склеивать
+    «OU=ГИТ» + база вслепую нельзя: в домене подразделение обычно лежит глубоко
+    (OU=ГИТ,OU=Завод-1,OU=Площадка Северная,OU=Severnoye,DC=...), и такой DN просто
+    не существует — поиск молча не находит никого.
     """
     base = (cfg.get("baseDn") or "").strip()
     ou = (cfg.get("ou") or "").strip()
@@ -125,9 +134,64 @@ def search_base(cfg):
         return base
     if "=" in ou:
         return ou
-    # несколько уровней через «/»: «Заводы/Завод-1» -> OU=Завод-1,OU=Заводы,...
-    parts = [x.strip() for x in ou.replace("\\", "/").split("/") if x.strip()]
-    return ",".join("OU=" + x for x in reversed(parts)) + ("," + base if base else "")
+    return base
+
+
+def _ou_chain(dn):
+    """Названия OU из DN сверху вниз: OU=ГИТ,OU=Завод-1,DC=... -> ["гит", "завод-1"]."""
+    try:
+        parts = parse_dn(dn)
+    except Exception:
+        return []
+    return [v.strip().lower() for a, v, _ in parts if a.lower() == "ou"]
+
+
+def resolve_base(conn, cfg):
+    """Настоящий DN подразделения: название ищем по каталогу, а не склеиваем.
+
+    Администратор пишет в настройках просто «ГИТ», а домен хранит его как
+    OU=ГИТ,OU=Завод-1,OU=Площадка Северная,OU=Severnoye,DC=company,DC=local. Поэтому
+    спрашиваем у домена, где это подразделение лежит. Если одноимённых
+    несколько (в каждом заводе своё «ИТ»), выбрать за администратора нельзя —
+    показываем найденные пути, чтобы он уточнил: «Завод-1/ГИТ» или полный DN.
+    """
+    base = (cfg.get("baseDn") or "").strip()
+    ou = (cfg.get("ou") or "").strip()
+    if not ou or "=" in ou:
+        return search_base(cfg)
+
+    parts = ou_parts(ou)
+    conn.search(search_base=base,
+                search_filter="(&(objectClass=organizationalUnit)(ou=%s))" % escape_filter(parts[-1]),
+                search_scope=SUBTREE, attributes=["ou"], paged_size=500)
+    found = [e.get("dn") for e in (conn.response or [])
+             if e.get("type") == "searchResEntry" and e.get("dn")]
+
+    if len(parts) > 1:
+        # путь «Площадка Северная/Завод-1/ГИТ»: все его звенья должны идти по DN
+        # снизу вверх подряд по порядку, но между ними могут быть и другие OU
+        need = [p.strip().lower() for p in reversed(parts)]
+        keep = []
+        for dn in found:
+            i = 0
+            for name in _ou_chain(dn):
+                if i < len(need) and name == need[i]:
+                    i += 1
+            if i == len(need):
+                keep.append(dn)
+        found = keep
+
+    if not found:
+        raise RuntimeError(
+            "подразделение «%s» не найдено в домене (искали внутри %s). Проверьте "
+            "написание или впишите полный путь: «Завод-1/ГИТ» либо DN целиком"
+            % (ou, base or "всего каталога"))
+    if len(found) > 1:
+        show = ", ".join(found[:5]) + (" и ещё %d" % (len(found) - 5) if len(found) > 5 else "")
+        raise RuntimeError(
+            "подразделений с названием «%s» в домене несколько: %s. Уточните путь "
+            "(«Завод-1/ГИТ») или впишите нужный DN целиком" % (ou, show))
+    return found[0]
 
 
 def make_server(cfg):
@@ -163,13 +227,33 @@ def connect(cfg):
     return conn
 
 
-def fetch(cfg, limit=0):
-    """Возвращает список словарей с уже разобранными полями."""
+def fetch(cfg, limit=0, info=None):
+    """Возвращает список словарей с уже разобранными полями.
+
+    info — необязательный словарь, куда складываем, где именно искали: это
+    показывается в «Проверке подключения», иначе администратору не видно,
+    во что развернулось название подразделения.
+    """
     conn = connect(cfg)
     try:
-        conn.search(search_base=search_base(cfg), search_filter=build_filter(cfg),
-                    search_scope=(SUBTREE if cfg.get("subtree", True) else LEVEL),
-                    attributes=ATTRS, paged_size=500, size_limit=limit or 0)
+        base = resolve_base(conn, cfg)
+        if info is not None:
+            info["base"] = base
+        ok = conn.search(search_base=base, search_filter=build_filter(cfg),
+                         search_scope=(SUBTREE if cfg.get("subtree", True) else LEVEL),
+                         attributes=ATTRS, paged_size=500, size_limit=limit or 0)
+        # без raise_exceptions ldap3 о неудаче сообщает только False: раньше
+        # несуществующая база поиска выглядела как «никого не нашлось»
+        if not ok:
+            r = conn.result or {}
+            desc = r.get("description") or ""
+            if desc == "sizeLimitExceeded":
+                pass
+            elif desc == "noSuchObject":
+                raise RuntimeError("домен не знает такой базы поиска: %s" % base)
+            else:
+                raise RuntimeError("домен отклонил запрос: %s %s"
+                                   % (desc or r.get("result"), r.get("message") or ""))
         out = []
         for e in conn.response or []:
             if e.get("type") != "searchResEntry":
@@ -205,6 +289,14 @@ def fetch(cfg, limit=0):
             pass
 
 
+def probe(cfg, limit=5):
+    """Проверка настроек: где искали, каким запросом и кто нашёлся."""
+    info = {}
+    sample = fetch(cfg, limit=limit, info=info)
+    return {"base": info.get("base") or search_base(cfg),
+            "filter": build_filter(cfg), "sample": sample}
+
+
 # ------------------------------------------------------------------ вход через домен
 
 AUTH_DEFAULTS = {
@@ -223,19 +315,111 @@ def merge_auth(saved):
     return cfg
 
 
+# Правило Active Directory «состоит в группе с учётом вложенных».
+# Домен сам обходит цепочку: человек в «ГИТ-инженеры», та группа внутри
+# «Asset-IT-Users» — вход открыт, хотя в memberOf у человека второй группы нет.
+IN_CHAIN = "1.2.840.113556.1.4.1941"
+
+
+def group_name(want):
+    r"""Название группы из того, что написал администратор: COMPANY\Asset-IT -> Asset-IT."""
+    want = (want or "").strip()
+    if "\\" in want:
+        want = want.rsplit("\\", 1)[-1]
+    if "@" in want:
+        want = want.split("@", 1)[0]
+    return want.strip()
+
+
+def resolve_group(conn, cfg, want):
+    r"""DN группы по названию.
+
+    Принимаем как полный DN, так и просто название — в том числе в видах
+    «COMPANY\Asset-IT» и «Asset-IT@company.local», их легко скопировать из оснастки.
+    Опечатка в названии не должна выглядеть как «никого не пускает»: если
+    такой группы в домене нет, говорим об этом прямо.
+    """
+    want = (want or "").strip()
+    if not want:
+        return ""
+    if "=" in want:
+        return want
+    name = group_name(want)
+    base = (cfg.get("baseDn") or "").strip()
+    conn.search(search_base=base,
+                search_filter="(&(objectClass=group)(|(cn=%s)(sAMAccountName=%s)))"
+                              % (escape_filter(name), escape_filter(name)),
+                search_scope=SUBTREE, attributes=["cn"], paged_size=100)
+    found = [e.get("dn") for e in (conn.response or [])
+             if e.get("type") == "searchResEntry" and e.get("dn")]
+    if not found:
+        raise RuntimeError("группа «%s» в домене не найдена (искали внутри %s). Проверьте "
+                           "написание или впишите её DN целиком"
+                           % (want, base or "всего каталога"))
+    if len(found) > 1:
+        raise RuntimeError("групп с названием «%s» несколько: %s. Впишите DN нужной"
+                           % (want, ", ".join(found[:5])))
+    return found[0]
+
+
 def _in_group(groups, want):
-    """Состоит ли пользователь в группе: сравниваем с полным DN или с CN."""
+    """Прямое членство по memberOf: сравниваем с полным DN или с названием.
+
+    Запасной путь на случай каталога, который не понимает правила IN_CHAIN
+    (например, не Active Directory). Вложенные группы так не видны.
+    """
     want = (want or "").strip().lower()
     if not want:
         return True
+    names = {want, group_name(want).lower()}
     for g in groups or []:
         g = str(g).lower()
-        if g == want:
+        if g in names:
             return True
         cn = g.split(",", 1)[0]
-        if cn.startswith("cn=") and cn[3:] == want:
+        if cn.startswith("cn=") and cn[3:] in names:
             return True
     return False
+
+
+def in_group_deep(conn, user_dn, group_dn, groups, want):
+    """Членство с учётом вложенных групп — спрашиваем у самого домена."""
+    if user_dn and group_dn:
+        ok = conn.search(search_base=user_dn,
+                         search_filter="(memberOf:%s:=%s)" % (IN_CHAIN, escape_filter(group_dn)),
+                         search_scope=BASE, attributes=["cn"], size_limit=1)
+        if ok:
+            for e in conn.response or []:
+                if e.get("type") == "searchResEntry":
+                    return True
+            return False
+        # каталог правила не знает — сверяем прямое членство
+    return _in_group(groups, group_dn or want)
+
+
+def check_group(cfg, want):
+    """Для настроек: существует ли группа и сколько в ней человек (с вложенными).
+
+    Администратор заводит группу и добавляет в неё людей — пусть сразу видит,
+    что приложение нашло именно её и кого в ней видит.
+    """
+    conn = connect(cfg)
+    try:
+        dn = resolve_group(conn, cfg, want)
+        if not dn:
+            return {"dn": "", "members": 0}
+        conn.search(search_base=(cfg.get("baseDn") or "").strip(),
+                    search_filter="(&(objectCategory=person)(objectClass=user)(memberOf:%s:=%s))"
+                                  % (IN_CHAIN, escape_filter(dn)),
+                    search_scope=SUBTREE, attributes=["sAMAccountName"], paged_size=500)
+        names = [_one(e.get("attributes") or {}, "sAMAccountName")
+                 for e in (conn.response or []) if e.get("type") == "searchResEntry"]
+        return {"dn": dn, "members": len(names), "sample": [n for n in names if n][:10]}
+    finally:
+        try:
+            conn.unbind()
+        except Exception:
+            pass
 
 
 def authenticate(cfg, auth, login, password, server=None, strategy=None):
@@ -268,13 +452,20 @@ def authenticate(cfg, auth, login, password, server=None, strategy=None):
             conn.search(search_base=login, search_filter="(objectClass=*)", search_scope=BASE,
                         attributes=ATTRS + ["memberOf"], size_limit=1)
         else:
-            conn.search(search_base=search_base(cfg),
-                        search_filter="(&(objectClass=user)(sAMAccountName=%s))" % escape_filter(sam),
+            # ищем по всему домену, а не внутри подразделения из настроек загрузки:
+            # то подразделение решает, кого переносить в справочник сотрудников,
+            # а кому можно входить — решает группа AD ниже. Заодно пробуем и UPN:
+            # он не всегда совпадает с sAMAccountName.
+            base = (cfg.get("baseDn") or "").strip() or search_base(cfg)
+            conn.search(search_base=base,
+                        search_filter="(&(objectClass=user)(|(sAMAccountName=%s)(userPrincipalName=%s)))"
+                                      % (escape_filter(sam), escape_filter(upn)),
                         search_scope=SUBTREE, attributes=ATTRS + ["memberOf"], size_limit=1)
-        entry = None
+        entry = entry_dn = None
         for e in conn.response or []:
             if e.get("type") == "searchResEntry":
                 entry = e.get("attributes") or {}
+                entry_dn = e.get("dn") or ""
                 break
         if entry is None:
             return None
@@ -287,8 +478,13 @@ def authenticate(cfg, auth, login, password, server=None, strategy=None):
         groups = entry.get("memberOf") or []
         if isinstance(groups, (str, bytes)):
             groups = [groups]
-        if not _in_group(groups, auth.get("group")):
-            return None
+        want = (auth.get("group") or "").strip()
+        if want:
+            # доступом заведует группа: кого в неё добавили — тот и заходит.
+            # Членство спрашиваем у домена, чтобы работали и вложенные группы.
+            group_dn = resolve_group(conn, cfg, want)
+            if not in_group_deep(conn, entry_dn, group_dn, groups, want):
+                return None
         return {"login": _one(entry, "sAMAccountName") or sam, "name": full_name(entry), "guid": _guid(entry),
                 "email": _one(entry, "mail"), "position": _one(entry, "title"),
                 "groups": [str(g) for g in groups]}

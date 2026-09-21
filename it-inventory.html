@@ -1230,7 +1230,7 @@
             <div class="field"><label for="ad_base">База поиска (Base DN)</label>
               <input id="ad_base" placeholder="DC=company,DC=local"></div>
             <div class="field"><label for="ad_ou">Только подразделение AD (OU)</label>
-              <input id="ad_ou" placeholder="PLANT1 или Заводы/Завод-1"></div>
+              <input id="ad_ou" placeholder="ГИТ, или Завод-1/ГИТ, или DN целиком"></div>
             <div class="field"><label for="ad_user">Служебная учётная запись</label>
               <input id="ad_user" placeholder="COMPANY\svc_asset или svc_asset@company.local"></div>
             <div class="field"><label for="ad_pass">Пароль</label>
@@ -1266,6 +1266,11 @@
             смена пароля в домене ничего здесь не ломает. Кто ещё не заведён, заводится сам
             при первом входе — с ролью и учреждением, указанными ниже; права потом меняете в
             «Пользователях ИТ».
+            <br><b>Кого пускать, решает группа AD.</b> Заведите группу в домене, добавляйте
+            в неё тех, кому нужен доступ, и впишите её ниже — этого достаточно, заводить
+            людей здесь не нужно. Вложенные группы учитываются: если внутри указанной лежит
+            другая, её участники тоже заходят. Пустое поле — пускать всех, у кого есть
+            учётная запись в домене.
           </div>
           <div class="grid2" style="margin-top:14px">
             <div class="field"><label>&nbsp;</label>
@@ -1275,7 +1280,7 @@
             <div class="field"><label for="aa_suffix">Домен для входа (хвост логина)</label>
               <input id="aa_suffix" placeholder="company.local — тогда i.ivanov → i.ivanov@company.local"></div>
             <div class="field"><label for="aa_group">Группа AD, кому открыт вход</label>
-              <input id="aa_group" placeholder="IT-Asset (пусто — всем, у кого есть учётка в домене)"></div>
+              <input id="aa_group" placeholder="Asset-IT-Users, COMPANY\Asset-IT-Users или DN (пусто — всем)"></div>
             <div class="field"><label for="aa_role">Роль для новых пользователей</label>
               <select id="aa_role"></select></div>
             <div class="field"><label for="aa_neworg">Учреждение для новых пользователей</label>
@@ -5325,8 +5330,11 @@
       .then(function(d){
         var w = d.who || {};
         toast("Домен принял: " + (w.name || w.login));
+        var g = d.group;
         $("aa_hint").textContent = "Проверка прошла: " + (w.name || "") + " (" + (w.login || "") + ")" +
-          (w.position ? ", " + w.position : "") + "; групп: " + ((w.groups || []).length);
+          (w.position ? ", " + w.position : "") + "; групп: " + ((w.groups || []).length) +
+          (g && g.dn ? ". Доступ по группе " + g.dn + " — в ней " + (g.members || 0) + " чел."
+                     : ". Группа не задана: вход открыт всем, у кого есть учётка в домене.");
       })
       .catch(function(e){ $("aa_err").textContent = (e && e.message) ? e.message : ("Проверка не прошла" + apiWhy(e)); });
   };
@@ -5410,7 +5418,11 @@
                " · " + (x.department || "без отдела") + " · " + (x.company || "без организации") +
                (x.email ? " · " + x.email : "");
       });
-      if(!lines.length) lines = ["Подключение есть, но по этому признаку не нашлось ни одной учётной записи."];
+      if(!lines.length) lines = ["Подключение есть, но по признаку " +
+        ($("ad_attr").value.trim() || "employeeType") + " = " + ($("ad_val").value.trim() || "ok") +
+        " в этом подразделении не нашлось ни одной учётной записи.",
+        "Проверьте: признак стоит у людей (свойства пользователя → «Редактор атрибутов») " +
+        "и подразделение указано верно — где искали, видно строкой выше."];
       adShow("Проверка подключения",
              '<div class="note" style="margin:0">Ищем в: <code>' + esc(d.base || "—") +
              '</code><br>Запрос: <code>' + esc(d.filter) + "</code></div>", lines);

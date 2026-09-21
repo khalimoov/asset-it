@@ -2572,15 +2572,26 @@ def api_adauth_test():
     with db() as conn, conn.cursor() as cur:
         auth = adsync.merge_auth(d.get("config") or _adauth_cfg(cur))
         ldap_cfg = _ldap_cfg(cur, auth.get("orgId") or "")
+    # группу проверяем отдельно и заранее: опечатка в названии закрывала бы вход
+    # всем, а выглядело бы это как «домен не принял пароль»
+    group = None
+    if (auth.get("group") or "").strip():
+        try:
+            group = adsync.check_group(ldap_cfg, auth["group"])
+        except Exception as e:
+            return jsonify({"error": "ldap", "message": str(e)}), 400
     try:
         who = adsync.authenticate(ldap_cfg, auth, d.get("login") or "", d.get("password") or "")
     except Exception as e:
         return jsonify({"error": "ldap", "message": str(e)}), 400
     if not who:
-        return jsonify({"error": "bad_credentials",
-                        "message": "Домен не принял логин и пароль, учётка отключена "
-                                   "или человек не состоит в указанной группе"}), 401
-    return jsonify({"ok": True, "who": who})
+        msg = "Домен не принял логин и пароль или учётная запись отключена"
+        if group:
+            msg = ("Домен не принял логин и пароль, учётная запись отключена или человек "
+                   "не состоит в группе %s (в ней сейчас %d чел.)"
+                   % (group["dn"], group.get("members") or 0))
+        return jsonify({"error": "bad_credentials", "message": msg, "group": group}), 401
+    return jsonify({"ok": True, "who": who, "group": group})
 
 
 @app.get("/api/ldap")
@@ -2634,11 +2645,13 @@ def api_ldap_test():
     with db() as conn, conn.cursor() as cur:
         cfg = _ldap_cfg(cur, org_id)
     try:
-        sample = adsync.fetch(cfg, limit=5)
+        res = adsync.probe(cfg, limit=5)
     except Exception as e:
         return jsonify({"error": "ldap", "message": str(e)}), 400
-    return jsonify({"ok": True, "filter": adsync.build_filter(cfg),
-                    "base": adsync.search_base(cfg), "sample": sample})
+    # base отдаём тот, который домен выдал на самом деле: название подразделения
+    # из настроек разворачивается в полный DN, и это видно администратору
+    return jsonify({"ok": True, "filter": res["filter"],
+                    "base": res["base"], "sample": res["sample"]})
 
 
 @app.post("/api/ldap/sync")
