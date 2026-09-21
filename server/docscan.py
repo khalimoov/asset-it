@@ -36,6 +36,10 @@ MAX_BYTES = 40 * 1024 * 1024
 
 def merge_config(saved):
     cfg = dict(DEFAULTS)
+    # В Docker папка архива — точка монтирования, её задаёт переменная окружения;
+    # то, что администратор сохранил в настройках, всё равно главнее.
+    if os.environ.get("DOCS_PATH"):
+        cfg["path"] = os.environ["DOCS_PATH"]
     cfg.update(saved or {})
     cfg["dpi"] = max(120, min(600, int(cfg.get("dpi") or 300)))
     return cfg

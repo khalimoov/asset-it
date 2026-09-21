@@ -1,0 +1,42 @@
+# Учёт ИТ-отдела в Docker: приложение + PostgreSQL.
+# Пароль базы и часовой пояс — в файле .env рядом (образец: .env.example).
+services:
+  db:
+    image: postgres:16
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: asset_it
+      POSTGRES_USER: asset_it
+      POSTGRES_PASSWORD: ${PGPASSWORD:?впишите PGPASSWORD в .env}
+      TZ: ${TZ:-Asia/Tashkent}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U asset_it -d asset_it"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  app:
+    build: .
+    image: asset-it:latest
+    restart: unless-stopped
+    ports:
+      - "${PORT:-8000}:8000"
+    environment:
+      PGHOST: db
+      PGPORT: "5432"
+      PGDATABASE: asset_it
+      PGUSER: asset_it
+      PGPASSWORD: ${PGPASSWORD}
+      DOCS_PATH: /opt/asset-it/documents
+      TZ: ${TZ:-Asia/Tashkent}
+    volumes:
+      # архив накладных и накладных по передаче — на диске сервера, вне контейнера
+      - /opt/asset-it/documents:/opt/asset-it/documents
+    depends_on:
+      db:
+        condition: service_healthy
+
+volumes:
+  pgdata:

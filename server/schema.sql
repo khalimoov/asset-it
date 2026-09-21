@@ -261,12 +261,14 @@ create table if not exists supply_issue (
   id        text primary key,
   supply_id text not null references supply(id) on delete cascade,
   person_id text references person(id) on delete set null,
+  item_id   text references item(id) on delete set null,   -- либо на сотрудника, либо в технику
   qty       int not null default 1,
   d         date,
   note      text not null default ''
 );
 create index if not exists issue_supply_idx on supply_issue(supply_id);
 create index if not exists issue_person_idx on supply_issue(person_id);
+create index if not exists issue_item_idx on supply_issue(item_id);
 
 -- ============================ журнал удалений ============================
 

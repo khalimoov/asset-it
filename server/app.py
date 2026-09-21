@@ -9,6 +9,7 @@
 import os
 import sys
 import json
+import re
 import secrets
 import hashlib
 import datetime
@@ -37,7 +38,7 @@ import docscan
 
 # Версия сборки. Должна совпадать с UI_BUILD в it-inventory.html: если файлы
 # обновили, а сервер не перезапустили, приложение об этом само скажет.
-APP_BUILD = "2026-09-18.13"
+APP_BUILD = "2026-09-21.1"
 
 BASE = Path(__file__).resolve().parent
 ROOT = BASE.parent
@@ -113,7 +114,7 @@ PERMS = [
     ("ip.manage",       "Учёт: диапазоны и резерв IP-адресов"),
     ("docs.scan",       "Учёт: приходные накладные — загрузка, разбор, заведение записей"),
     ("supply.receive",  "Учёт: приход расходных материалов"),
-    ("supply.issue",    "Учёт: списание материалов на сотрудников"),
+    ("supply.issue",    "Учёт: списание материалов на сотрудников и оборудование"),
     ("repair.send",     "Учёт: отправлять оборудование в ремонт"),
     ("repair.close",    "Учёт: выводить из ремонта"),
     ("repair.assign",   "Учёт: назначать мастера"),
@@ -473,27 +474,12 @@ def seed():
             on conflict (key) do nothing
         """, (json.dumps(DEF_UNITS),))
 
-        cur.execute("select count(*) as n from staff where login is not null")
-        if cur.fetchone()["n"] == 0:
-            password = secrets.token_urlsafe(9)
-            cur.execute("""
-                insert into staff (id, full_name, position, login, pass_hash, role_id, is_master, active)
-                values ('st_admin', 'Администратор', 'Администратор системы',
-                        'admin', %s, 'role_admin', false, true)
-                on conflict (id) do nothing
-            """, (hash_password(password),))
-            fname = "FIRST_LOGIN_" + os.environ.get("PGDATABASE", "asset_it") + ".txt"
-            (BASE / fname).write_text(
-                "Первый вход в «Учёт ИТ-отдела»\n\n"
-                "  логин:  admin\n"
-                "  пароль: " + password + "\n\n"
-                "Смените пароль после входа: Пользователи ИТ → карточка admin → поле «Пароль».\n"
-                "Этот файл после смены пароля можно удалить.\n", encoding="utf-8")
-            print("\n  Создана учётная запись администратора:")
-            print("    логин:  admin")
-            print("    пароль: " + password)
-            print("  (продублировано в server/" + fname + ")")
-            cur.execute("update staff set org_id = %s where id = 'st_admin'", (org_id,))
+        # Учётную запись администратора не выдумываем: пока в базе нет ни одного
+        # логина, страница показывает экран первого запуска, и администратор
+        # сам задаёт себе логин и пароль (/api/setup).
+        if not has_accounts(cur):
+            print("\n  Учётных записей ещё нет: откройте страницу в браузере и задайте")
+            print("  логин и пароль администратора на экране первого запуска.")
 
 
 # ------------------------------------------------------------------ чтение состояния
@@ -603,6 +589,7 @@ def load_state(user, org_id):
                                              where s.org_id = %s
                                           order by r.d desc nulls last""", (org_id,))]
         issues = [{"id": r["id"], "supplyId": r["supply_id"], "userId": r["person_id"] or "",
+                   "itemId": r["item_id"] or "",
                    "qty": r["qty"], "date": js_date(r["d"]), "note": r["note"]}
                   for r in rows("""select i.* from supply_issue i
                                             join supply s on s.id = i.supply_id
@@ -893,6 +880,7 @@ def save_cfg(cfg, user, org_id):
             sync_table(cur, "supply_issue", {
                 "supply_id": lambda r: g(r, "supplyId"),
                 "person_id": lambda r: g(r, "userId") or None,
+                "item_id": lambda r: g(r, "itemId") or None,
                 "qty": lambda r: int(g(r, "qty", 1) or 1),
                 "d": lambda r: g(r, "date") or None, "note": lambda r: g(r, "note")},
                 cfg["issues"], scope=in_supplies)
@@ -1099,11 +1087,73 @@ def _ad_login(cur, login, password, row):
     return cur.fetchone()
 
 
+def has_accounts(cur):
+    """Есть ли хоть одна учётная запись с логином — иначе установка ещё не настроена."""
+    cur.execute("select count(*) as n from staff where login is not null")
+    return cur.fetchone()["n"] > 0
+
+
+def _open_session(cur, staff_id):
+    """Заводит сессию и отдаёт ответ с cookie — общее для входа и первого запуска."""
+    token = secrets.token_urlsafe(32)
+    expires = datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(days=SESSION_DAYS)
+    cur.execute("insert into session (token, staff_id, expires_at) values (%s,%s,%s)",
+                (token, staff_id, expires))
+    resp = make_response(jsonify({"ok": True}))
+    resp.set_cookie(COOKIE, token, httponly=True, samesite="Lax",
+                    max_age=SESSION_DAYS * 24 * 3600, path="/")
+    return resp
+
+
 @app.get("/api/login-info")
 def api_login_info():
-    """Что показать на экране входа до входа: включён ли вход через домен."""
+    """Что показать до входа: включён ли вход через домен и не первый ли это запуск."""
     with db() as conn, conn.cursor() as cur:
-        return jsonify({"ad": bool(_adauth_cfg(cur).get("enabled"))})
+        return jsonify({"ad": bool(_adauth_cfg(cur).get("enabled")),
+                        "setup": not has_accounts(cur)})
+
+
+RE_LOGIN = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._@-]{2,63}$")
+
+
+@app.post("/api/setup")
+def api_setup():
+    """Первый запуск: администратор сам задаёт логин и пароль.
+
+    Работает только пока в базе нет ни одного логина — как только первая учётная
+    запись создана, повторный вызов отвечает 409. Таблица блокируется на время
+    проверки, чтобы два одновременных запроса не завели двух администраторов.
+    """
+    data = request.get_json(silent=True) or {}
+    name = (data.get("name") or "").strip()
+    login = (data.get("login") or "").strip()
+    password = data.get("password") or ""
+    if not name:
+        return jsonify({"error": "bad_value", "message": "Укажите имя"}), 400
+    if not RE_LOGIN.match(login):
+        return jsonify({"error": "bad_value",
+                        "message": "Логин — от 3 до 64 знаков: латиница, цифры, точка, дефис"}), 400
+    if len(password) < 6:
+        return jsonify({"error": "bad_value", "message": "Пароль — не короче 6 знаков"}), 400
+    with db() as conn, conn.cursor() as cur:
+        cur.execute("lock table staff in share row exclusive mode")
+        if has_accounts(cur):
+            return jsonify({"error": "already_set_up"}), 409
+        cur.execute("select id from org order by sort, name limit 1")
+        row = cur.fetchone()
+        org_id = row["id"] if row else None
+        cur.execute("""
+            insert into staff (id, full_name, position, login, pass_hash, role_id,
+                               is_master, active, org_id, can_edit, auth)
+            values ('st_admin', %s, 'Администратор системы', %s, %s, 'role_admin',
+                    false, true, %s, true, 'local')
+            on conflict (id) do update set
+              full_name = excluded.full_name, login = excluded.login,
+              pass_hash = excluded.pass_hash, role_id = 'role_admin', active = true,
+              org_id = excluded.org_id, can_edit = true, auth = 'local'
+        """, (name, login, hash_password(password), org_id))
+        print("  Создана учётная запись администратора: " + login)
+        return _open_session(cur, "st_admin")
 
 
 @app.post("/api/login")
@@ -1120,14 +1170,7 @@ def api_login():
             row = _ad_login(cur, login, password, row)
             if not row:
                 return jsonify({"error": "bad_credentials"}), 401
-        token = secrets.token_urlsafe(32)
-        expires = datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(days=SESSION_DAYS)
-        cur.execute("insert into session (token, staff_id, expires_at) values (%s,%s,%s)",
-                    (token, row["id"], expires))
-    resp = make_response(jsonify({"ok": True}))
-    resp.set_cookie(COOKIE, token, httponly=True, samesite="Lax",
-                    max_age=SESSION_DAYS * 24 * 3600, path="/")
-    return resp
+        return _open_session(cur, row["id"])
 
 
 @app.post("/api/logout")

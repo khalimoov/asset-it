@@ -1,8 +1,9 @@
 # -*- coding: utf-8 -*-
 """Собирает пакет для установки на сервер без интернета.
 
-    python packaging/build.py            собрать dist/asset-it-server и zip
-    python packaging/build.py --no-zip   только папку
+    python packaging/build.py            собрать dist/asset-it-server и zip,
+                                         а также dist/asset-it-docker.zip
+    python packaging/build.py --no-zip   только папки
 
 Что складывается:
 
@@ -11,6 +12,10 @@
     packaging/*.bat     установка, запуск, остановка, копии базы
     packaging/УСТАНОВКА.txt
     wheels/             библиотеки Python под Windows x64
+
+Второй пакет, asset-it-docker — для Linux-сервера с Docker: страница, server/,
+Dockerfile, docker-compose.yml, .env.example и УСТАНОВКА-DOCKER.txt. Библиотеки
+и словари в него не кладутся — их ставит сборка образа (нужен интернет на сервере).
 
 Колёса берутся из уже собранного пакета, если он есть; иначе качаются через pip —
 для этого нужен интернет на той машине, где собирают. На сервере интернет не нужен.
@@ -23,6 +28,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 PKG = ROOT / "packaging"
 OUT = ROOT / "dist" / "asset-it-server"
+DOCK = ROOT / "dist" / "asset-it-docker"
 
 # то, что ставится в окружение сервера
 REQUIREMENTS = ["flask", "psycopg[binary]", "waitress", "ldap3",
@@ -108,6 +114,32 @@ def ensure_tesseract():
     print("  tesseract/%s — %.0f МБ" % (TESSERACT_EXE, f.stat().st_size / 1024 / 1024))
 
 
+def build_docker():
+    """Пакет для Linux с Docker: только исходники и файлы сборки образа."""
+    if DOCK.exists():
+        shutil.rmtree(DOCK)
+    srv = DOCK / "server"
+    srv.mkdir(parents=True)
+    shutil.copy2(ROOT / "it-inventory.html", DOCK / "it-inventory.html")
+    for f in (ROOT / "server").iterdir():
+        if f.name in SERVER_SKIP or f.name.startswith("FIRST_LOGIN") or f.suffix == ".log":
+            continue
+        if f.is_dir():
+            if f.name == "migrations":
+                shutil.copytree(f, srv / f.name)
+            continue        # словари и движок в образ ставятся из пакетов Debian
+        shutil.copy2(f, srv / f.name)
+    for name in ("Dockerfile", "docker-compose.yml", ".dockerignore", ".env.example"):
+        shutil.copy2(ROOT / name, DOCK / name)
+    shutil.copy2(PKG / "УСТАНОВКА-DOCKER.txt", DOCK / "УСТАНОВКА-DOCKER.txt")
+    print("  asset-it-docker/ — собран")
+    if "--no-zip" not in sys.argv:
+        shutil.make_archive(str(ROOT / "dist" / "asset-it-docker"), "zip",
+                            str(ROOT / "dist"), "asset-it-docker")
+        size = (ROOT / "dist" / "asset-it-docker.zip").stat().st_size
+        print("  архив: dist/asset-it-docker.zip (%.1f МБ)" % (size / 1024 / 1024))
+
+
 def main():
     OUT.mkdir(parents=True, exist_ok=True)
     shutil.copy2(ROOT / "it-inventory.html", OUT / "it-inventory.html")
@@ -128,6 +160,7 @@ def main():
         shutil.make_archive(str(zip_path), "zip", str(ROOT / "dist"), "asset-it-server")
         size = (ROOT / "dist" / "asset-it-server.zip").stat().st_size
         print("  архив: dist/asset-it-server.zip (%.1f МБ)" % (size / 1024 / 1024))
+    build_docker()
     print()
     print("Готово.")
 

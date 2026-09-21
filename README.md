@@ -42,6 +42,11 @@ python packaging/build.py
 
 Подробности установки — в `packaging/УСТАНОВКА.txt`.
 
+Та же команда собирает и `dist/asset-it-docker.zip` — пакет для Linux-сервера с Docker
+(приложение + PostgreSQL, архив накладных в `/opt/asset-it/documents`). Из клона
+репозитория образ поднимается напрямую: `cp .env.example .env`, вписать `PGPASSWORD`,
+`docker compose up -d --build`. Подробности — `packaging/УСТАНОВКА-DOCKER.txt`.
+
 ## Чего нет в репозитории
 
 `server/.env` с паролем базы, собранный пакет `dist/`, датированные копии `backup/`.

@@ -50,8 +50,21 @@
   .orgpick[hidden]{display:none !important}
   .side-nav{flex:1 1 auto;min-height:0;overflow-y:auto;scrollbar-width:none}
   .side-nav::-webkit-scrollbar{width:0;height:0}
-  .brand{font-weight:700;font-size:14.5px;padding:4px 10px 2px;letter-spacing:-.01em}
+  .brand{display:flex;align-items:center;justify-content:space-between;gap:8px;
+    font-weight:700;font-size:14.5px;padding:4px 10px 2px;letter-spacing:-.01em}
   .brand small{display:block;font-weight:500;font-size:11.5px;color:var(--muted);margin-top:2px}
+  /* тумблер темы: слева солнце — светлая, справа луна — тёмная */
+  .side .tsw{flex:0 0 auto;width:42px;height:24px;padding:0;border-radius:12px;position:relative;
+    border:1px solid var(--border);background:var(--surface-2);cursor:pointer;display:block}
+  .side .tsw:hover{background:var(--surface-2);border-color:var(--muted)}
+  .side .tsw .knob{position:absolute;top:2px;left:2px;width:18px;height:18px;border-radius:50%;
+    background:var(--surface);border:1px solid var(--border);box-shadow:0 1px 2px rgba(0,0,0,.15);
+    display:flex;align-items:center;justify-content:center;font-size:11px;line-height:1;color:var(--text);
+    transition:left .18s ease}
+  .side .tsw .knob::before{content:"☀"}
+  .side .tsw.on{background:var(--accent);border-color:var(--accent)}
+  .side .tsw.on .knob{left:20px}
+  .side .tsw.on .knob::before{content:"☾"}
   .side .grp{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);
     font-weight:700;margin:12px 10px 4px}
   .side-nav > .grp:first-child{margin-top:6px}
@@ -85,7 +98,6 @@
     border-radius:10px;box-shadow:var(--shadow);pointer-events:none}
   #photoPop img{display:block;max-width:360px;max-height:360px;border-radius:6px}
   #mi_photo{max-width:100%;max-height:260px;border-radius:8px;border:1px solid var(--border);display:block;margin-bottom:12px}
-  .side #themeSw{display:flex;gap:4px;margin-bottom:8px}
   .whoami{display:flex;align-items:center;gap:8px;padding:8px 10px;
     border:1px solid var(--border);border-radius:9px}
   .whoami .who{flex:1 1 auto;min-width:0}
@@ -111,9 +123,6 @@
   body.noadmin .col-adm{display:none}
   body.nodict .col-dict{display:none}
   #xferBody td:last-child .ic, #xhistBody td:last-child .ic{margin-left:12px}
-  .side #themeSw button{width:auto;flex:1;justify-content:center;border:1px solid var(--border);
-    border-radius:7px;padding:5px 4px;font-size:11px;color:var(--muted)}
-  .side #themeSw button.on{background:var(--accent);border-color:var(--accent);color:var(--accent-fg)}
   .ntc{display:flex;gap:10px;align-items:flex-start;padding:10px 12px;border:1px solid var(--border);
     border-radius:10px;margin-bottom:8px;background:var(--surface);cursor:pointer}
   .ntc:hover{border-color:var(--accent)}
@@ -138,7 +147,8 @@
     .app{display:block}
     aside.side{width:auto;height:auto;position:static;border-right:none;border-bottom:1px solid var(--border);
       display:block;overflow:visible;padding:10px 12px}
-    .brand{display:none}
+    .brand{padding:0 0 6px}
+    .brand small{display:inline;margin-left:6px}
     .orgpick{width:auto;min-width:200px;max-width:320px;margin:0 0 4px}
     .side-nav{display:flex;flex-wrap:wrap;align-items:center;gap:3px 4px;overflow:visible}
     #regNav{display:contents}
@@ -147,7 +157,6 @@
     .side button{width:auto;white-space:nowrap;padding:5px 9px;gap:6px}
     .side .cnt{margin-left:4px}
     .side-foot{display:flex;align-items:center;gap:10px;padding:8px 0 0;margin-top:8px}
-    .side #themeSw{margin:0}
     .whoami{flex:1 1 auto;min-width:0;padding:5px 8px}
     main{padding:16px 12px 48px}
   }
@@ -254,7 +263,20 @@
   .dropzone b{display:block;font-size:14px;margin-bottom:4px}
   .dropzone span{font-size:12.5px;color:var(--muted)}
   .dropzone.over{border-color:var(--accent);background:var(--surface-2)}
-  .dropzone.busy{opacity:.6;pointer-events:none}
+  .dropzone.busy{pointer-events:none;border-style:solid;border-color:var(--accent);background:var(--surface-2)}
+  .dropzone.busy > b, .dropzone.busy > span{display:none}
+  .docwait{display:none}
+  .dropzone.busy .docwait{display:block}
+  .docwait .spin{width:30px;height:30px;margin:0 auto 10px;border-radius:50%;
+    border:3px solid var(--border);border-top-color:var(--accent);animation:spin .8s linear infinite}
+  .docwait b{display:block;font-size:14px;margin-bottom:4px}
+  .docwait span{display:block;font-size:12.5px;color:var(--muted)}
+  .docwait .pbar{height:6px;max-width:340px;margin:12px auto 0;border-radius:3px;
+    background:var(--border);overflow:hidden;position:relative}
+  .docwait .pbar i{display:block;height:100%;background:var(--accent);width:0;transition:width .2s}
+  .docwait .pbar.ind i{width:35%;position:absolute;left:0;animation:slide 1.3s ease-in-out infinite}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  @keyframes slide{0%{left:-35%}100%{left:100%}}
   .row-done{opacity:.55}
   .row-done input, .row-done select{pointer-events:none}
   .net-un{color:var(--muted)}
@@ -265,7 +287,16 @@
   .sec b{font-size:12.5px}
   .ipgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(62px,1fr));gap:6px}
   .ipcell{border:1px solid var(--border);border-radius:8px;padding:5px 3px;text-align:center;
-    background:var(--surface);cursor:pointer;overflow:hidden;font-size:12px;line-height:1.25}
+    background:var(--surface);cursor:pointer;overflow:hidden;font-size:12px;line-height:1.25;position:relative}
+  /* результат опроса сети — точка в углу: зелёная отвечает, серая молчит, нет точки — не опрашивали */
+  .ipcell .net{position:absolute;top:4px;right:4px;width:8px;height:8px;border-radius:50%;
+    background:var(--muted);opacity:.45;box-shadow:0 0 0 2px var(--surface)}
+  .ipcell .net.on{background:#16a34a;opacity:1;box-shadow:0 0 0 2px var(--surface),0 0 0 4px rgba(22,163,74,.25)}
+  .ipcell.busy .net{box-shadow:0 0 0 2px var(--ok-bg)}
+  .ipcell.busy .net.on{box-shadow:0 0 0 2px var(--ok-bg),0 0 0 4px rgba(22,163,74,.25)}
+  .ipcell.free .net.on{background:#f59e0b;box-shadow:0 0 0 2px var(--surface),0 0 0 4px rgba(245,158,11,.3)}
+  .ipcell.free.alive{border-style:dashed;border-color:#f59e0b;color:inherit}
+  .ipcell.busy.dead{opacity:.55}
   .ipcell b{display:block;font-weight:700;font-family:ui-monospace,Consolas,monospace}
   .ipcell small{display:block;font-size:9.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;opacity:.85}
   .ipcell.busy{background:var(--ok-bg);color:var(--ok);border-color:transparent}
@@ -278,6 +309,10 @@
   .lg i.busy{background:var(--ok-bg);border-color:var(--ok)}
   .lg i.res{background:var(--warn-bg);border-color:var(--warn)}
   .lg i.bad{background:var(--danger-bg);border-color:var(--danger)}
+  .lg i.dot{border-radius:50%;width:8px;height:8px;border:none}
+  .lg i.dot.on{background:#16a34a}
+  .lg i.dot.off{background:var(--muted);opacity:.45}
+  .lg i.dot.odd{background:#f59e0b}
   .pooltab{padding:6px 12px;border-radius:20px;font-size:12.5px;font-weight:600}
   .pooltab.on{background:var(--accent);border-color:var(--accent);color:var(--accent-fg)}
   .pre{display:flex;align-items:stretch;border:1px solid var(--border);border-radius:8px;
@@ -350,13 +385,31 @@
     <div class="err" id="lg_err"></div>
     <button class="btn-primary" type="submit">Войти</button>
   </form>
+  <!-- первый запуск: учётных записей ещё нет, администратор заводит себя сам -->
+  <form id="setupForm" autocomplete="off" hidden>
+    <h1>Учёт ИТ-отдела</h1>
+    <div class="sub">Первый запуск. Учётных записей ещё нет — задайте логин и пароль администратора. Остальных пользователей вы заведёте потом в разделе «Пользователи ИТ».</div>
+    <div class="field"><label for="su_name">Ваше имя</label>
+      <input id="su_name" placeholder="Фамилия Имя" autocomplete="off"></div>
+    <div class="field"><label for="su_login">Логин</label>
+      <input id="su_login" placeholder="admin" autocomplete="off"></div>
+    <div class="field"><label for="su_pass">Пароль</label>
+      <input id="su_pass" type="password" autocomplete="new-password"></div>
+    <div class="field"><label for="su_pass2">Пароль ещё раз</label>
+      <input id="su_pass2" type="password" autocomplete="new-password"></div>
+    <div class="err" id="su_err"></div>
+    <button class="btn-primary" type="submit" id="btnSetup">Создать администратора и войти</button>
+  </form>
   <div class="copy" title="Developed by @Khalimoov">Copyright © 2026 Axborot texnologiyalar guruhi</div>
 </div>
 
 <div class="app" id="appRoot" hidden>
   <!-- ================= БОКОВАЯ ПАНЕЛЬ ================= -->
   <aside class="side">
-    <div class="brand">Учёт ИТ-отдела<small>единая база</small></div>
+    <div class="brand">
+      <div>Учёт ИТ-отдела<small>Единая база</small></div>
+      <button type="button" class="tsw" id="themeSw" role="switch" aria-checked="false" title="Тёмная тема"><span class="knob"></span></button>
+    </div>
     <select id="orgPick" class="orgpick" title="Учреждение"></select>
 
     <div class="side-nav">
@@ -389,11 +442,6 @@
     </div><!-- /side-nav -->
 
     <div class="side-foot">
-      <div id="themeSw">
-        <button data-theme="auto">Авто</button>
-        <button data-theme="light">Светлая</button>
-        <button data-theme="dark">Тёмная</button>
-      </div>
       <div class="whoami">
         <div class="who"><b id="meName">—</b><span id="meRole">—</span></div>
         <button id="btnLogout" title="Выйти из системы">Выйти</button>
@@ -907,22 +955,28 @@
             <div class="field"><label for="isSup">Материал</label><select id="isSup"></select></div>
             <div class="field"><label for="isQty">Кол-во</label>
               <input id="isQty" type="number" min="1" step="1" value="1"></div>
-            <div class="field"><label for="isUser">Сотрудник</label><select id="isUser"></select></div>
+            <div class="field"><label for="isTo">Кому списать</label>
+              <select id="isTo">
+                <option value="user">На сотрудника</option>
+                <option value="item">На оборудование</option>
+              </select></div>
+            <div class="field" id="isUserWrap"><label for="isUser">Сотрудник</label><select id="isUser"></select></div>
+            <div class="field" id="isItemWrap" hidden><label for="isItem">Оборудование</label><select id="isItem"></select></div>
             <div class="field"><label for="isDate">Дата</label><input id="isDate" type="date"></div>
             <div class="field"><label for="isNote">Примечание</label>
               <input id="isNote" placeholder="Залили краску в принтер, заменили термопасту"></div>
           </div>
           <div class="row" style="margin-top:12px"><button class="btn-primary" id="btnIssue">Списать на сотрудника</button></div>
-          <div class="note">Подразделение и отдел подставляются из карточки сотрудника. Списание попадает в его профиль.</div>
+          <div class="note" id="isHint">Подразделение и отдел подставляются из карточки сотрудника. Списание попадает в его профиль.</div>
         </div>
         <div class="searchbar">
-          <div class="searchbox"><input id="qIssue" type="search" placeholder="Поиск по материалу, сотруднику, примечанию…"></div>
+          <div class="searchbox"><input id="qIssue" type="search" placeholder="Поиск по материалу, сотруднику, оборудованию, примечанию…"></div>
         </div>
         <div class="card">
           <div class="tablewrap">
             <table>
               <colgroup><col style="width:3.4%"><col style="width:9%"><col style="width:21%"><col style="width:7%"><col style="width:16%"><col style="width:12%"><col class="hide-md" style="width:11%"><col style="width:13%"><col style="width:6%"></colgroup>
-              <thead><tr><th class="num">#</th><th>Дата</th><th>Материал</th><th>Кол-во</th><th>Сотрудник</th><th>Подразделение</th><th class="hide-md">Отдел</th><th>Примечание</th><th></th></tr></thead>
+              <thead><tr><th class="num">#</th><th>Дата</th><th>Материал</th><th>Кол-во</th><th>Кому</th><th>Подразделение</th><th class="hide-md">Отдел</th><th>Примечание</th><th></th></tr></thead>
               <tbody id="issuedBody"></tbody>
             </table>
           </div>
@@ -951,10 +1005,14 @@
             <span class="lg"><i class="res"></i>резерв</span>
             <span class="lg"><i class="bad"></i>конфликт</span>
             <span class="lg"><i></i>свободен</span>
+            <span class="lg" style="margin-left:18px"><i class="dot on"></i>в сети</span>
+            <span class="lg"><i class="dot off"></i>не отвечает</span>
+            <span class="lg"><i class="dot odd"></i>отвечает, но не в учёте</span>
           </div>
         </div>
         <div class="ipgrid" id="ipGrid"></div>
-        <div class="note">Клик по занятому адресу открывает карточку записи, по свободному — добавляет в резерв. Адрес попадает сюда из любой характеристики вида «IP-адрес», а также из обычного текстового поля, если в нём лежит корректный IPv4.</div>
+        <div class="note">Клик по занятому адресу открывает карточку записи, по свободному — добавляет в резерв. Адрес попадает сюда из любой характеристики вида «IP-адрес», а также из обычного текстового поля, если в нём лежит корректный IPv4.
+        Точка в углу — результат последнего опроса сети: зелёная — отвечает, серая — молчит, без точки — ещё не опрашивали. Оранжевая на свободном адресе — в сети кто-то есть, а в учёте его нет.</div>
       </div>
 
       <div class="card pad" id="pingCard" style="margin-bottom:16px" hidden>
@@ -1035,6 +1093,12 @@
           <b>Перетащите сюда скан накладной</b>
           <span>PDF или изображение, до 40 МБ. Или <a href="#" id="docPick">выберите файл</a></span>
           <input type="file" id="docFile" accept=".pdf,.png,.jpg,.jpeg,.tif,.tiff,.bmp" hidden>
+          <div class="docwait" id="docWait">
+            <div class="spin"></div>
+            <b id="dwTitle">Загружаем файл…</b>
+            <span id="dwSub"></span>
+            <div class="pbar" id="dwBar"><i></i></div>
+          </div>
         </div>
         <div class="note" id="docOcr"></div>
         <div class="err" id="docErr"></div>
@@ -1449,6 +1513,7 @@
     </div>
     <div class="note" id="attLockNote" hidden style="color:var(--warn)"></div>
     <div class="sec" id="attBox" hidden><b>Прикреплённое оборудование</b><div id="attList"></div></div>
+    <div class="sec" id="matBox" hidden><b>Установленные материалы</b><div id="matList"></div></div>
     <div class="sec" id="statusExtra" hidden>
       <b id="seTitle">Дополнительно к статусу</b>
       <div class="grid2" style="margin-top:10px">
@@ -1760,6 +1825,7 @@
     <div id="drillBody" style="margin-top:12px"></div>
   </div>
   <div class="dlg-foot">
+    <button id="btnDrillGo" hidden>Открыть раздел</button>
     <button id="btnDrillClose" class="btn-primary">Закрыть</button>
   </div>
 </dialog>
@@ -2071,6 +2137,26 @@
     var ids = cfg.registries.filter(function(r){ return r.kind!=="supplies"; }).map(function(r){ return r.id; });
     return items.filter(function(i){ return ids.indexOf(rid(i))!==-1; });
   }
+  /* Списание идёт либо на сотрудника (userId), либо на оборудование (itemId):
+     краска — в принтер, термопаста — в компьютер. Подразделение и отдел
+     берутся у того, на кого списали. */
+  function issueTarget(x){
+    if(x.itemId){
+      var it = items.find(function(i){ return i.id===x.itemId; });
+      if(!it) return {kind:"item", name:"оборудование удалено", div:"", dep:"", item:null};
+      var who = ownerName(it.owner);
+      return {kind:"item", item:it,
+              name:(typeName(it.type)||"оборудование") + " · инв. " + (it.inv||"—") + (who ? " · " + who : ""),
+              div:nameById("divisions", it.division), dep:nameById("departments", it.department)};
+    }
+    var u = byId("users", x.userId) || {};
+    return {kind:"user", item:null, name:u.name||"",
+            div:nameById("divisions", u.divisionId), dep:nameById("departments", u.departmentId)};
+  }
+  function issuesOfItem(id){
+    return cfg.issues.filter(function(x){ return x.itemId===id; })
+      .sort(function(a,b){ return (b.date||"").localeCompare(a.date||""); });
+  }
   function issuedCount(sid){
     return cfg.issues.filter(function(x){ return x.supplyId===sid; })
       .reduce(function(a,x){ return a + (x.qty||1); }, 0);
@@ -2294,7 +2380,7 @@
 
   /* Версия интерфейса. Сервер отдаёт свою в /api/state; расходятся —
      значит файлы обновили, а сервер не перезапустили. */
-  var UI_BUILD = "2026-09-18.13";
+  var UI_BUILD = "2026-09-21.1";
 
   /* ================== связь с сервером ================== */
   function api(path, data){
@@ -2472,9 +2558,34 @@
       $("lg_sub").textContent = d.ad
         ? "Вход в систему — доменный логин (например, i.ivanov) и пароль Windows, либо логин и пароль, выданные администратором"
         : "Вход в систему — логин и пароль, выданные администратором";
+      /* пока нет ни одного логина — вместо входа экран первого запуска */
+      $("setupForm").hidden = !d.setup;
+      $("loginForm").hidden = !!d.setup;
+      if(d.setup) setTimeout(function(){ $("su_name").focus(); }, 30);
     }).catch(function(){});
-    setTimeout(function(){ $("lg_login").focus(); }, 30);
+    setTimeout(function(){ if(!$("loginForm").hidden) $("lg_login").focus(); }, 30);
   }
+  $("setupForm").onsubmit = function(e){
+    e.preventDefault();
+    var err = $("su_err"); err.textContent = "";
+    var name = $("su_name").value.trim(), login = $("su_login").value.trim();
+    var p1 = $("su_pass").value, p2 = $("su_pass2").value;
+    if(!name){ err.textContent = "Укажите имя"; $("su_name").focus(); return; }
+    if(!/^[A-Za-z0-9][A-Za-z0-9._@-]{2,63}$/.test(login)){
+      err.textContent = "Логин — от 3 знаков: латиница, цифры, точка, дефис"; $("su_login").focus(); return; }
+    if(p1.length < 6){ err.textContent = "Пароль — не короче 6 знаков"; $("su_pass").focus(); return; }
+    if(p1 !== p2){ err.textContent = "Пароли не совпадают"; $("su_pass2").focus(); return; }
+    $("btnSetup").disabled = true;
+    api("/api/setup", {name:name, login:login, password:p1})
+      .then(function(){ $("su_pass").value = ""; $("su_pass2").value = ""; forgetScreen(); return loadState(); })
+      .catch(function(x){
+        err.textContent = (x && x.error === "already_set_up")
+          ? "Администратор уже создан — войдите по логину и паролю"
+          : ((x && x.message) || "Не удалось создать учётную запись" + apiWhy(x));
+        if(x && x.error === "already_set_up") showLogin();
+      })
+      .then(function(){ $("btnSetup").disabled = false; });
+  };
   $("loginForm").onsubmit = function(e){
     e.preventDefault();
     $("lg_err").textContent = "";
@@ -2559,21 +2670,35 @@
   }
 
   /* ================== оформление ================== */
+  /* Тумблер у названия: два положения, светлая и тёмная. Пока пользователь его
+     не трогал, тема берётся у системы («auto» в localStorage, как раньше), а
+     тумблер просто показывает, какая сейчас действует. */
+  function systemDark(){
+    return !!(window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches);
+  }
   function applyTheme(t){
     if(t==="auto") document.documentElement.removeAttribute("data-theme");
     else document.documentElement.setAttribute("data-theme", t);
     try{ localStorage.setItem("it_inv_theme", t); }catch(e){}
-    document.querySelectorAll("#themeSw button").forEach(function(b){
-      b.classList.toggle("on", b.dataset.theme===t);
-    });
+    var dark = t==="dark" || (t==="auto" && systemDark());
+    var sw = $("themeSw");
+    sw.classList.toggle("on", dark);
+    sw.setAttribute("aria-checked", dark ? "true" : "false");
+    sw.title = dark ? "Тёмная тема — переключить на светлую" : "Светлая тема — переключить на тёмную";
   }
-  document.querySelectorAll("#themeSw button").forEach(function(b){
-    b.onclick = function(){ applyTheme(b.dataset.theme); };
-  });
+  $("themeSw").onclick = function(){
+    applyTheme($("themeSw").classList.contains("on") ? "light" : "dark");
+  };
   (function(){
     var t = "auto";
     try{ t = localStorage.getItem("it_inv_theme") || "auto"; }catch(e){}
     applyTheme(t);
+    if(window.matchMedia){
+      /* тема системы поменялась, а своей пользователь не выбирал — двигаем тумблер */
+      var mq = window.matchMedia("(prefers-color-scheme: dark)");
+      var onSys = function(){ var cur = "auto"; try{ cur = localStorage.getItem("it_inv_theme") || "auto"; }catch(e){} if(cur==="auto") applyTheme("auto"); };
+      if(mq.addEventListener) mq.addEventListener("change", onSys);
+    }
   })();
 
   /* ================== навигация ================== */
@@ -2727,7 +2852,7 @@
       var r = reg();
       $("ttl").textContent = r.name;
       $("subttl").textContent = r.kind==="supplies"
-        ? "Приход материалов и списание на сотрудников"
+        ? "Приход материалов, списание на сотрудников и установка в оборудование"
         : "Категории → подкатегории → типы, характеристики и записи раздела";
     } else {
       $("ttl").textContent = TT[nav][0];
@@ -2741,9 +2866,10 @@
     return '<div class="stat'+(drill?' clickable" data-drill="'+esc(drill):'')+'">'+
       '<b>'+value+'</b><span title="'+esc(label)+'">'+esc(label)+'</span></div>';
   }
-  function barRow(name, count, total){
+  function barRow(name, count, total, attr){
     var pct = total ? Math.round(count*100/total) : 0;
-    return '<tr>'+cellText(name)+'<td>'+count+'</td>'+
+    return '<tr'+(attr ? ' class="pick" '+attr+' title="открыть карточку"' : '')+'>'+
+      cellText(name)+'<td>'+count+'</td>'+
       '<td><div class="bar" title="'+pct+'%"><i style="width:'+pct+'%"></i></div></td></tr>';
   }
   function renderDash(){
@@ -2774,9 +2900,10 @@
             : '<button class="ic btn-danger js-delreg" title="Удалить раздел">✕</button>')+'</td></tr>';
     }).join("");
     var divs = cfg.divisions.map(function(d){
-      return {name:d.name, cnt:assets.filter(function(i){ return i.division===d.id; }).length};
+      return {id:d.id, name:d.name, cnt:assets.filter(function(i){ return i.division===d.id; }).length};
     }).sort(function(a,b){ return b.cnt-a.cnt; });
-    $("dashDivs").innerHTML = divs.map(function(d){ return barRow(d.name, d.cnt, total); }).join("");
+    $("dashDivs").innerHTML = divs.map(function(d){
+      return barRow(d.name, d.cnt, total, 'data-div="'+esc(d.id)+'"'); }).join("");
     $("dashDivsEmpty").hidden = divs.length>0;
   }
   /* Дашборд по нескольким учреждениям: разделов у каждого свои, поэтому
@@ -2810,7 +2937,7 @@
     order.sort(function(a,b){ return groups[b].cnt - groups[a].cnt; });
     $("dashRegs").innerHTML = order.map(function(nm){
       var g = groups[nm], pct = total ? Math.round(g.cnt*100/total) : 0;
-      return '<tr><td title="'+esc(nm)+'">'+esc(nm)+
+      return '<tr class="pick" data-regn="'+esc(nm)+'" title="открыть карточку"><td title="'+esc(nm)+'">'+esc(nm)+
         ' <span class="chip">в работе '+g.use+'</span>'+
         (g.rep ? ' <span class="chip">в ремонте '+g.rep+'</span>' : '')+'</td>'+
         '<td>'+g.cnt+'</td>'+
@@ -2826,7 +2953,7 @@
     });
     dorder.sort(function(a,b){ return divs[b] - divs[a]; });
     $("dashDivs").innerHTML = dorder.map(function(nm){
-      return barRow(nm, divs[nm], total); }).join("");
+      return barRow(nm, divs[nm], total, 'data-divn="'+esc(nm)+'"'); }).join("");
     $("dashDivsEmpty").hidden = dorder.length > 0;
   }
 
@@ -2849,6 +2976,31 @@
       .map(function(r){ return [(r.icon||"▣")+" "+r.name, by[r.id]]; });
     if(!rows.length) return "";
     return miniTable(["Раздел","Позиций"], rows, "");
+  }
+  /* Карточка раздела или подразделения: сверху статусы чипами, ниже список. */
+  function drillStatusChips(list){
+    var by = {}, ord = [];
+    list.forEach(function(i){
+      var st = i.status || "—";
+      if(by[st] === undefined){ by[st] = 0; ord.push(st); }
+      by[st]++;
+    });
+    if(!ord.length) return "";
+    ord.sort(function(a,b){ return by[b] - by[a]; });
+    return '<div class="row" style="flex-wrap:wrap;gap:6px;margin-bottom:10px">'+
+      ord.map(function(st){ return '<span class="chip">'+esc(st)+': <b>'+by[st]+'</b></span>'; }).join("")+
+      '</div>';
+  }
+  function drillSort(list){
+    var wide = scopeWide();
+    var keyOf = function(x){
+      return (wide ? (x.orgName||"") : "") + "|" +
+             (wide ? (x.regName||"") : ((reg(rid(x))||{}).name||"")) + "|" + (x.inv||"");
+    };
+    return list.slice().sort(function(a,b){
+      var ka = keyOf(a), kb = keyOf(b);
+      return ka<kb?-1:ka>kb?1:0;
+    });
   }
   function drillItems(list, repair){
     if(!list.length) return '<div class="note">Пока пусто.</div>';
@@ -2876,8 +3028,51 @@
   function openDrill(key){
     var wide = scopeWide();
     var assets = wide ? scopePick(cross.items) : assetItems();
-    var title = "", summary = "", body = "";
-    if(key==="all" || key==="inuse" || key==="repair"){
+    var title = "", summary = "", body = "", go = "";
+    if(key.indexOf("reg:")===0){
+      /* карточка раздела учёта (клик по строке дашборда) */
+      var rr = cfg.registries.find(function(x){ return x.id===key.slice(4); });
+      if(!rr) return;
+      if(rr.kind==="supplies"){
+        var mats2 = cfg.supplies.slice()
+          .sort(function(a,b){ return a.name.toLowerCase()<b.name.toLowerCase()?-1:1; });
+        title = (rr.icon||"▣")+" "+rr.name+" — "+mats2.length;
+        summary = '<div class="row" style="flex-wrap:wrap;gap:6px;margin-bottom:10px">'+
+          '<span class="chip">На складе: <b>'+mats2.reduce(function(a,m){ return a+Math.max(0,stockLeft(m)); }, 0)+'</b></span>'+
+          '<span class="chip">Выдано: <b>'+cfg.issues.length+'</b></span></div>';
+        body = miniTable(["Материал","Единица","Поступило","Выдано","Остаток"],
+          mats2.map(function(m){ return [m.name, m.unit||"шт", m.qty||0, issuedCount(m.id), stockLeft(m)]; }),
+          "Материалы пока не заведены.");
+      } else {
+        var rl = drillSort(regItems(rr.id));
+        title = (rr.icon||"▣")+" "+rr.name+" — "+rl.length;
+        summary = drillStatusChips(rl);
+        body = drillItems(rl, false);
+      }
+      go = rr.id;
+    }
+    else if(key.indexOf("regn:")===0){
+      var rn = key.slice(5);
+      var rl2 = drillSort(assets.filter(function(i){ return (i.regName || "без раздела")===rn; }));
+      title = rn+" — "+rl2.length;
+      summary = drillStatusChips(rl2) + drillRegSummary(rl2);
+      body = drillItems(rl2, false);
+    }
+    else if(key.indexOf("div:")===0){
+      var dv = byId("divisions", key.slice(4)); if(!dv) return;
+      var dl = drillSort(assets.filter(function(i){ return i.division===dv.id; }));
+      title = dv.name+" — "+dl.length;
+      summary = drillStatusChips(dl) + drillRegSummary(dl);
+      body = drillItems(dl, false);
+    }
+    else if(key.indexOf("divn:")===0){
+      var dn = key.slice(5);
+      var dl2 = drillSort(assets.filter(function(i){ return (i.divName || "без подразделения")===dn; }));
+      title = dn+" — "+dl2.length;
+      summary = drillStatusChips(dl2) + drillRegSummary(dl2);
+      body = drillItems(dl2, false);
+    }
+    else if(key==="all" || key==="inuse" || key==="repair"){
       var list = key==="all" ? assets
         : assets.filter(function(i){ return i.status === (key==="inuse" ? ST_USE : ST_REPAIR); });
       var sortKeyOf = function(x){
@@ -2904,10 +3099,10 @@
     else if(key==="issues"){
       var iss = cfg.issues.slice().sort(function(a,b){ return (b.date||"").localeCompare(a.date||""); });
       title = "Списания материалов — " + iss.length;
-      body = miniTable(["Дата","Материал","Кол-во","Сотрудник","Примечание"],
+      body = miniTable(["Дата","Материал","Кол-во","Кому","Примечание"],
         iss.map(function(x){
-          var m = supplyById(x.supplyId)||{}, u = byId("users", x.userId)||{};
-          return [fmtDate(x.date), m.name||"", x.qty||1, u.name||"", x.note||""];
+          var m = supplyById(x.supplyId)||{};
+          return [fmtDate(x.date), m.name||"", x.qty||1, issueTarget(x).name||"", x.note||""];
         }), "Списаний не было.");
     }
     else if(key==="ips"){
@@ -2922,20 +3117,28 @@
     $("drillTitle").textContent = title;
     $("drillSummary").innerHTML = summary;
     $("drillBody").innerHTML = body;
+    $("btnDrillGo").hidden = !go;
+    $("btnDrillGo").onclick = function(){ $("dlgDrill").close(); openReg(go, "items"); };
     $("dlgDrill").showModal();
   }
   $("btnDrillClose").onclick = function(){ $("dlgDrill").close(); };
+  $("dashDivs").addEventListener("click", function(e){
+    var tr = e.target.closest("tr[data-div],tr[data-divn]"); if(!tr) return;
+    openDrill(tr.dataset.div ? "div:"+tr.dataset.div : "divn:"+tr.dataset.divn);
+  });
   $("dashStats").addEventListener("click", function(e){
     var el = e.target.closest("[data-drill]"); if(!el) return;
     openDrill(el.dataset.drill);
   });
 
   $("dashRegs").addEventListener("click", function(e){
+    var wtr = e.target.closest("tr[data-regn]");
+    if(wtr){ openDrill("regn:"+wtr.dataset.regn); return; }
     var tr = e.target.closest("tr[data-reg]"); if(!tr) return;
     var r = cfg.registries.find(function(x){ return x.id===tr.dataset.reg; }); if(!r) return;
     if(e.target.classList.contains("js-cfgreg")){ openRegDlg(r); return; }
     if(e.target.classList.contains("js-delreg")){ deleteRegistry(r); return; }
-    openReg(r.id, "items");
+    openDrill("reg:"+r.id);
   });
 
   /* ================== настройки раздела ================== */
@@ -4471,30 +4674,83 @@
   }
 
   /* ---------- приём файла ---------- */
+  /* Распознавание скана занимает от 10 до 40 секунд (подбор поворота, разбор
+     таблицы по линейкам), и без индикатора это выглядит как зависание. Поэтому
+     файл уходит через XMLHttpRequest — он умеет отдавать ход загрузки, — а дальше
+     крутится секундомер: видно, что сервер работает, а не молчит. */
+  var docWaitTimer = null;
+  function docWaitStop(){
+    if(docWaitTimer){ clearInterval(docWaitTimer); docWaitTimer = null; }
+    var dz = $("docDrop");
+    dz.classList.remove("busy");
+    $("dwBar").classList.remove("ind");
+    $("dwBar").firstChild.style.width = "0";
+  }
   function sendDoc(file){
     if(!file) return;
     $("docErr").textContent = "";
-    var dz = $("docDrop");
+    var dz = $("docDrop"), bar = $("dwBar"), started = Date.now(), stage = "up";
     dz.classList.add("busy");
-    dz.querySelector("b").textContent = "Загружаю и распознаю: " + file.name;
+    $("dwTitle").textContent = "Загружаем файл: " + file.name;
+    $("dwSub").textContent = fmtBytes(file.size);
+    bar.classList.remove("ind"); bar.firstChild.style.width = "0";
+    var isPdf = /\.pdf$/i.test(file.name);
+    var ocrStage = function(){
+      stage = "ocr";
+      $("dwTitle").textContent = "Распознаём документ…";
+      bar.classList.add("ind"); bar.firstChild.style.width = "";
+      var tick = function(){
+        var s = Math.round((Date.now() - started) / 1000);
+        $("dwSub").textContent = "Прошло " + s + " с. " +
+          (docsOcr && docsOcr.ready === false
+            ? "Распознавание на сервере выключено — читаем только текстовый слой."
+            : (isPdf ? "У PDF с текстовым слоем это мгновенно, скан читается 10–40 секунд — не закрывайте страницу."
+                     : "Картинка распознаётся 10–40 секунд: подбираем поворот и читаем таблицу — не закрывайте страницу."));
+      };
+      tick();
+      docWaitTimer = setInterval(tick, 1000);
+    };
     var fd = new FormData();
     fd.append("file", file);
-    fetch("/api/docs/upload", {method:"POST", body:fd, credentials:"same-origin"})
-      .then(function(r){ return r.json().catch(function(){ return {}; })
-        .then(function(j){ if(!r.ok){ j.status = r.status; throw j; } return j; }); })
-      .then(function(d){
-        docsOcr = d.ocr || docsOcr;
-        toast("Накладная принята");
-        return loadDocs().then(function(){ openDoc(d.doc && d.doc.id); });
-      })
-      .catch(function(e){
+    var xhr = new XMLHttpRequest();
+    xhr.open("POST", "/api/docs/upload", true);
+    xhr.withCredentials = true;
+    xhr.upload.onprogress = function(ev){
+      if(!ev.lengthComputable || stage !== "up") return;
+      var pct = Math.round(ev.loaded * 100 / ev.total);
+      bar.firstChild.style.width = pct + "%";
+      $("dwSub").textContent = fmtBytes(ev.loaded) + " из " + fmtBytes(ev.total) + " · " + pct + "%";
+      if(ev.loaded >= ev.total) ocrStage();
+    };
+    xhr.upload.onload = function(){ if(stage === "up") ocrStage(); };
+    xhr.onerror = function(){
+      docWaitStop();
+      $("docErr").textContent = "Не удалось принять файл — нет связи с сервером";
+    };
+    xhr.onload = function(){
+      docWaitStop();
+      var j = {};
+      try { j = JSON.parse(xhr.responseText || "{}"); } catch(e){ j = {}; }
+      if(xhr.status === 401){ showLogin(); return; }
+      if(xhr.status < 200 || xhr.status >= 300){
+        j.status = xhr.status;
         $("docErr").textContent = "Не удалось принять файл" +
-          (e && e.message ? " — " + e.message : apiWhy(e));
-      })
-      .then(function(){
-        dz.classList.remove("busy");
-        dz.querySelector("b").textContent = "Перетащите сюда скан накладной";
-      });
+          (j && j.message ? " — " + j.message : apiWhy(j));
+        return;
+      }
+      docsOcr = j.ocr || docsOcr;
+      var secs = Math.round((Date.now() - started) / 1000);
+      toast("Накладная принята" + (secs >= 3 ? " за " + secs + " с" : ""));
+      loadDocs().then(function(){ openDoc(j.doc && j.doc.id); })
+        .catch(function(e){ $("docErr").textContent = "Не удалось обновить список" + apiWhy(e); });
+    };
+    xhr.send(fd);
+  }
+  function fmtBytes(n){
+    n = n || 0;
+    if(n < 1024) return n + " Б";
+    if(n < 1024*1024) return Math.round(n/1024) + " КБ";
+    return (n/1024/1024).toFixed(1).replace(".", ",") + " МБ";
   }
   (function(){
     var dz = $("docDrop");
@@ -5367,24 +5623,42 @@
           return '<option value="'+esc(u.id)+'">'+esc(u.name)+'</option>'; }).join("")
       : '<option value="">— сотрудники не заведены —</option>';
     if(keepU && byId("users", keepU)) $("isUser").value = keepU;
+    /* оборудование — всё, кроме списанного, по разделам; подпись как в «Прикрепить к» */
+    var keepI = $("isItem").value, groups = {};
+    assetItems().filter(function(x){ return x.status !== ST_OFF; }).forEach(function(x){
+      var k = rid(x); (groups[k] = groups[k] || []).push(x); });
+    $("isItem").innerHTML = '<option value="">— выберите оборудование —</option>' +
+      cfg.registries.filter(function(r){ return groups[r.id]; }).map(function(r){
+        return '<optgroup label="'+esc(r.name)+'">' + groups[r.id]
+          .sort(function(a,b){ return (a.inv||"").localeCompare(b.inv||""); })
+          .map(function(x){
+            var who = ownerName(x.owner);
+            return '<option value="'+esc(x.id)+'">'+esc((x.inv||"—") + " · " + (typeName(x.type)||"") +
+                   (who ? " · " + who : "") + (x.status && x.status!==ST_USE ? " · " + x.status : ""))+'</option>';
+          }).join("") + '</optgroup>';
+      }).join("");
+    if(keepI && items.some(function(x){ return x.id===keepI; })) $("isItem").value = keepI;
+    syncIssueTarget();
     if(!$("isDate").value) $("isDate").value = today();
 
     var q = $("qIssue").value.trim().toLowerCase();
     var list = cfg.issues.slice().sort(function(a,b){ return (b.date||"").localeCompare(a.date||""); });
     var shown = list.filter(function(x){
       if(!q) return true;
-      var u = byId("users", x.userId) || {}, m = supplyById(x.supplyId) || {};
-      return [fmtDate(x.date), m.name, String(x.qty||1), u.name, nameById("divisions",u.divisionId),
-              nameById("departments",u.departmentId), x.note].join(" ").toLowerCase().indexOf(q)!==-1;
+      var t = issueTarget(x), m = supplyById(x.supplyId) || {};
+      return [fmtDate(x.date), m.name, String(x.qty||1), t.name, t.div, t.dep, x.note]
+        .join(" ").toLowerCase().indexOf(q)!==-1;
     });
     $("issuedBody").innerHTML = shown.map(function(x, i){
-      var u = byId("users", x.userId) || {}, m = supplyById(x.supplyId) || {};
+      var t = issueTarget(x), m = supplyById(x.supplyId) || {};
       return '<tr data-i="'+esc(x.id)+'"><td class="num">'+(i+1)+'</td>'+
         '<td class="mono" title="'+esc(fmtDate(x.date))+'">'+esc(fmtDate(x.date))+'</td>'+
-        cellText(m.name||"—") + '<td>'+(x.qty||1)+'</td>' + cellText(u.name||"—") +
-        cellText(nameById("divisions", u.divisionId)||"—") +
-        '<td class="hide-md" title="'+esc(nameById("departments", u.departmentId)||"—")+'">'+
-          esc(nameById("departments", u.departmentId)||"—")+'</td>'+
+        cellText(m.name||"—") + '<td>'+(x.qty||1)+'</td>' +
+        '<td title="'+esc(t.name||"—")+'">'+
+          (t.kind==="item" ? '<span class="chip" title="установлено в оборудование">⚙</span> ' : '')+
+          (t.item ? '<a href="#" class="js-isitem" data-id="'+esc(t.item.id)+'">'+esc(t.name)+'</a>' : esc(t.name||"—"))+'</td>'+
+        cellText(t.div||"—") +
+        '<td class="hide-md" title="'+esc(t.dep||"—")+'">'+esc(t.dep||"—")+'</td>'+
         cellText(x.note||"") +
         acts(['<button class="ic btn-danger js-deli" title="Отменить списание">✕</button>'])+'</tr>';
     }).join("");
@@ -5392,24 +5666,41 @@
     ie.textContent = list.length ? "Ничего не найдено." : "Списаний пока не было.";
   }
   $("qIssue").oninput = renderIssued;
+  function syncIssueTarget(){
+    var toItem = $("isTo").value === "item";
+    $("isUserWrap").hidden = toItem;
+    $("isItemWrap").hidden = !toItem;
+    $("btnIssue").textContent = toItem ? "Установить в оборудование" : "Списать на сотрудника";
+    $("isHint").textContent = toItem
+      ? "Материал уходит в конкретную единицу техники: краска в принтер, термопаста в компьютер. Списание видно в карточке этого оборудования, подразделение и отдел берутся из неё."
+      : "Подразделение и отдел подставляются из карточки сотрудника. Списание попадает в его профиль.";
+  }
+  $("isTo").onchange = syncIssueTarget;
   $("btnIssue").onclick = function(){
-    var m = supplyById($("isSup").value), u = byId("users", $("isUser").value);
+    var m = supplyById($("isSup").value), toItem = $("isTo").value === "item";
+    var u = toItem ? null : byId("users", $("isUser").value);
+    var it = toItem ? items.find(function(x){ return x.id===$("isItem").value; }) : null;
     if(!m){ toast("Выберите материал"); return; }
-    if(!u){ toast("Выберите сотрудника"); return; }
+    if(!toItem && !u){ toast("Выберите сотрудника"); return; }
+    if(toItem && !it){ toast("Выберите оборудование"); return; }
     var d = $("isDate").value || today();
     var qty = Math.max(1, parseInt($("isQty").value,10)||1);
     var left = stockLeft(m);
     if(left <= 0){ toast("«"+m.name+"» закончился — сначала оприходуйте приход"); return; }
     if(qty > left){ toast("На складе только "+left+" "+(m.unit||"шт")+" — списать больше нельзя"); return; }
-    cfg.issues.push({id:uid("is"), supplyId:m.id, userId:u.id, qty:qty, date:d, note:$("isNote").value.trim()});
+    cfg.issues.push({id:uid("is"), supplyId:m.id, userId:u ? u.id : "", itemId:it ? it.id : "",
+                     qty:qty, date:d, note:$("isNote").value.trim()});
     $("isNote").value=""; $("isQty").value="1";
-    saveCfg(); toast("Списано: "+m.name+" × "+qty+" → "+u.name);
+    saveCfg(); toast("Списано: "+m.name+" × "+qty+" → "+(u ? u.name : "инв. "+(it.inv||"—")));
   };
   $("issuedBody").addEventListener("click", function(e){
+    if(e.target.classList.contains("js-isitem")){
+      e.preventDefault(); openItemById(e.target.dataset.id); return;
+    }
     if(!e.target.classList.contains("js-deli")) return;
     var x = cfg.issues.find(function(y){ return y.id===e.target.closest("tr").dataset.i; }); if(!x) return;
-    var m = supplyById(x.supplyId) || {}, u = byId("users", x.userId) || {};
-    if(!confirm("Отменить списание «"+(m.name||"")+"» на "+(u.name||"")+" от "+fmtDate(x.date)+"?")) return;
+    var m = supplyById(x.supplyId) || {}, t = issueTarget(x);
+    if(!confirm("Отменить списание «"+(m.name||"")+"» на "+(t.name||"")+" от "+fmtDate(x.date)+"?")) return;
     cfg.issues = cfg.issues.filter(function(y){ return y.id!==x.id; }); saveCfg();
   });
   function renderSup(){ renderStock(); renderReceipts(); renderIssued(); }
@@ -5775,8 +6066,7 @@
     var cur = poolById(curPool);
     $("gridCard").hidden = !cur;
     if(cur){
-      $("gridTitle").textContent = cur.name + " · " + cur.prefix + "0/24 · хосты " + cur.from + "–" + cur.to;
-      var cells = [];
+      var cells = [], aliveN = 0, checkedN = 0;
       for(var h=(cur.from|0); h<=(cur.to|0); h++){
         var ip = cur.prefix+h, e = idx[ip], cls = "free", lab = "", ttl = ip + " — свободен";
         if(e && e.list.length){
@@ -5789,9 +6079,24 @@
           cls = "res"; lab = e.res.note || "резерв";
           ttl = ip + " — резерв" + (e.res.note ? ": "+e.res.note : "");
         }
-        cells.push('<div class="ipcell '+cls+'" data-ip="'+esc(ip)+'" title="'+esc(ttl)+'">'+
+        /* опрос сети: точка в углу и подпись в подсказке */
+        var ns = netOf(ip), dot = "";
+        if(ns && ns.lastCheck){
+          checkedN++;
+          if(ns.alive){
+            aliveN++; cls += " alive"; dot = '<i class="net on"></i>';
+            ttl += " · в сети" + (ns.method ? " ("+ns.method+")" : "") +
+                   (e && e.list.length ? "" : " — в учёте не числится");
+          } else {
+            cls += " dead"; dot = '<i class="net"></i>';
+            ttl += " · не отвечает" + (ns.lastSeen ? ", был в сети " + fmtWhen(ns.lastSeen) : "");
+          }
+        }
+        cells.push('<div class="ipcell '+cls+'" data-ip="'+esc(ip)+'" title="'+esc(ttl)+'">'+dot+
           '<b>'+h+'</b><small>'+esc(lab||"·")+'</small></div>');
       }
+      $("gridTitle").textContent = cur.name + " · " + cur.prefix + "0/24 · хосты " + cur.from + "–" + cur.to +
+        (checkedN ? " · в сети " + aliveN + " из " + checkedN + " опрошенных" : "");
       $("ipGrid").innerHTML = cells.join("");
     }
 
@@ -6804,6 +7109,11 @@
         }).join("");
     $("f_parent").value = it ? (it.parent||"") : "";
     $("f_hide").checked = !!(it && it.hideAttached);
+    var mats = it ? issuesOfItem(it.id) : [];
+    $("matBox").hidden = !mats.length;
+    $("matList").innerHTML = miniTable(["Дата","Материал","Кол-во","Примечание"],
+      mats.map(function(x){ var m = supplyById(x.supplyId)||{};
+        return [fmtDate(x.date), m.name||"—", String(x.qty||1), x.note||""]; }), "");
     var att = it ? attachedTo(it.id) : [];
     $("attBox").hidden = !att.length;
     $("attList").innerHTML = miniTable(["Инв. номер","Модель","Тип","Статус","В списке"],
@@ -7455,13 +7765,12 @@
         });
       suffix = "поступления";
     } else if(supTab==="issued"){
-      head = ["Дата","Материал","Кол-во","Сотрудник","Подразделение","Отдел","Примечание"];
+      head = ["Дата","Материал","Кол-во","Кому","Подразделение","Отдел","Примечание"];
       rows = cfg.issues.slice()
         .sort(function(a,b){ return (b.date||"").localeCompare(a.date||""); })
         .map(function(x){
-          var u = byId("users", x.userId) || {}, m = supplyById(x.supplyId) || {};
-          return [fmtDate(x.date), m.name||"", x.qty||1, u.name||"",
-                  nameById("divisions", u.divisionId), nameById("departments", u.departmentId), x.note||""];
+          var t = issueTarget(x), m = supplyById(x.supplyId) || {};
+          return [fmtDate(x.date), m.name||"", x.qty||1, t.name||"", t.div, t.dep, x.note||""];
         });
       suffix = "выдачи";
     } else {

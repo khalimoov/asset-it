@@ -1,0 +1,15 @@
+# в образ идут только страница и server/ — остальное не нужно
+.git
+dist
+backup
+packaging
+*.dump
+*.log
+*.d.ts
+it-stub.html
+NOTES.md
+server/.env
+server/FIRST_LOGIN_*.txt
+server/__pycache__
+server/tessdata
+server/tesseract
