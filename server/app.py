@@ -488,6 +488,21 @@ def js_date(v):
     return v.isoformat() if isinstance(v, (datetime.date, datetime.datetime)) else (v or "")
 
 
+def js_num(v):
+    """Деньги из базы в JSON: numeric приезжает как Decimal, а его jsonify не умеет."""
+    return None if v is None else float(v)
+
+
+def to_num(v):
+    """Деньги из браузера в базу: пустое поле — это «не указано», а не ноль."""
+    if v is None or v == "":
+        return None
+    try:
+        return round(float(str(v).replace(",", ".").replace(" ", "").replace(" ", "")), 2)
+    except (TypeError, ValueError):
+        return None
+
+
 def load_state(user, org_id):
     """Собирает дерево данных одного учреждения.
 
@@ -572,7 +587,8 @@ def load_state(user, org_id):
                        "orgId": r["org_id"] or ""}
                       for r in by_org("warehouse", "order by code, name")]
         divisions = [{"id": r["id"], "name": r["name"]} for r in by_org("division", "order by name")]
-        departments = [{"id": r["id"], "name": r["name"]} for r in by_org("department", "order by name")]
+        departments = [{"id": r["id"], "name": r["name"], "divisionId": r["division_id"] or ""}
+                       for r in by_org("department", "order by name")]
 
         pools = [{"id": r["id"], "name": r["name"], "prefix": r["prefix"], "from": r["host_from"],
                   "to": r["host_to"], "note": r["note"], "registryId": r["registry_id"] or "",
@@ -583,6 +599,7 @@ def load_state(user, org_id):
         supplies = [{"id": r["id"], "name": r["name"], "unit": r["unit"], "note": r["note"], "qty": 0}
                     for r in by_org("supply", "order by name")]
         receipts = [{"id": r["id"], "supplyId": r["supply_id"], "qty": r["qty"],
+                     "sku": r["sku"] or "", "cost": js_num(r["cost"]),
                      "date": js_date(r["d"]), "note": r["note"]}
                     for r in rows("""select r.* from supply_receipt r
                                               join supply s on s.id = r.supply_id
@@ -590,11 +607,18 @@ def load_state(user, org_id):
                                           order by r.d desc nulls last""", (org_id,))]
         issues = [{"id": r["id"], "supplyId": r["supply_id"], "userId": r["person_id"] or "",
                    "itemId": r["item_id"] or "",
+                   "sku": r["sku"] or "", "cost": js_num(r["cost"]),
                    "qty": r["qty"], "date": js_date(r["d"]), "note": r["note"]}
                   for r in rows("""select i.* from supply_issue i
                                             join supply s on s.id = i.supply_id
                                            where s.org_id = %s
                                         order by i.d desc nulls last""", (org_id,))]
+        # документальный склад: списания «по бумагам», на фактические остатки не влияют
+        writeoffs = [{"id": r["id"], "supplyId": r["supply_id"], "sku": r["sku"] or "",
+                      "cost": js_num(r["cost"]), "qty": r["qty"], "date": js_date(r["d"]),
+                      "note": r["note"], "who": r["who"] or "",
+                      "at": r["at"].isoformat() if r["at"] else ""}
+                     for r in by_org("stock_writeoff", "order by d desc nulls last, at desc")]
         got = {}
         for rc in receipts:
             got[rc["supplyId"]] = got.get(rc["supplyId"], 0) + (rc["qty"] or 0)
@@ -638,6 +662,7 @@ def load_state(user, org_id):
             for r in rows("select * from item where registry_id = any(%s) order by inv", (reg_ids,)):
                 items.append({
                     "id": r["id"], "registryId": r["registry_id"], "inv": r["inv"],
+                    "sku": r["sku"] or "", "cost": js_num(r["cost"]),
                     "type": r["type_id"] or "", "status": r["status"],
                     "owner": r["owner_id"] or "", "division": r["division_id"] or "",
                     "department": r["department_id"] or "", "notes": r["notes"],
@@ -664,7 +689,7 @@ def load_state(user, org_id):
         "types": types, "specs": specs, "presets": presets, "users": persons,
         "staff": staff, "roles": roles, "divisions": divisions, "departments": departments,
         "ipPools": pools, "ipReserved": reserved, "supplies": supplies, "receipts": receipts,
-        "issues": issues, "repairs": repairs, "notices": notices, "units": units,
+        "issues": issues, "writeoffs": writeoffs, "repairs": repairs, "notices": notices, "units": units,
         "netStatus": net_status, "warehouses": warehouses,
         "models": models, "places": places,
     }
@@ -783,10 +808,12 @@ def save_cfg(cfg, user, org_id):
         for name, table in (("divisions", "division"), ("departments", "department"),
                             ("places", "place")):
             if name in cfg and can(user, "users.manage"):
-                # примечание есть только у мест: у подразделений и отделов такой колонки нет
+                # примечание есть только у мест, подразделение — только у отделов
                 cols = {"name": lambda r: g(r, "name"), "org_id": org}
                 if table == "place":
                     cols["note"] = lambda r: g(r, "note")
+                if table == "department":
+                    cols["division_id"] = lambda r: g(r, "divisionId") or None
                 sync_table(cur, table, cols, cfg[name], scope=in_org)
 
         if "users" in cfg and can(user, "users.manage"):
@@ -874,6 +901,7 @@ def save_cfg(cfg, user, org_id):
         if "receipts" in cfg and can(user, "supply.receive"):
             sync_table(cur, "supply_receipt", {
                 "supply_id": lambda r: g(r, "supplyId"), "qty": lambda r: int(g(r, "qty", 0) or 0),
+                "sku": lambda r: g(r, "sku"), "cost": lambda r: to_num(r.get("cost")),
                 "d": lambda r: g(r, "date") or None, "note": lambda r: g(r, "note")},
                 cfg["receipts"], scope=in_supplies)
         if "issues" in cfg and can(user, "supply.issue"):
@@ -882,8 +910,19 @@ def save_cfg(cfg, user, org_id):
                 "person_id": lambda r: g(r, "userId") or None,
                 "item_id": lambda r: g(r, "itemId") or None,
                 "qty": lambda r: int(g(r, "qty", 1) or 1),
+                "sku": lambda r: g(r, "sku"), "cost": lambda r: to_num(r.get("cost")),
                 "d": lambda r: g(r, "date") or None, "note": lambda r: g(r, "note")},
                 cfg["issues"], scope=in_supplies)
+        if "writeoffs" in cfg and can(user, "supply.issue"):
+            # документальные списания: тот же приём, что и у выдачи, но отдельной таблицей —
+            # «Таблица склада» ведёт свой счёт и фактических остатков не трогает
+            sync_table(cur, "stock_writeoff", {
+                "supply_id": lambda r: g(r, "supplyId"),
+                "sku": lambda r: g(r, "sku"), "cost": lambda r: to_num(r.get("cost")),
+                "qty": lambda r: int(g(r, "qty", 0) or 0),
+                "d": lambda r: g(r, "date") or None, "note": lambda r: g(r, "note"),
+                "who": lambda r: g(r, "who"), "org_id": org},
+                cfg["writeoffs"], scope=in_org)
 
         # --- ремонты и уведомления пишет всякий, кто может менять статус ---
         if "repairs" in cfg:
@@ -992,14 +1031,16 @@ def save_items(items, user, org_id):
             if parent == it["id"]:
                 parent = ""                      # к самой себе не прикрепить
             cur.execute("""
-                insert into item (id, registry_id, inv, type_id, status, owner_id, division_id,
+                insert into item (id, registry_id, inv, sku, cost, type_id, status, owner_id,
+                                  division_id,
                                   department_id, notes, specs, specs_none, master_id,
                                   status_date, status_note, warehouse_id,
                                   model_id, holder, place_id, parent_id, hide_attached,
                                   updated_by, updated_by_name, updated_at)
-                values (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s, now())
+                values (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s, now())
                 on conflict (id) do update set
-                  registry_id = excluded.registry_id, inv = excluded.inv, type_id = excluded.type_id,
+                  registry_id = excluded.registry_id, inv = excluded.inv,
+                  sku = excluded.sku, cost = excluded.cost, type_id = excluded.type_id,
                   status = excluded.status, owner_id = excluded.owner_id,
                   division_id = excluded.division_id, department_id = excluded.department_id,
                   notes = excluded.notes, specs = excluded.specs, specs_none = excluded.specs_none,
@@ -1012,7 +1053,8 @@ def save_items(items, user, org_id):
                   updated_by_name = excluded.updated_by_name, updated_at = now(),
                   transferred_at = case when excluded.status = 'На складе'
                                         then item.transferred_at else null end
-            """, (it["id"], reg, it.get("inv", ""), it.get("type") or None, it.get("status", ""),
+            """, (it["id"], reg, it.get("inv", ""), (it.get("sku") or "").strip(),
+                  to_num(it.get("cost")), it.get("type") or None, it.get("status", ""),
                   it.get("owner") or None, it.get("division") or None, it.get("department") or None,
                   it.get("notes", ""), json.dumps(it.get("specs", {})),
                   json.dumps(it.get("specsNone", {})), it.get("masterId") or None,
@@ -1896,10 +1938,11 @@ def api_docs_apply():
                         cur.execute("""insert into supply (id, name, unit, note, org_id)
                                        values (%s,%s,'шт','',%s)""", (sid, name, org_id))
                         log.append("новый материал: " + name)
-                cur.execute("""insert into supply_receipt (id, supply_id, qty, d, note, document_id)
-                               values (%s,%s,%s,%s,%s,%s)""",
-                            ("rcp" + secrets.token_hex(6), sid, qty, doc["doc_date"],
-                             "накладная " + (doc["number"] or ""), did))
+                cur.execute("""insert into supply_receipt (id, supply_id, qty, sku, cost,
+                                                          d, note, document_id)
+                               values (%s,%s,%s,%s,%s,%s,%s,%s)""",
+                            ("rcp" + secrets.token_hex(6), sid, qty, sku, to_num(r.get("cost")),
+                             doc["doc_date"], "накладная " + (doc["number"] or ""), did))
                 made["receipts"] += 1
                 log.append("%s — приход %d" % (name, qty))
                 cur.execute("""insert into sku_hint (org_id, sku, registry_id, supply_id, name)
@@ -1939,11 +1982,11 @@ def api_docs_apply():
                     # одинаковая номенклатура на несколько единиц: 12345678, /2, /3…
                     inv = next_inv(cur, org_id, sku)
                     cur.execute("""
-                        insert into item (id, registry_id, inv, type_id, status, notes,
+                        insert into item (id, registry_id, inv, sku, cost, type_id, status, notes,
                                           specs, specs_none, document_id, warehouse_id,
                                           updated_by, updated_by_name)
-                        values (%s,%s,%s,%s,'На складе',%s,'{}','{}',%s,%s,%s,%s)
-                    """, (item_id, target, inv, tid,
+                        values (%s,%s,%s,%s,%s,%s,'На складе',%s,'{}','{}',%s,%s,%s,%s)
+                    """, (item_id, target, inv, sku, to_num(r.get("cost")), tid,
                           "накладная " + doc["number"] if doc["number"] else "",
                           did, wh_id, request.user["id"], request.user["name"]))
                     # в истории записи должно быть видно, кто и по какому

@@ -544,6 +544,7 @@
             <select id="qField" title="Где искать">
               <option value="">Везде</option>
               <option value="inv">Инвентарный номер</option>
+              <option value="sku">Номенклатурный номер</option>
               <option value="catName">Категория</option>
               <option value="subName">Подкатегория</option>
               <option value="typeName">Тип</option>
@@ -573,13 +574,16 @@
           <div class="tablewrap">
             <table id="tbl">
               <colgroup>
-                <col style="width:3.4%"><col style="width:10%"><col style="width:11%"><col class="hide-md col-sub" style="width:11%">
-                <col style="width:17%"><col style="width:12%"><col style="width:12%">
-                <col style="width:8%"><col class="hide-md" style="width:8%"><col class="hide-sm" style="width:8%">
+                <col style="width:3.4%"><col style="width:9%"><col class="hide-sm" style="width:8%"><col class="hide-sm" style="width:9%">
+                <col style="width:10%"><col class="hide-md col-sub" style="width:9%">
+                <col style="width:14%"><col style="width:10%"><col style="width:10%">
+                <col style="width:6%"><col class="hide-md" style="width:6%"><col class="hide-sm" style="width:5.6%">
               </colgroup>
               <thead><tr>
                 <th class="num">#</th>
                 <th data-s="inv">Инв. номер<span class="arr"></span></th>
+                <th data-s="sku" class="hide-sm">Номенкл.<span class="arr"></span></th>
+                <th data-s="cost" class="hide-sm">Стоимость<span class="arr"></span></th>
                 <th data-s="catName">Категория<span class="arr"></span></th>
                 <th data-s="subName" class="hide-md col-sub">Подкатегория<span class="arr"></span></th>
                 <th data-s="typeName">Тип<span class="arr"></span></th>
@@ -894,6 +898,7 @@
         <button data-st="stock" class="on">Приход и остатки</button>
         <button data-st="receipts">История поступлений</button>
         <button data-st="issued">Выдано и установлено</button>
+        <button data-st="wh">Таблица склада</button>
       </nav>
 
       <section id="s-stock">
@@ -906,6 +911,10 @@
               <datalist id="supNames"></datalist></div>
             <div class="field"><label for="supQty">Количество</label>
               <input id="supQty" type="number" min="1" step="1" value="1"></div>
+            <div class="field"><label for="supSku">Номенклатурный</label>
+              <input id="supSku" inputmode="numeric" placeholder="как в накладной: 0091220"></div>
+            <div class="field"><label for="supCost">Стоимость</label>
+              <input id="supCost" inputmode="decimal" placeholder="цена за единицу"></div>
             <div class="field"><label for="supDate">Дата поступления</label>
               <input id="supDate" type="date"></div>
             <div class="field"><label for="supUnit">Единица</label>
@@ -914,7 +923,7 @@
               <input id="supNote" placeholder="Партия, поставщик, счёт"></div>
           </div>
           <div class="row" style="margin-top:12px"><button class="btn-primary" id="btnAddSup">Оприходовать</button></div>
-          <div class="note">Каждый приход записывается отдельной строкой с датой — их видно на вкладке «История поступлений». Если материал с таким названием уже есть, количество прибавится к остатку.
+          <div class="note">Каждый приход записывается отдельной строкой с датой — их видно на вкладке «История поступлений». Один и тот же материал сходится в одну строку остатков, только когда совпадает всё: название, номенклатурный номер и стоимость. Разошлось хоть что-то — это отдельная строка, свой остаток и своя цена.
           Кнопки «Импорт CSV» и «Экспорт CSV» вверху работают с этой вкладкой: выгружаются материалы
           с остатками, а при загрузке колонка «Поступило» из файла заменяет текущее значение
           (так выгрузка и загрузка не удваивают остаток).</div>
@@ -922,8 +931,8 @@
         <div class="card">
           <div class="tablewrap">
             <table>
-              <colgroup><col style="width:3.4%"><col style="width:31%"><col style="width:9%"><col style="width:11%"><col style="width:11%"><col style="width:11%"><col class="hide-md" style="width:14%"><col style="width:8%"></colgroup>
-              <thead><tr><th class="num">#</th><th>Материал</th><th>Единица</th><th>Поступило</th><th>Выдано</th><th>Остаток</th><th class="hide-md">Примечание</th><th></th></tr></thead>
+              <colgroup><col style="width:3.4%"><col style="width:22%"><col style="width:11%"><col style="width:11%"><col style="width:6%"><col style="width:9%"><col style="width:8%"><col style="width:9%"><col class="hide-md" style="width:12%"><col style="width:8.6%"></colgroup>
+              <thead><tr><th class="num">#</th><th>Материал</th><th>Номенклатурный</th><th>Стоимость</th><th>Единица</th><th>Поступило</th><th>Выдано</th><th>Остаток</th><th class="hide-md">Примечание</th><th></th></tr></thead>
               <tbody id="stockBody"></tbody>
             </table>
           </div>
@@ -938,8 +947,8 @@
         <div class="card">
           <div class="tablewrap">
             <table>
-              <colgroup><col style="width:3.4%"><col style="width:12%"><col style="width:36%"><col style="width:10%"><col style="width:29%"><col style="width:9%"></colgroup>
-              <thead><tr><th class="num">#</th><th>Дата</th><th>Материал</th><th>Кол-во</th><th>Примечание</th><th></th></tr></thead>
+              <colgroup><col style="width:3.4%"><col style="width:10%"><col style="width:24%"><col style="width:11%"><col style="width:11%"><col style="width:7%"><col style="width:11%"><col class="hide-md" style="width:14%"><col style="width:8.6%"></colgroup>
+              <thead><tr><th class="num">#</th><th>Дата</th><th>Материал</th><th>Номенклатурный</th><th>Стоимость</th><th>Кол-во</th><th>Сумма</th><th class="hide-md">Примечание</th><th></th></tr></thead>
               <tbody id="receiptsBody"></tbody>
             </table>
           </div>
@@ -981,6 +990,30 @@
             </table>
           </div>
           <div class="empty" id="issuedEmpty" hidden>Списаний пока не было.</div>
+        </div>
+      </section>
+
+      <!-- Документальный склад: списания «по бумагам». Приход общий с фактом,
+           а списания свои — на «Выдано и установлено» они не влияют. -->
+      <section id="s-wh" hidden>
+        <div class="card pad" style="margin-bottom:14px">
+          <h2>Документальный учёт</h2>
+          <div class="note" style="margin-top:0">Материалы сюда приходят те же, что и в «Приход и остатки» — приход один на оба учёта. А списания здесь свои, бумажные: на фактические остатки во «Выдано и установлено» они не влияют, и наоборот.</div>
+          <div class="stats" id="whStats" style="margin-top:12px"></div>
+          <div class="row" style="margin-top:12px"><button class="btn-primary" id="btnWhOff">Списание</button></div>
+        </div>
+        <div class="searchbar">
+          <div class="searchbox"><input id="qWh2" type="search" placeholder="Поиск по материалу, номенклатуре, дате…"></div>
+        </div>
+        <div class="card">
+          <div class="tablewrap">
+            <table>
+              <colgroup><col style="width:3.4%"><col style="width:10%"><col style="width:24%"><col style="width:11%"><col style="width:11%"><col style="width:7%"><col style="width:11%"><col class="hide-md" style="width:14%"><col style="width:8.6%"></colgroup>
+              <thead><tr><th class="num">#</th><th>Дата</th><th>Материал</th><th>Номенклатурный</th><th>Стоимость</th><th>Кол-во</th><th>Сумма</th><th class="hide-md">Примечание</th><th></th></tr></thead>
+              <tbody id="whBody"></tbody>
+            </table>
+          </div>
+          <div class="empty" id="whEmpty" hidden>Списаний по документам пока не было.</div>
         </div>
       </section>
     </section>
@@ -1470,15 +1503,16 @@
         <h2>Новый отдел</h2>
         <div class="row">
           <input id="newDepartments" placeholder="Например: Бухгалтерия" style="flex:1;min-width:240px">
+          <select id="newDepartmentsDiv" style="min-width:200px"></select>
           <button class="btn-primary" data-add="departments">Добавить</button>
         </div>
-        <div class="note">Справочник общий для всех разделов учёта.</div>
+        <div class="note">Справочник общий для всех разделов учёта. Подразделение можно указать сразу или выбрать потом в таблице.</div>
       </div>
       <div class="card">
         <div class="tablewrap">
           <table>
-            <colgroup><col style="width:3.4%"><col style="width:45%"><col style="width:16%"><col style="width:16%"><col style="width:18%"></colgroup>
-            <thead><tr><th class="num">#</th><th>Отдел</th><th>Сотрудников</th><th>Позиций</th><th></th></tr></thead>
+            <colgroup><col style="width:3.4%"><col style="width:29%"><col style="width:26%"><col style="width:13%"><col style="width:13%"><col style="width:15.6%"></colgroup>
+            <thead><tr><th class="num">#</th><th>Отдел</th><th>Подразделение</th><th>Сотрудников</th><th>Позиций</th><th></th></tr></thead>
             <tbody id="departmentsBody"></tbody>
           </table>
         </div>
@@ -1493,9 +1527,13 @@
   <div class="dlg-head" id="dlgTitle">Запись</div>
   <div class="dlg-body">
     <div class="grid2">
-      <div class="field"><label for="f_inv">Номенклатурный / инвентарный номер</label>
+      <div class="field"><label for="f_inv">Инвентарный номер</label>
         <input id="f_inv" inputmode="numeric" placeholder="7 цифр — номенклатурный, 10 — инвентарный">
         <div class="note" id="f_invHint" style="margin:3px 0 0;min-height:14px"></div></div>
+      <div class="field"><label for="f_sku">Номенклатурный номер</label>
+        <input id="f_sku" inputmode="numeric" placeholder="как в накладной: 7086302"></div>
+      <div class="field"><label for="f_cost">Стоимость</label>
+        <input id="f_cost" inputmode="decimal" placeholder="цена из накладной"></div>
       <div class="field"><label for="f_cat">Категория</label><select id="f_cat"></select></div>
       <div class="field col-sub" id="wrapSub"><label for="f_sub">Подкатегория</label><select id="f_sub"></select></div>
       <div class="field" id="wrapModel"><label for="f_model">Модель</label><select id="f_model"></select></div>
@@ -1618,10 +1656,12 @@
     </div>
     <div class="tablewrap" style="margin-top:10px">
       <table>
-        <colgroup><col style="width:3%"><col style="width:12%"><col style="width:31%">
-          <col style="width:8%"><col style="width:21%"><col style="width:21%"><col style="width:4%"></colgroup>
+        <colgroup><col style="width:3%"><col style="width:10%"><col style="width:23%">
+          <col style="width:6%"><col style="width:11%"><col style="width:11%">
+          <col style="width:16%"><col style="width:16%"><col style="width:4%"></colgroup>
         <thead><tr><th class="num">#</th><th>Номенклатура</th><th>Наименование</th>
-          <th>Кол-во</th><th>Куда</th><th>Категория / материал</th><th></th></tr></thead>
+          <th>Кол-во</th><th>Стоимость</th><th>Сумма</th>
+          <th>Куда</th><th>Категория / материал</th><th></th></tr></thead>
         <tbody id="drBody"></tbody>
       </table>
     </div>
@@ -1630,7 +1670,7 @@
       <button class="btn-sm" id="btnDrAdd">+ Строка вручную</button>
     </div>
     <div class="err" id="dr_err"></div>
-    <div class="note">Оборудование заводится по отдельной записи на каждую единицу — у них разные инвентарные номера. Материалы приходуются одной строкой на всё количество. Выбор по номенклатуре запоминается: в следующей накладной подставится сам.</div>
+    <div class="note">Оборудование заводится по отдельной записи на каждую единицу — у них разные инвентарные номера. Материалы приходуются одной строкой на всё количество. Номенклатурный номер и стоимость переносятся в учёт: у материалов по ним расходятся остатки, у техники они видны в карточке. «Стоимость» — цена за единицу из колонки «Цена в валюте», «Сумма» считается сама. Выбор по номенклатуре запоминается: в следующей накладной подставится сам.</div>
   </div>
   <div class="dlg-foot">
     <button id="btnDrDel" class="btn-danger">Удалить накладную</button>
@@ -1948,6 +1988,33 @@
 </dialog>
 
 <!-- ================= ДИАПАЗОНЫ IP ================= -->
+<dialog id="dlgWhOff">
+  <div class="dlg-head">Списание по документам</div>
+  <div class="dlg-body">
+    <div class="grid2">
+      <div class="field" style="grid-column:1/-1"><label for="wo_sup">Материал</label>
+        <select id="wo_sup"></select></div>
+      <div class="field"><label for="wo_sku">Номенклатура</label><select id="wo_sku"></select></div>
+      <div class="field"><label for="wo_cost">Стоимость</label><select id="wo_cost"></select></div>
+      <div class="field"><label for="wo_qty">Количество</label>
+        <input id="wo_qty" type="number" min="1" step="1" value="1">
+        <div class="note" id="wo_left" style="margin:3px 0 0;min-height:14px"></div></div>
+      <div class="field"><label for="wo_sum">Сумма</label>
+        <input id="wo_sum" readonly tabindex="-1">
+        <div class="note" style="margin:3px 0 0">количество × стоимость</div></div>
+      <div class="field"><label for="wo_date">Дата списания</label><input id="wo_date" type="date"></div>
+      <div class="field"><label for="wo_note">Примечание</label>
+        <input id="wo_note" placeholder="Акт, основание"></div>
+    </div>
+    <div class="note">Номенклатура и стоимость предлагаются те, что числятся по выбранному материалу: одно название может прийти с разными номенклатурными номерами и по разной цене. Количество подставляется по остатку этой связки — больше него списать нельзя.</div>
+    <div class="err" id="wo_err"></div>
+  </div>
+  <div class="dlg-foot">
+    <button id="btnWoCancel">Отмена</button>
+    <button id="btnWoSave" class="btn-primary">Списать</button>
+  </div>
+</dialog>
+
 <dialog id="dlgPools" class="xwide">
   <div class="dlg-head">Диапазоны (пулы) адресов</div>
   <div class="dlg-body">
@@ -2256,6 +2323,79 @@
     m.qty = receiptsOf(m.id).reduce(function(a,x){ return a + (x.qty||0); }, 0);
   }
   function stockLeft(m){ return (m.qty||0) - issuedCount(m.id); }
+
+  /* Партии материала — строки прихода, сошедшиеся по материалу, номенклатурному
+     номеру и стоимости. Совпало всё — одна строка остатков; разошлось хоть что-то
+     (пришла другая партия по другой цене) — строки разные, у каждой свой остаток.
+     out — фактическая выдача, off — документальное списание: это два разных учёта,
+     поэтому и считаются они порознь. */
+  function lots(){
+    var by = {}, order = [];
+    var touch = function(supplyId, sku, cost){
+      var k = lotKey(supplyId, sku, cost);
+      if(!by[k]){
+        by[k] = {key:k, supplyId:supplyId, sku:String(sku||"").trim(),
+                 cost:numVal(cost), got:0, out:0, off:0};
+        order.push(k);
+      }
+      return by[k];
+    };
+    cfg.supplies.forEach(function(m){ touch(m.id, "", null); });
+    cfg.receipts.forEach(function(r){ touch(r.supplyId, r.sku, r.cost).got += (r.qty||0); });
+    cfg.issues.forEach(function(x){ touch(x.supplyId, x.sku, x.cost).out += (x.qty||1); });
+    (cfg.writeoffs||[]).forEach(function(x){ touch(x.supplyId, x.sku, x.cost).off += (x.qty||0); });
+    /* у материала без прихода остаётся пустая связка — иначе он пропал бы из списка;
+       а вот лишние пустые связки у материалов, которые пришли с номенклатурой, убираем */
+    return order.map(function(k){ return by[k]; }).filter(function(l){
+      if(l.got || l.out || l.off) return true;
+      return !order.some(function(k2){
+        var o = by[k2];
+        return o !== l && o.supplyId === l.supplyId && (o.got || o.out || o.off);
+      });
+    });
+  }
+  function lotsOf(supplyId){
+    return lots().filter(function(l){ return l.supplyId === supplyId; });
+  }
+  function lotLeft(l){ return l.got - l.out; }        /* факт: пришло минус выдано */
+  function lotDocLeft(l){ return l.got - l.off; }     /* документально: пришло минус списано */
+  function lotLabel(l){
+    var m = supplyById(l.supplyId) || {};
+    return (m.name || "—") + (l.sku ? " · " + l.sku : "") +
+           (l.cost === null ? "" : " · " + money(l.cost));
+  }
+
+  /* ---- деньги ---- */
+  /* Число из поля ввода: пустое поле — «не указано», а не ноль. Пробелы в
+     разрядах и запятую вместо точки люди ставят постоянно. */
+  function numVal(v){
+    if(v === null || v === undefined) return null;
+    var t = String(v).replace(/[\s ]/g, "").replace(",", ".");
+    if(!t) return null;
+    var n = parseFloat(t);
+    return isFinite(n) ? n : null;
+  }
+  /* 28769000 -> «28 769 000», 120.5 -> «120.5». Копейки показываем только когда они есть. */
+  function money(v){
+    var n = numVal(v);
+    if(n === null) return "";
+    var neg = n < 0; n = Math.abs(n);
+    var whole = Math.floor(n), frac = Math.round((n - whole) * 100);
+    var t = String(whole).replace(/\B(?=(\d{3})+(?!\d))/g, " ");
+    if(frac) t += "," + (frac<10 ? "0"+frac : String(frac));
+    return (neg ? "−" : "") + t;
+  }
+  /* Сумма строки: цена за единицу на количество. Если цены нет — и суммы нет. */
+  function lineSum(cost, qty){
+    var c = numVal(cost);
+    return c === null ? null : c * (parseFloat(qty) || 0);
+  }
+  /* Ключ связки «материал + номенклатура + стоимость»: по нему материалы
+     сходятся в одну строку остатков или расходятся на разные. */
+  function lotKey(supplyId, sku, cost){
+    var c = numVal(cost);
+    return (supplyId||"") + "|" + String(sku||"").trim() + "|" + (c === null ? "" : c.toFixed(2));
+  }
   function fmtDate(d){
     if(!d) return "";
     var x = String(d).split("-");
@@ -2359,6 +2499,7 @@
       divisions:v.divisions||[], departments:v.departments||[],
       ipPools:v.ipPools||[], ipReserved:v.ipReserved||[],
       supplies:v.supplies||[], receipts:v.receipts||[], issues:v.issues||[],
+      writeoffs:v.writeoffs||[],
       staff:v.staff||[], roles:v.roles||[], repairs:v.repairs||[], notices:v.notices||[],
       netStatus:v.netStatus||{}, warehouses:v.warehouses||[],
       models:v.models||[], places:v.places||[],
@@ -2828,6 +2969,7 @@
     $("s-stock").hidden    = !(cur==="sup" && supTab==="stock");
     $("s-receipts").hidden = !(cur==="sup" && supTab==="receipts");
     $("s-issued").hidden   = !(cur==="sup" && supTab==="issued");
+    $("s-wh").hidden       = !(cur==="sup" && supTab==="wh");
     document.querySelectorAll("#supTabs button").forEach(function(b){ b.classList.toggle("on", b.dataset.st===supTab); });
     $("topActions").hidden = !((cur==="reg" && regTab==="items") || cur==="sup" ||
                                cur==="dash" || cur==="ips" || cur==="repairs" || cur==="dels");
@@ -3443,10 +3585,18 @@
       if(fp && it.department !== fp) return false;
       if(!q) return true;
       var hay = qf ? (it[qf] || "")
-        : [it.inv,it.catName,it.subName,it.typeName,it.modelName,it.status,it.ownerName,it.divName,it.depName,it.notes,specText(it)].join(" ");
+        : [it.inv,it.sku,it.catName,it.subName,it.typeName,it.modelName,it.status,it.ownerName,it.divName,it.depName,it.notes,specText(it)].join(" ");
       return String(hay).toLowerCase().indexOf(q) !== -1;
     });
     list.sort(function(a,b){
+      /* стоимость — число: по строке «9» оказалось бы больше «28769000» */
+      if(sortKey === "cost"){
+        var na = numVal(a.cost), nb = numVal(b.cost);
+        if(na === null && nb === null) return 0;
+        if(na === null) return sortDir;
+        if(nb === null) return -sortDir;
+        return na < nb ? -sortDir : na > nb ? sortDir : 0;
+      }
       var x=(a[sortKey]||"").toString().toLowerCase(), y=(b[sortKey]||"").toString().toLowerCase();
       return x<y ? -sortDir : x>y ? sortDir : 0;
     });
@@ -3481,6 +3631,8 @@
       return '<tr class="pick" data-id="'+esc(it.id)+'">'+
         '<td class="num">'+(i+1)+'</td>'+
         '<td class="mono" title="'+esc(it.inv||"")+'">'+esc(it.inv||"")+'</td>'+
+        '<td class="mono hide-sm" title="'+esc(it.sku||"")+'">'+esc(it.sku||"")+'</td>'+
+        '<td class="mono hide-sm" title="'+esc(money(it.cost))+'">'+esc(money(it.cost))+'</td>'+
         cellText(it.catName) +
         '<td class="hide-md" title="'+esc(it.subName||"")+'">'+esc(it.subName||"")+'</td>'+
         cellText(it.typeName) +
@@ -4822,11 +4974,13 @@
       var done = !!r.done;
       return '<tr data-r="'+i+'"'+(done ? ' class="row-done" title="уже заведено"' : '')+
         '><td class="num">'+(i+1)+(done ? " ✓" : "")+'</td>'+
-        '<td><input class="js-sku" value="'+esc(r.sku||"")+'"'+
-          (reg(r.target) && reg(r.target).kind === "supplies"
-            ? ' disabled title="у расходных материалов номенклатура не нужна"' : '')+'></td>'+
+        '<td><input class="js-sku" value="'+esc(r.sku||"")+'"></td>'+
         '<td><input class="js-name" value="'+esc(r.name||"")+'"></td>'+
         '<td><input class="js-qty" type="number" min="1" value="'+esc(r.qty||"1")+'"></td>'+
+        '<td><input class="js-cost" inputmode="decimal" value="'+esc(r.cost==null?"":money(r.cost))+
+          '" title="цена за единицу из колонки «Цена в валюте»"></td>'+
+        '<td class="mono js-sum" title="стоимость × количество">'+
+          esc(money(lineSum(r.cost, r.qty || 1)) || "—")+'</td>'+
         '<td><select class="js-target">'+targetOptions(r.target)+'</select></td>'+
         '<td><select class="js-second">'+secondOptions(r)+'</select></td>'+
         '<td>'+(done ? '' : '<button class="ic js-rowdel" title="Убрать строку: её не заводить">✕</button>')+
@@ -4846,6 +5000,7 @@
       out.push({sku: tr.querySelector(".js-sku").value.trim(),
                 name: tr.querySelector(".js-name").value.trim(),
                 qty: tr.querySelector(".js-qty").value || "1",
+                cost: numVal(tr.querySelector(".js-cost").value),
                 target: tr.querySelector(".js-target").value,
                 done: !!was.done,
                 catId: "", typeId: "", supplyId: ""});
@@ -4924,6 +5079,15 @@
     if(!e.target.closest(".js-target")) return;
     curDoc.rows = readDocRows();
     renderDocRows();
+  });
+  /* сумму пересчитываем прямо при наборе: перерисовывать всю таблицу на каждую
+     цифру нельзя — поле теряло бы курсор */
+  $("drBody").addEventListener("input", function(e){
+    if(!e.target.classList.contains("js-cost") && !e.target.classList.contains("js-qty")) return;
+    var tr = e.target.closest("tr"); if(!tr) return;
+    var cell = tr.querySelector(".js-sum"); if(!cell) return;
+    cell.textContent = money(lineSum(tr.querySelector(".js-cost").value,
+                                     tr.querySelector(".js-qty").value || 1)) || "—";
   });
   $("drBody").addEventListener("click", function(e){
     var b = e.target.closest(".js-rowdel"); if(!b) return;
@@ -5528,22 +5692,31 @@
     $("supNames").innerHTML = cfg.supplies.slice()
       .sort(function(a,b){ return a.name.toLowerCase()<b.name.toLowerCase()?-1:1; })
       .map(function(m){ return '<option value="'+esc(m.name)+'"></option>'; }).join("");
-    var list = cfg.supplies.slice().sort(function(a,b){
-      return a.name.toLowerCase()<b.name.toLowerCase()?-1:1; });
-    $("stockBody").innerHTML = list.map(function(m, i){
-      var out = issuedCount(m.id), left = stockLeft(m);
+    var list = lots().sort(function(a,b){
+      var an = (supplyById(a.supplyId)||{}).name || "", bn = (supplyById(b.supplyId)||{}).name || "";
+      if(an.toLowerCase() !== bn.toLowerCase()) return an.toLowerCase()<bn.toLowerCase()?-1:1;
+      if(a.sku !== b.sku) return a.sku < b.sku ? -1 : 1;
+      return (a.cost||0) - (b.cost||0);
+    });
+    $("stockBody").innerHTML = list.map(function(l, i){
+      var m = supplyById(l.supplyId) || {}, left = lotLeft(l);
       var cls = left<=0 ? "b-danger" : left<=2 ? "b-warn" : "b-ok";
-      return '<tr data-m="'+esc(m.id)+'"><td class="num">'+(i+1)+'</td>'+cellText(m.name)+cellText(m.unit||"шт")+
-        '<td>'+(m.qty||0)+'</td><td>'+out+'</td>'+
+      return '<tr data-m="'+esc(l.supplyId)+'"><td class="num">'+(i+1)+'</td>'+
+        cellText(m.name||"—")+
+        '<td class="mono">'+esc(l.sku||"—")+'</td>'+
+        '<td class="mono">'+esc(l.cost===null ? "—" : money(l.cost))+'</td>'+
+        cellText(m.unit||"шт")+
+        '<td>'+l.got+'</td><td>'+l.out+'</td>'+
         '<td><span class="badge '+cls+'">'+left+'</span></td>'+
         '<td class="hide-md" title="'+esc(m.note||"")+'">'+esc(m.note||"")+'</td>'+
-        acts(['<button class="ic js-renm" title="Изменить">✎</button>',
-              '<button class="ic btn-danger js-delm" title="Удалить">✕</button>'])+'</tr>';
+        acts(['<button class="ic js-renm" title="Изменить материал">✎</button>',
+              '<button class="ic btn-danger js-delm" title="Удалить материал">✕</button>'])+'</tr>';
     }).join("");
     $("stockEmpty").hidden = list.length>0;
-    var onStock = cfg.supplies.reduce(function(a,m){ return a + Math.max(0, stockLeft(m)); }, 0);
-    var zero = cfg.supplies.filter(function(m){ return stockLeft(m)<=0; }).length;
+    var onStock = list.reduce(function(a,l){ return a + Math.max(0, lotLeft(l)); }, 0);
+    var zero = list.filter(function(l){ return lotLeft(l)<=0; }).length;
     $("supStats").innerHTML = tile("Позиций в справочнике", cfg.supplies.length) +
+      tile("Строк на складе", list.length) +
       tile("Единиц на складе", onStock) + tile("Списаний", cfg.issues.length) +
       tile("Закончилось", zero);
   }
@@ -5560,11 +5733,13 @@
       m = {id:uid("m"), name:nm, unit:$("supUnit").value.trim()||"шт", qty:0, note:note};
       cfg.supplies.push(m);
     }
-    cfg.receipts.push({id:uid("rc"), supplyId:m.id, qty:qty, date:d, note:note});
+    var sku = $("supSku").value.trim(), cost = numVal($("supCost").value);
+    cfg.receipts.push({id:uid("rc"), supplyId:m.id, qty:qty, sku:sku, cost:cost, date:d, note:note});
     recalcSupply(m);
     $("supName").value=""; $("supQty").value="1"; $("supNote").value="";
+    $("supSku").value=""; $("supCost").value="";
     saveCfg();
-    toast("Приход записан: "+m.name+" × "+qty+" от "+fmtDate(d));
+    toast("Приход записан: "+m.name+(sku?" · "+sku:"")+" × "+qty+" от "+fmtDate(d));
   };
   $("supName").addEventListener("keydown", function(e){ if(e.key==="Enter") $("btnAddSup").click(); });
   $("stockBody").addEventListener("click", function(e){
@@ -5605,13 +5780,19 @@
     var shown = list.filter(function(x){
       if(!q) return true;
       var m = supplyById(x.supplyId) || {};
-      return [fmtDate(x.date), m.name, String(x.qty||0), x.note].join(" ").toLowerCase().indexOf(q)!==-1;
+      return [fmtDate(x.date), m.name, x.sku, String(x.cost||""), String(x.qty||0), x.note]
+        .join(" ").toLowerCase().indexOf(q)!==-1;
     });
     $("receiptsBody").innerHTML = shown.map(function(x, i){
       var m = supplyById(x.supplyId) || {};
       return '<tr data-r="'+esc(x.id)+'"><td class="num">'+(i+1)+'</td>'+
         '<td class="mono" title="'+esc(fmtDate(x.date)||"—")+'">'+esc(fmtDate(x.date)||"—")+'</td>'+
-        cellText(m.name||"—") + '<td>'+(x.qty||0)+'</td>' + cellText(x.note||"") +
+        cellText(m.name||"—") +
+        '<td class="mono">'+esc(x.sku||"—")+'</td>'+
+        '<td class="mono">'+esc(x.cost==null ? "—" : money(x.cost))+'</td>'+
+        '<td>'+(x.qty||0)+'</td>'+
+        '<td class="mono">'+esc(money(lineSum(x.cost, x.qty||0)) || "—")+'</td>'+
+        '<td class="hide-md" title="'+esc(x.note||"")+'">'+esc(x.note||"")+'</td>'+
         acts(['<button class="ic btn-danger js-delrec" title="Удалить приход">✕</button>'])+'</tr>';
     }).join("");
     var re = $("receiptsEmpty"); re.hidden = shown.length>0;
@@ -5630,16 +5811,19 @@
 
   function renderIssued(){
     var keepS = $("isSup").value, keepU = $("isUser").value;
-    /* в списке только то, что реально есть на складе — иначе можно уйти в минус */
-    var avail = cfg.supplies.filter(function(m){ return stockLeft(m) > 0; })
-      .sort(function(a,b){ return a.name.toLowerCase()<b.name.toLowerCase()?-1:1; });
+    /* в списке только то, что реально есть на складе — иначе можно уйти в минус.
+       Выбирается не материал вообще, а связка: у одного названия может быть
+       несколько номенклатур и цен, и списывать надо из конкретной. */
+    var avail = lots().filter(function(l){ return lotLeft(l) > 0; })
+      .sort(function(a,b){ return lotLabel(a).toLowerCase()<lotLabel(b).toLowerCase()?-1:1; });
     $("isSup").innerHTML = avail.length
-      ? '<option value="">— выберите материал —</option>' + avail.map(function(m){
-          return '<option value="'+esc(m.id)+'">'+esc(m.name)+' — остаток '+stockLeft(m)+
+      ? '<option value="">— выберите материал —</option>' + avail.map(function(l){
+          var m = supplyById(l.supplyId) || {};
+          return '<option value="'+esc(l.key)+'">'+esc(lotLabel(l))+' — остаток '+lotLeft(l)+
                  ' '+esc(m.unit||"шт")+'</option>'; }).join("")
       : '<option value="">'+(cfg.supplies.length ? "— на складе пусто, оприходуйте материал —"
                                                  : "— материалы не заведены —")+'</option>';
-    if(keepS && avail.some(function(m){ return m.id===keepS; })) $("isSup").value = keepS;
+    if(keepS && avail.some(function(l){ return l.key===keepS; })) $("isSup").value = keepS;
     $("btnIssue").disabled = !avail.length || !can("supply.issue");
     $("isUser").innerHTML = cfg.users.length
       ? '<option value="">— выберите сотрудника —</option>' + cfg.users.slice().sort(function(a,b){
@@ -5701,21 +5885,24 @@
   }
   $("isTo").onchange = syncIssueTarget;
   $("btnIssue").onclick = function(){
-    var m = supplyById($("isSup").value), toItem = $("isTo").value === "item";
+    var key = $("isSup").value;
+    var l = lots().find(function(x){ return x.key===key; });
+    var m = l ? supplyById(l.supplyId) : null, toItem = $("isTo").value === "item";
     var u = toItem ? null : byId("users", $("isUser").value);
     var it = toItem ? items.find(function(x){ return x.id===$("isItem").value; }) : null;
-    if(!m){ toast("Выберите материал"); return; }
+    if(!l || !m){ toast("Выберите материал"); return; }
     if(!toItem && !u){ toast("Выберите сотрудника"); return; }
     if(toItem && !it){ toast("Выберите оборудование"); return; }
     var d = $("isDate").value || today();
     var qty = Math.max(1, parseInt($("isQty").value,10)||1);
-    var left = stockLeft(m);
-    if(left <= 0){ toast("«"+m.name+"» закончился — сначала оприходуйте приход"); return; }
+    var left = lotLeft(l);
+    if(left <= 0){ toast("«"+lotLabel(l)+"» закончился — сначала оприходуйте приход"); return; }
     if(qty > left){ toast("На складе только "+left+" "+(m.unit||"шт")+" — списать больше нельзя"); return; }
-    cfg.issues.push({id:uid("is"), supplyId:m.id, userId:u ? u.id : "", itemId:it ? it.id : "",
+    cfg.issues.push({id:uid("is"), supplyId:l.supplyId, sku:l.sku, cost:l.cost,
+                     userId:u ? u.id : "", itemId:it ? it.id : "",
                      qty:qty, date:d, note:$("isNote").value.trim()});
     $("isNote").value=""; $("isQty").value="1";
-    saveCfg(); toast("Списано: "+m.name+" × "+qty+" → "+(u ? u.name : "инв. "+(it.inv||"—")));
+    saveCfg(); toast("Списано: "+lotLabel(l)+" × "+qty+" → "+(u ? u.name : "инв. "+(it.inv||"—")));
   };
   $("issuedBody").addEventListener("click", function(e){
     if(e.target.classList.contains("js-isitem")){
@@ -5727,7 +5914,143 @@
     if(!confirm("Отменить списание «"+(m.name||"")+"» на "+(t.name||"")+" от "+fmtDate(x.date)+"?")) return;
     cfg.issues = cfg.issues.filter(function(y){ return y.id!==x.id; }); saveCfg();
   });
-  function renderSup(){ renderStock(); renderReceipts(); renderIssued(); }
+  /* ================== таблица склада: документальное списание ================== */
+  /* Отдельный учёт: приход общий с фактом, а списания свои. Поэтому здесь
+     считается lotDocLeft (пришло минус списано по документам), а не остаток
+     «Выдано и установлено». */
+  function renderWh(){
+    var q = $("qWh2").value.trim().toLowerCase();
+    var list = (cfg.writeoffs||[]).slice().sort(function(a,b){
+      return (b.date||"").localeCompare(a.date||""); });
+    var shown = list.filter(function(x){
+      if(!q) return true;
+      var m = supplyById(x.supplyId) || {};
+      return [fmtDate(x.date), m.name, x.sku, String(x.cost||""), String(x.qty||0), x.note]
+        .join(" ").toLowerCase().indexOf(q)!==-1;
+    });
+    $("whBody").innerHTML = shown.map(function(x, i){
+      var m = supplyById(x.supplyId) || {};
+      return '<tr data-w="'+esc(x.id)+'"><td class="num">'+(i+1)+'</td>'+
+        '<td class="mono" title="'+esc(fmtDate(x.date)||"—")+'">'+esc(fmtDate(x.date)||"—")+'</td>'+
+        cellText(m.name||"—")+
+        '<td class="mono">'+esc(x.sku||"—")+'</td>'+
+        '<td class="mono">'+esc(x.cost==null ? "—" : money(x.cost))+'</td>'+
+        '<td>'+(x.qty||0)+'</td>'+
+        '<td class="mono">'+esc(money(lineSum(x.cost, x.qty||0)) || "—")+'</td>'+
+        '<td class="hide-md" title="'+esc(x.note||"")+'">'+esc(x.note||"")+'</td>'+
+        acts(can("supply.issue")
+          ? ['<button class="ic btn-danger js-delwo" title="Отменить списание">✕</button>'] : [])+'</tr>';
+    }).join("");
+    var we = $("whEmpty"); we.hidden = shown.length>0;
+    we.textContent = list.length ? "Ничего не найдено." : "Списаний по документам пока не было.";
+
+    var all = lots();
+    var left = all.reduce(function(a,l){ return a + Math.max(0, lotDocLeft(l)); }, 0);
+    var sum = all.reduce(function(a,l){
+      return a + (l.cost===null ? 0 : l.cost * Math.max(0, lotDocLeft(l))); }, 0);
+    $("whStats").innerHTML = tile("Строк на складе", all.length) +
+      tile("Числится единиц", left) + tile("На сумму", money(sum) || "—") +
+      tile("Списаний", list.length);
+    $("btnWhOff").disabled = !can("supply.issue") || !all.some(function(l){ return lotDocLeft(l) > 0; });
+  }
+  $("qWh2").oninput = renderWh;
+  $("whBody").addEventListener("click", function(e){
+    if(!e.target.classList.contains("js-delwo")) return;
+    var id = e.target.closest("tr").dataset.w;
+    var x = (cfg.writeoffs||[]).find(function(y){ return y.id===id; }); if(!x) return;
+    var m = supplyById(x.supplyId) || {};
+    if(!confirm("Отменить документальное списание «"+(m.name||"")+"» × "+(x.qty||0)+
+                " от "+(fmtDate(x.date)||"—")+"?")) return;
+    cfg.writeoffs = cfg.writeoffs.filter(function(y){ return y.id!==x.id; });
+    saveCfg();
+  });
+
+  /* Окно списания: материал -> доступные по нему номенклатуры -> цены.
+     Количество подставляется остатком связки, сумма считается. */
+  function woSupplies(){
+    var seen = {}, out = [];
+    lots().forEach(function(l){
+      if(lotDocLeft(l) <= 0 || seen[l.supplyId]) return;
+      seen[l.supplyId] = true;
+      out.push(supplyById(l.supplyId) || {id:l.supplyId, name:"—"});
+    });
+    return out.sort(function(a,b){ return (a.name||"").toLowerCase()<(b.name||"").toLowerCase()?-1:1; });
+  }
+  function woLots(){
+    var sid = $("wo_sup").value;
+    return lots().filter(function(l){ return l.supplyId===sid && lotDocLeft(l) > 0; });
+  }
+  function woFillSku(){
+    var ls = woLots(), seen = {}, opts = [];
+    ls.forEach(function(l){
+      if(seen[l.sku]) return; seen[l.sku] = true;
+      opts.push('<option value="'+esc(l.sku)+'">'+esc(l.sku || "— без номенклатуры —")+'</option>');
+    });
+    $("wo_sku").innerHTML = opts.join("");
+    woFillCost();
+  }
+  function woFillCost(){
+    var sku = $("wo_sku").value;
+    var ls = woLots().filter(function(l){ return l.sku === sku; });
+    $("wo_cost").innerHTML = ls.map(function(l){
+      return '<option value="'+esc(l.key)+'">'+esc(l.cost===null ? "— без цены —" : money(l.cost))+
+             ' · числится '+lotDocLeft(l)+'</option>';
+    }).join("");
+    woFillQty();
+  }
+  function woLot(){
+    var key = $("wo_cost").value;
+    return lots().find(function(l){ return l.key===key; }) || null;
+  }
+  function woFillQty(){
+    var l = woLot();
+    var left = l ? lotDocLeft(l) : 0;
+    $("wo_qty").max = left || 1;
+    $("wo_qty").value = left || 1;
+    $("wo_left").textContent = l
+      ? ("числится " + left + " " + ((supplyById(l.supplyId)||{}).unit || "шт") + " — больше не списать")
+      : "";
+    woFillSum();
+  }
+  function woFillSum(){
+    var l = woLot();
+    var qty = Math.max(0, parseInt($("wo_qty").value, 10) || 0);
+    $("wo_sum").value = l ? (money(lineSum(l.cost, qty)) || "—") : "";
+  }
+  $("wo_sup").onchange = woFillSku;
+  $("wo_sku").onchange = woFillCost;
+  $("wo_cost").onchange = woFillQty;
+  $("wo_qty").oninput = woFillSum;
+  $("btnWhOff").onclick = function(){
+    var sup = woSupplies();
+    if(!sup.length){ toast("Списывать нечего — на складе пусто"); return; }
+    $("wo_sup").innerHTML = sup.map(function(m){
+      return '<option value="'+esc(m.id)+'">'+esc(m.name)+'</option>'; }).join("");
+    $("wo_err").textContent = "";
+    $("wo_note").value = "";
+    $("wo_date").value = today();
+    woFillSku();
+    $("dlgWhOff").showModal();
+  };
+  $("btnWoCancel").onclick = function(){ $("dlgWhOff").close(); };
+  $("btnWoSave").onclick = function(){
+    var l = woLot();
+    if(!l){ $("wo_err").textContent = "Выберите материал"; return; }
+    var qty = Math.max(1, parseInt($("wo_qty").value, 10) || 0);
+    var left = lotDocLeft(l);
+    if(qty > left){
+      $("wo_err").textContent = "По этой связке числится только " + left + " — списать больше нельзя";
+      return;
+    }
+    cfg.writeoffs.push({id:uid("wo"), supplyId:l.supplyId, sku:l.sku, cost:l.cost, qty:qty,
+                        date:$("wo_date").value || today(), note:$("wo_note").value.trim(),
+                        who:(me && me.name) || ""});
+    saveCfg();
+    $("dlgWhOff").close();
+    toast("Списано по документам: " + lotLabel(l) + " × " + qty);
+  };
+
+  function renderSup(){ renderStock(); renderReceipts(); renderIssued(); renderWh(); }
 
   /* ================== IP-адреса ================== */
   function poolById(id){ return cfg.ipPools.find(function(x){ return x.id===id; }) || null; }
@@ -6725,17 +7048,33 @@
   /* ================== подразделения и отделы ================== */
   var SIMPLE = {
     divisions: {field:"division", userField:"divisionId", title:"подразделение"},
-    departments:{field:"department", userField:"departmentId", title:"отдел"},
+    departments:{field:"department", userField:"departmentId", title:"отдел", division:true},
     places:     {field:"place", userField:"", title:"место"}
   };
+  /* список подразделений: и в форме добавления отдела, и в каждой строке таблицы */
+  function divOptions(sel){
+    return '<option value="">— не указано —</option>' +
+      cfg.divisions.slice().sort(function(a,b){
+        return a.name.toLowerCase()<b.name.toLowerCase()?-1:1; }).map(function(d){
+        return '<option value="'+esc(d.id)+'"'+(d.id===sel?' selected':'')+'>'+esc(d.name)+'</option>';
+      }).join("");
+  }
   function renderSimple(key){
     var conf = SIMPLE[key];
     if(!$(key+"Body")) return;
+    if(conf.division && $("newDepartmentsDiv")){
+      var keepNew = $("newDepartmentsDiv").value;
+      $("newDepartmentsDiv").innerHTML = divOptions("");
+      if(keepNew) $("newDepartmentsDiv").value = keepNew;
+    }
     $(key+"Body").innerHTML = cfg[key].map(function(o, i){
       var used = items.filter(function(i){ return i[conf.field]===o.id; }).length;
       var staff = conf.userField ? cfg.users.filter(function(u){ return u[conf.userField]===o.id; }).length : null;
       return '<tr data-id="'+esc(o.id)+'"><td class="num">'+(i+1)+'</td>'+
-        cellText(o.name)+(staff===null ? '' : '<td>'+staff+'</td>')+'<td>'+used+'</td>'+
+        cellText(o.name)+
+        (conf.division ? '<td><select class="js-depdiv"'+(can("users.manage")?'':' disabled')+'>'+
+                         divOptions(o.divisionId||"")+'</select></td>' : '')+
+        (staff===null ? '' : '<td>'+staff+'</td>')+'<td>'+used+'</td>'+
         acts(can("users.manage")
           ? ['<button class="ic js-ren" title="Переименовать">✎</button>',
              '<button class="ic btn-danger js-del" title="Удалить">✕</button>']
@@ -6749,7 +7088,9 @@
       var n = $(inpId).value.trim();
       if(!n){ toast("Введите название"); return; }
       if(cfg[key].some(function(o){ return o.name.toLowerCase()===n.toLowerCase(); })){ toast("Уже есть в списке"); return; }
-      cfg[key].push({id:uid(key[0]), name:n}); $(inpId).value=""; saveCfg(); toast("Добавлено");
+      var rec = {id:uid(key[0]), name:n};
+      if(conf.division && $("newDepartmentsDiv")) rec.divisionId = $("newDepartmentsDiv").value || "";
+      cfg[key].push(rec); $(inpId).value=""; saveCfg(); toast("Добавлено");
       var card = $("add"+key.charAt(0).toUpperCase()+key.slice(1)); if(card) card.hidden = true;
     };
     document.querySelector('[data-add="'+key+'"]').onclick = add;
@@ -6761,6 +7102,14 @@
       if(!card.hidden) $(inpId).focus();
     };
     $(inpId).addEventListener("keydown", function(e){ if(e.key==="Enter") add(); });
+    /* подразделение меняется прямо в строке: отдельного окна ради одного поля не нужно */
+    if(conf.division) $(key+"Body").addEventListener("change", function(e){
+      if(!e.target.classList.contains("js-depdiv")) return;
+      var tr = e.target.closest("tr"); if(!tr) return;
+      var o = cfg[key].find(function(x){ return x.id===tr.dataset.id; }); if(!o) return;
+      o.divisionId = e.target.value || "";
+      saveCfg(); toast(o.name + " → " + (nameById("divisions", o.divisionId) || "без подразделения"));
+    });
     $(key+"Body").addEventListener("click", function(e){
       var tr = e.target.closest("tr"); if(!tr) return;
       var o = cfg[key].find(function(x){ return x.id===tr.dataset.id; }); if(!o) return;
@@ -7157,6 +7506,8 @@
     $("f_dep").value = it ? (it.department||"") : "";
     $("dlgTitle").textContent = (it ? "Карточка: " + (it.inv || typeName(it.type) || "") : "Новая запись") + " · " + reg().name;
     $("f_inv").value = it ? (it.inv||"") : "";
+    $("f_sku").value  = it ? (it.sku||"") : "";
+    $("f_cost").value = it && it.cost != null ? money(it.cost) : "";
     showInvHint();
     $("f_status").value = it && it.status ? it.status : sts[0];
     $("f_qty").value = "1";
@@ -7287,6 +7638,8 @@
       id: editingId || undefined,
       registryId: prev ? rid(prev) : curReg,
       inv: $("f_inv").value.trim(),
+      sku: $("f_sku").value.trim(),
+      cost: numVal($("f_cost").value),
       type: $("f_type").value,
       status: attached ? (prev.status || $("f_status").value) : $("f_status").value,
       owner:      ownerless($("f_status").value) || $("f_holder").value !== "person" ? "" : $("f_owner").value,
@@ -7695,7 +8048,8 @@
   }
 
   /* ================== CSV ================== */
-  var BASE = [["inv","Инвентарный номер/Номенклатура"],["catName","Категория"],["subName","Подкатегория"],
+  var BASE = [["inv","Инвентарный номер"],["sku","Номенклатурный номер"],["cost","Стоимость"],
+    ["catName","Категория"],["subName","Подкатегория"],
     ["modelName","Модель"],["typeName","Тип"],["status","Статус"],["ownerName","Ответственный сотрудник"],
     ["divName","Подразделение"],["depName","Отдел"],["notes","Примечание"]];
 
@@ -7880,7 +8234,7 @@
       var i = head.indexOf(c[1].toLowerCase()); if(i===-1) i = head.indexOf(c[0]);
       if(i!==-1) map[c[0]] = i;
     });
-    if(map.inv===undefined && map.typeName===undefined){ toast("Нужна колонка «Инвентарный номер/Номенклатура» или «Тип»"); return; }
+    if(map.inv===undefined && map.typeName===undefined){ toast("Нужна колонка «Инвентарный номер» или «Тип»"); return; }
     var queue = [], sts = statusesOf();
     rows.slice(1).forEach(function(r){
       var g = function(k){ return map[k]!==undefined ? (r[map[k]]||"").trim() : ""; };
@@ -7928,7 +8282,7 @@
         else specs[sp.id] = v;
       });
       var row = {
-        registryId: curReg, inv: inv, type: typeId,
+        registryId: curReg, inv: inv, sku: g("sku"), cost: numVal(g("cost")), type: typeId,
         status: sts.indexOf(g("status"))!==-1 ? g("status") : sts[0],
         owner: ownerId,
         division: findOrAdd("divisions", g("divName")),

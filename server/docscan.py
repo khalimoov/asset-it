@@ -309,8 +309,12 @@ def _ocr_cell(exe, img, box, lang, psm, whitelist=""):
 
 
 def _which(header_cells):
-    """Какая ячейка шапки — номенклатура, наименование, количество."""
-    sku = name = qty = None
+    """Какая ячейка шапки — номенклатура, наименование, количество, цена.
+
+    «Цена» — именно цена за единицу, а не «Стоимость поставки»: в учёте от неё
+    считается сумма строки, и итог по документу тут не подходит.
+    """
+    sku = name = qty = price = None
     for i, t in enumerate(header_cells):
         low = " ".join(t.lower().split())
         if name is None and "наимен" in low:
@@ -320,7 +324,9 @@ def _which(header_cells):
             sku = i
         elif qty is None and "количество" in low:
             qty = i
-    return sku, name, qty
+        elif price is None and "цена" in low:
+            price = i
+    return sku, name, qty, price
 
 
 def _in(cells, x):
@@ -342,7 +348,7 @@ def table_rows(exe, img, lang, dpi=300):
     bands = [(a, b) for a, b in zip(ys, ys[1:]) if min_row <= b - a <= max_row]
     min_cell = int(dpi * 0.12)
 
-    header = None     # (cells, sku_i, name_i, qty_i)
+    header = None     # (cells, sku_i, name_i, qty_i, price_i)
     out = []
     for y1, y2 in bands:
         xs = _vlines(mask, y1, y2)
@@ -358,13 +364,13 @@ def table_rows(exe, img, lang, dpi=300):
             if "наимен" not in txt:
                 continue
             texts = [_ocr_cell(exe, img, (a, y1, b, y2), lang, 6) for a, b in cells]
-            sku_i, name_i, qty_i = _which(texts)
+            sku_i, name_i, qty_i, price_i = _which(texts)
             if sku_i is None or name_i is None:
                 continue
-            header = (cells, sku_i, name_i, qty_i)
+            header = (cells, sku_i, name_i, qty_i, price_i)
             continue
 
-        hcells, sku_i, name_i, qty_i = header
+        hcells, sku_i, name_i, qty_i, price_i = header
         def cell_at(i):
             if i is None:
                 return None
@@ -372,6 +378,7 @@ def table_rows(exe, img, lang, dpi=300):
             j = _in(cells, cx)
             return cells[j] if j is not None else None
         sc, nc, qc = cell_at(sku_i), cell_at(name_i), cell_at(qty_i)
+        pc = cell_at(price_i)
         if not sc or not nc:
             break
         sku = re.sub(r"\D", "", _ocr_cell(exe, img, (sc[0], y1, sc[1], y2), lang, 7, "0123456789"))
@@ -386,10 +393,13 @@ def table_rows(exe, img, lang, dpi=300):
             m = RE_QTY3.search(q) or re.search(r"(\d{1,6})", q)
             if m:
                 qty = str(int(m.group(1)))
+        cost = ""
+        if pc:
+            cost = money_value(_ocr_cell(exe, img, (pc[0], y1, pc[1], y2), lang, 7, "0123456789.,"))
         letters = len(re.findall(r"[A-Za-zА-Яа-яЁё]", name))
         if letters < 4:
             continue
-        out.append({"sku": sku, "name": name[:200], "qty": qty,
+        out.append({"sku": sku, "name": name[:200], "qty": qty, "cost": cost,
                     "target": "", "catId": "", "typeId": "", "supplyId": ""})
     return out
 
@@ -515,6 +525,23 @@ def _first_money(rest):
     return None
 
 
+def money_value(s):
+    """Число из денежной записи: «28 769 000.00» -> «28769000.00».
+
+    Пробелы и неразрывные пробелы в разрядах ставят и печатные формы, и OCR;
+    запятая вместо точки тоже встречается.
+    """
+    t = re.sub(r"[\s ]", "", str(s or ""))
+    m = re.search(r"\d+(?:[.,]\d{1,2})?", t)
+    if not m:
+        return ""
+    v = m.group(0).replace(",", ".")
+    try:
+        return ("%.2f" % float(v)).rstrip("0").rstrip(".") or "0"
+    except ValueError:
+        return ""
+
+
 def _clean_name(s):
     s = re.sub(r"[|]+", " ", s)
     s = re.sub(r"\s{2,}", " ", s).strip(" .,-|—–:;")
@@ -565,7 +592,11 @@ def parse_rows(text):
         if mq:
             qty = str(int(mq.group(1)))
 
-        out.append({"sku": sku, "name": name[:200], "qty": qty,
+        # первая сумма после наименования — это «Цена в валюте», цена за единицу;
+        # дальше по строке идут стоимость по строке и итог с НДС, они нам не нужны
+        cost = money_value(money.group(0)) if money else ""
+
+        out.append({"sku": sku, "name": name[:200], "qty": qty, "cost": cost,
                     "target": "", "catId": "", "typeId": "", "supplyId": ""})
     return out
 
@@ -600,9 +631,40 @@ def analyze(cfg, path, max_pages=10):
             "rows": rows, "number": number, "date": doc_date, "warehouse": warehouse}
 
 
+def _mkdate(d, m, y):
+    """Дата из трёх кусков, или None, если такой даты не бывает."""
+    y = int(y)
+    if y < 100:
+        y += 2000
+    try:
+        return datetime.date(y, int(m), int(d)).isoformat()
+    except ValueError:
+        return None
+
+
+def order_date(flat):
+    """Дата из шапки — та, что стоит после «№ Заказ».
+
+    Внизу формы есть ещё «Документ № … от …», но он читается не на всяком скане,
+    а в шапке дата стоит в обеих формах накладной. Берём первую правильную дату
+    в пределах строки после слова «Заказ»: дальше начинаются доверенность и
+    сроки, их принимать нельзя.
+    """
+    m = re.search(r"заказ", flat, re.IGNORECASE)
+    if not m:
+        return None
+    window = flat[m.end():m.end() + 120]
+    for d in RE_DATE.finditer(window):
+        got = _mkdate(d.group(1), d.group(2), d.group(3))
+        if got:
+            return got
+    return None
+
+
 def parse_header(text):
     """Номер и дата документа."""
     flat = " ".join((text or "").split())
+    top = order_date(flat)
     best = None
     for m in RE_NUM_DATE.finditer(flat):
         # ближе к слову «Документ» — вернее
@@ -612,22 +674,13 @@ def parse_header(text):
             if near:
                 break
     if best:
-        y = int(best.group(4))
-        if y < 100:
-            y += 2000
-        try:
-            return best.group(1), datetime.date(y, int(best.group(3)),
-                                                int(best.group(2))).isoformat()
-        except ValueError:
-            return best.group(1), None
+        # дата из шапки вернее: «Документ № … от …» внизу есть не на каждом скане
+        return best.group(1), top or _mkdate(best.group(2), best.group(3), best.group(4))
+    if top:
+        return "", top
     head = "\n".join((text or "").splitlines()[:14])
-    m = RE_DATE.search(head)
-    if m:
-        y = int(m.group(3))
-        if y < 100:
-            y += 2000
-        try:
-            return "", datetime.date(y, int(m.group(2)), int(m.group(1))).isoformat()
-        except ValueError:
-            pass
+    for m in RE_DATE.finditer(head):
+        got = _mkdate(m.group(1), m.group(2), m.group(3))
+        if got:
+            return "", got
     return "", None
