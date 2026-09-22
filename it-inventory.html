@@ -990,7 +990,8 @@
             <div class="field"><label for="supUnit">Единица</label>
               <select id="supUnit"></select></div>
             <div class="field"><label for="supModel">Модель</label>
-              <select id="supModel"></select></div>
+              <select id="supModel"></select>
+              <label class="chk"><input type="checkbox" id="supNoModel"> Без модели</label></div>
             <div class="field"><label for="supNote">Примечание</label>
               <input id="supNote" placeholder="Партия, поставщик, счёт"></div>
           </div>
@@ -1031,7 +1032,9 @@
         <div class="card pad" id="issueAddCard" hidden style="margin-bottom:14px">
           <h2>Выдать / установить</h2>
           <div class="grid2">
-            <div class="field"><label for="isModel">Модель</label><select id="isModel"></select></div>
+            <div class="field"><label for="isModel">Модель</label>
+              <select id="isModel"></select>
+              <label class="chk"><input type="checkbox" id="isNoModel"> Без модели</label></div>
             <div class="field"><label for="isSup">Материал</label><select id="isSup"></select></div>
             <div class="field"><label for="isQty">Кол-во</label>
               <input id="isQty" type="number" min="1" step="1" value="1"></div>
@@ -5951,11 +5954,27 @@
     return cfg.models.filter(function(m){ return modelFits(m, curReg, "", ""); })
       .sort(function(a,b){ return a.name.toLowerCase()<b.name.toLowerCase()?-1:1; });
   }
+  /* «Без модели» — явное «не указывать»: список запирается и очищается.
+     Заказчик просил показать, что модель необязательна, а не догадываться
+     по пустому пункту в списке. */
+  function noModelToggle(boxId, selId, after){
+    var b = $(boxId); if(!b) return;
+    b.onchange = function(){
+      var sel = $(selId);
+      sel.disabled = b.checked;
+      if(b.checked) sel.value = "";
+      if(after) after();
+    };
+  }
+  noModelToggle("supNoModel", "supModel", null);
+  noModelToggle("isNoModel", "isModel", function(){ renderIssued(); });
+
   function fillSupModels(){
     var list = supplyModels(), keep = $("supModel").value;
     $("supModel").innerHTML = '<option value="">— не указана —</option>' + list.map(function(m){
       return '<option value="'+esc(m.id)+'">'+esc(m.name)+'</option>'; }).join("");
     if(keep) $("supModel").value = keep;
+    $("supModel").disabled = $("supNoModel").checked;
   }
   function renderStock(){
     fillUnits();
@@ -6000,7 +6019,8 @@
     }
     /* модель — свойство материала, а не отдельного прихода: по ней потом
        отбирают, что списывать на «Выдано и установлено» */
-    if($("supModel").value) m.model = $("supModel").value;
+    if($("supNoModel").checked) m.model = "";
+    else if($("supModel").value) m.model = $("supModel").value;
     var sku = $("supSku").value.trim(), cost = numVal($("supCost").value);
     cfg.receipts.push({id:uid("rc"), supplyId:m.id, qty:qty, sku:sku, cost:cost, date:d, note:note});
     recalcSupply(m);
@@ -6094,7 +6114,8 @@
     $("isModel").innerHTML = '<option value="">— все модели —</option>' + mlist.map(function(m){
       return '<option value="'+esc(m.id)+'">'+esc(m.name)+'</option>'; }).join("");
     if(keepM && mlist.some(function(m){ return m.id===keepM; })) $("isModel").value = keepM;
-    var pickM = $("isModel").value;
+    $("isModel").disabled = $("isNoModel").checked;
+    var pickM = $("isNoModel").checked ? "" : $("isModel").value;
 
     var avail = withLeft.filter(function(l){
         if(!pickM) return true;
@@ -6481,14 +6502,16 @@
   function woSum(){
     var sum = 0;
     document.querySelectorAll("#woDestBody .js-wqty").forEach(function(el){
-      sum += parseInt(el.value, 10) || 0; });
+      var n = parseInt(el.value, 10);
+      if(isFinite(n) && n > 0) sum += n; });
     return sum;
   }
   function woDestFoot(sum){
     var left = woDestIdx >= 0 ? woLeftFor(woList[woDestIdx] || {}) : 0;
     $("woDestTotal").textContent = "по местам: " + sum + " из " + left;
+    var bad = woDestProblem(readWoDest());
     $("woDest_err").textContent = sum > left
-      ? ("Числится только " + left + " — разнесено больше") : "";
+      ? ("Числится только " + left + " — разнесено больше") : bad;
   }
   function renderWoDest(){
     $("woDestBody").innerHTML = woDestDraft.map(function(d, i){
@@ -6497,7 +6520,8 @@
         '<td><select class="js-wdiv">'+woDivOptions(d.divisionId||"")+'</select></td>'+
         '<td><select class="js-wdep">'+woDepOptions(d.divisionId||"", d.departmentId||"")+'</select></td>'+
         '<td><select class="js-wwh">'+woWhOptions(d.warehouseId||"")+'</select></td>'+
-        '<td><input class="js-wqty" type="number" min="1" step="1" value="'+esc(d.qty||1)+'"></td>'+
+        '<td><input class="js-wqty" type="number" min="1" step="1" inputmode="numeric" '+
+          'value="'+esc(d.qty === 0 || d.qty ? d.qty : "")+'"></td>'+
         '<td class="act"><button class="ic btn-danger js-wdestdel" title="Убрать место">✕</button></td></tr>';
     }).join("");
     $("woDestEmpty").hidden = woDestDraft.length > 0;
@@ -6506,12 +6530,28 @@
   function readWoDest(){
     var out = [];
     document.querySelectorAll("#woDestBody tr").forEach(function(tr){
+      /* количество берём как есть: если молча подставить единицу, человек
+         не заметит, что строку не заполнил, и спишет не то */
       out.push({divisionId: tr.querySelector(".js-wdiv").value,
                 departmentId: tr.querySelector(".js-wdep").value,
                 warehouseId: tr.querySelector(".js-wwh").value,
-                qty: Math.max(1, parseInt(tr.querySelector(".js-wqty").value, 10) || 1)});
+                qty: tr.querySelector(".js-wqty").value.trim()});
     });
     return out;
+  }
+  /* Что не так со строкой места: номер строки и сообщение, или пусто. */
+  function woDestProblem(dest){
+    for(var i = 0; i < dest.length; i++){
+      var v = dest[i].qty;
+      if(v === "" || v === null || v === undefined)
+        return "Строка " + (i + 1) + ": не указано количество";
+      var n = Number(v);
+      if(!isFinite(n) || Math.floor(n) !== n)
+        return "Строка " + (i + 1) + ": количество — целое число";
+      if(n <= 0)
+        return "Строка " + (i + 1) + ": количество должно быть больше нуля";
+    }
+    return "";
   }
   function openWoDest(i){
     woDestIdx = i;
@@ -6529,7 +6569,7 @@
   }
   $("btnWoDestAdd").onclick = function(){
     woDestDraft = readWoDest();
-    woDestDraft.push({divisionId:"", departmentId:"", warehouseId:"", qty:1});
+    woDestDraft.push({divisionId:"", departmentId:"", warehouseId:"", qty:""});
     renderWoDest();
   };
   $("woDestBody").addEventListener("click", function(e){
@@ -6550,12 +6590,21 @@
   });
   $("woDestBody").addEventListener("input", function(e){
     if(!e.target.classList.contains("js-wqty")) return;
+    /* минус не даём набрать вовсе: знак убираем прямо при вводе */
+    var v = e.target.value;
+    if(v.indexOf("-") !== -1){ e.target.value = v.replace(/-/g, ""); }
     woDestFoot(woSum());
   });
   $("btnWoDestCancel").onclick = function(){ $("dlgWoDest").close(); };
   $("btnWoDestOk").onclick = function(){
     var row = woList[woDestIdx]; if(!row){ $("dlgWoDest").close(); return; }
     var dest = readWoDest();
+    var bad = woDestProblem(dest);
+    if(bad){ $("woDest_err").textContent = bad; return; }
+    dest = dest.map(function(d){
+      return {divisionId:d.divisionId, departmentId:d.departmentId,
+              warehouseId:d.warehouseId, qty: parseInt(d.qty, 10)};
+    });
     var sum = dest.reduce(function(a,d){ return a + d.qty; }, 0);
     var left = woLeftFor(row);
     if(sum > left){
@@ -6588,7 +6637,9 @@
     var bad = null;
     woList.forEach(function(row){
       var m = supplyById(row.supplyId) || {}, take = woTaken(row), left = woLeftFor(row);
-      if(!take) bad = bad || ("У «" + (m.name||"\u2014") + "» не указано ни одного места");
+      var why = woDestProblem(row.dest || []);
+      if(why) bad = bad || ("У «" + (m.name||"\u2014") + "» " + why.toLowerCase());
+      else if(!take) bad = bad || ("У «" + (m.name||"\u2014") + "» не указано ни одного места");
       else if(take > left) bad = bad || ("По «" + (m.name||"\u2014") + "» числится только " + left);
     });
     if(bad){ $("wo_err").textContent = bad; return; }

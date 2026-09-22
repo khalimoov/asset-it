@@ -661,10 +661,33 @@ def order_date(flat):
     return None
 
 
+def order_number(flat):
+    """Номер из шапки — тот, что стоит после «№ Заказ».
+
+    Заказчик просил брать именно его, а не «№ документ»: в форме они рядом,
+    и снизу «Документ № … от …» даёт не тот номер. Берём первое число из
+    пяти-девяти цифр в пределах строки после слова «Заказ», пропуская даты.
+    """
+    m = re.search(r"заказ", flat, re.IGNORECASE)
+    if not m:
+        return ""
+    window = flat[m.end():m.end() + 80]
+    # дальше шапки не лезем: за «Основанием» и «ИНН» идут чужие числа
+    for stop in ("Основание", "Получател", "Отправител", "ИНН", "Доверенност"):
+        i = window.find(stop)
+        if i != -1:
+            window = window[:i]
+    # даты выкидываем, чтобы «09.09.2026» не сошло за номер
+    window = RE_DATE.sub(" ", window)
+    got = re.search(r"(?<!\d)(\d{5,9})(?!\d)", window)
+    return got.group(1) if got else ""
+
+
 def parse_header(text):
     """Номер и дата документа."""
     flat = " ".join((text or "").split())
     top = order_date(flat)
+    top_num = order_number(flat)
     best = None
     for m in RE_NUM_DATE.finditer(flat):
         # ближе к слову «Документ» — вернее
@@ -674,10 +697,12 @@ def parse_header(text):
             if near:
                 break
     if best:
-        # дата из шапки вернее: «Документ № … от …» внизу есть не на каждом скане
-        return best.group(1), top or _mkdate(best.group(2), best.group(3), best.group(4))
-    if top:
-        return "", top
+        # шапка вернее: «Документ № … от …» внизу есть не на каждом скане,
+        # да и номер там документа, а не заказа
+        return (top_num or best.group(1),
+                top or _mkdate(best.group(2), best.group(3), best.group(4)))
+    if top_num or top:
+        return top_num, top
     head = "\n".join((text or "").splitlines()[:14])
     for m in RE_DATE.finditer(head):
         got = _mkdate(m.group(1), m.group(2), m.group(3))
