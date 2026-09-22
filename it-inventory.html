@@ -7288,20 +7288,14 @@
     /* имя хоста: что вернул обход сети, иначе характеристика «PC-name» из карточки */
     var ipKvFill = function(d){
       d = d || {};
-      var ports = (d.ports || "").split(",").filter(function(x){ return x; });
       $("ipKv").innerHTML =
       kv("Имя хоста", d.hostName || st.hostName || (it ? specValueByName(it, "PC-name") : "")) +
       kv("Что за устройство", d.kind || st.kind || "") +
       kv("Производитель", d.vendor || st.vendor || "") +
       kv("MAC-адрес", d.mac || st.mac || "") +
-      kv("Открытые порты", ports.length ? ports.join(", ") : "") +
-      kv("Веб-интерфейс", d.banner || "") +
-      kv("Сейчас", st.lastCheck ? (st.alive ? "отвечает" : "не отвечает") : "не проверялся") +
       kv("Последний ответ", st.lastSeen ? fmtWhen(st.lastSeen) : "") +
-      kv("Разобран", d.probedAt ? fmtWhen(d.probedAt) : "") +
       kv("Оборудование", it ? ((it.inv || "—") + " · " + (typeName(it.type) || "")) : "не привязано") +
-      kv("Ответственный", it ? ownerName(it.owner) : "") +
-      kv("Резерв", en.res ? (en.res.note || "да") : "");
+      kv("Ответственный", it ? ownerName(it.owner) : "");
     };
     ipKvFill(null);
     var months = ipMonthList(183);
