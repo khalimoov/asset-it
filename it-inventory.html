@@ -396,6 +396,15 @@
   .dlg-head{flex:0 0 auto}
   .dlg-foot{padding:12px 18px;border-top:1px solid var(--border);display:flex;gap:8px;
     justify-content:flex-end;flex-wrap:wrap;flex:0 0 auto;background:var(--surface)}
+  /* «Прикреплённое» и «Установленные материалы» стоят рядом; если виден только
+     один, он растягивается на всю ширину — пустой половины не остаётся */
+  .secrow{display:flex;gap:12px;flex-wrap:wrap;align-items:flex-start}
+  .secrow > .sec{flex:1 1 340px;min-width:0;margin-top:14px}
+  /* свёрнутый блок: стрелка вместо стандартного маркера */
+  .sec > summary{cursor:pointer;list-style:none;display:flex;align-items:center;gap:8px}
+  .sec > summary::-webkit-details-marker{display:none}
+  .sec > summary::before{content:"\25b8";color:var(--muted);font-size:11px}
+  details.sec[open] > summary::before{content:"\25be"}
   .hist ul{margin:6px 0 0;padding-left:18px;max-height:140px;overflow:auto}
   .hist li{font-size:12.5px;color:var(--muted);margin-bottom:3px}
   /* Всплывашка: скрыта не сдвигом за край (у пустого элемента высота меньше сдвига,
@@ -895,9 +904,9 @@
         <div class="tablewrap">
           <table>
             <colgroup>
-              <col style="width:3.4%"><col style="width:12%"><col style="width:13%">
+              <col style="width:3.4%"><col style="width:11%"><col style="width:12%">
               <col style="width:10%"><col style="width:9%"><col class="hide-md" style="width:14%">
-              <col style="width:9%"><col class="hide-md" style="width:12%"><col style="width:13.6%"><col style="width:4%">
+              <col style="width:9%"><col class="hide-md" style="width:12%"><col style="width:13.6%"><col style="width:6%">
             </colgroup>
             <thead><tr>
               <th class="num">#</th><th>Когда</th><th>Кто удалил</th><th id="delColOrg">Раздел</th>
@@ -1542,14 +1551,17 @@
       <div class="field" id="wrapOwner"><label for="f_owner">Ответственный сотрудник</label><select id="f_owner"></select></div>
       <div class="field" id="wrapDiv"><label for="f_div">Подразделение</label><select id="f_div"></select></div>
       <div class="field" id="wrapDep"><label for="f_dep">Отдел</label><select id="f_dep"></select></div>
+      <div class="field" id="wrapWh"><label for="f_wh">Склад</label><select id="f_wh"></select></div>
       <div class="field" id="wrapPlace" hidden><label for="f_place">Место</label><select id="f_place"></select></div>
       <div class="field" id="wrapParent" hidden><label for="f_parent">Прикрепить к оборудованию</label><select id="f_parent"></select></div>
       <div class="field" id="wrapHide" hidden><label>&nbsp;</label>
         <label class="chk" style="margin:0"><input type="checkbox" id="f_hide"> Убрать из списка</label></div>
     </div>
     <div class="note" id="attLockNote" hidden style="color:var(--warn)"></div>
-    <div class="sec" id="attBox" hidden><b>Прикреплённое оборудование</b><div id="attList"></div></div>
-    <div class="sec" id="matBox" hidden><b>Установленные материалы</b><div id="matList"></div></div>
+    <div class="secrow">
+      <div class="sec" id="attBox" hidden><b>Прикреплённое оборудование</b><div id="attList"></div></div>
+      <div class="sec" id="matBox" hidden><b>Установленные материалы</b><div id="matList"></div></div>
+    </div>
     <div class="sec" id="statusExtra" hidden>
       <b id="seTitle">Дополнительно к статусу</b>
       <div class="grid2" style="margin-top:10px">
@@ -1561,7 +1573,6 @@
           <input id="f_snote" placeholder="Причина, номер акта, что именно чинят"></div>
       </div>
     </div>
-    <div class="field" style="margin-top:12px" id="wrapWh"><label for="f_wh">Склад</label><select id="f_wh"></select></div>
     <div id="xferWrap" hidden>
       <label class="chk" style="margin-top:8px"><input type="checkbox" id="f_xfer"> Передать другому складу</label>
       <div class="sec" id="xferBox" hidden>
@@ -1578,10 +1589,10 @@
     <div class="field" style="margin-top:12px"><label for="f_notes">Примечание</label><textarea id="f_notes" rows="2"></textarea></div>
     <div class="sec" id="specBox"><b>Характеристики</b><div id="specFields"></div></div>
     <div class="sec" id="repBox" hidden><b>Ремонты</b><div id="repList"></div></div>
-    <div class="sec hist" id="histBox" hidden>
-      <b>История</b> <span class="note" id="lastEdit" style="margin:0"></span>
+    <details class="sec hist" id="histBox" hidden>
+      <summary><b>История</b> <span class="note" id="lastEdit" style="margin:0"></span></summary>
       <ul id="hist"></ul>
-    </div>
+    </details>
   </div>
   <div class="dlg-foot">
     <button id="btnDel" class="btn-danger" hidden>Удалить</button>
@@ -4539,7 +4550,9 @@
         cellText(x.status || "") +
         '<td class="hide-md" title="'+esc(x.ownerName||"")+'">'+esc(x.ownerName||"")+'</td>'+
         cellText(x.reason || "") +
-        '<td>'+(can("deletions.manage") ? '<button class="ic btn-danger js-dldel" title="Убрать запись из журнала">✕</button>' : '')+'</td></tr>';
+        acts(can("deletions.manage")
+          ? ['<button class="ic btn-danger js-dldel" title="Убрать запись из журнала">✕</button>']
+          : [])+'</tr>';
     }).join("");
     var e = $("delsEmpty"); e.hidden = list.length > 0;
     e.textContent = all.length ? "Ничего не найдено по фильтрам." : "Удалений пока не было.";
@@ -7819,13 +7832,14 @@
     $("matBox").hidden = !mats.length;
     $("matList").innerHTML = miniTable(["Дата","Материал","Кол-во","Примечание"],
       mats.map(function(x){ var m = supplyById(x.supplyId)||{};
-        return [fmtDate(x.date), m.name||"—", String(x.qty||1), x.note||""]; }), "");
+        return [fmtDate(x.date), m.name||"—", String(x.qty||1), x.note||""]; }), "",
+      null, ["18%","36%","13%","33%"]);
     var att = it ? attachedTo(it.id) : [];
     $("attBox").hidden = !att.length;
     $("attList").innerHTML = miniTable(["Инв. номер","Модель","Тип","Статус","В списке"],
       att.map(function(x){ return [x.inv||"", modelName(x.model)||"", typeName(x.type)||"", x.status||"",
                                     x.hideAttached ? "скрыто" : "видно"]; }),
-      "", att.map(function(x){ return x.id; }));
+      "", att.map(function(x){ return x.id; }), ["21%","20%","28%","19%","12%"]);
     refreshSubSelect($("f_cat").value, it ? subOfType(it.type) : "");
     refreshTypeSelect($("f_cat").value, $("f_sub").value, it ? it.type : "");
     refreshOwnerSelect(it ? (it.owner||"") : "");
