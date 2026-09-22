@@ -17,6 +17,8 @@ import subprocess
 import sys
 from concurrent.futures import ThreadPoolExecutor
 
+import netinfo
+
 # чтобы на сервере не мигали чёрные окна консоли
 NO_WINDOW = 0x08000000 if sys.platform == "win32" else 0
 
@@ -128,6 +130,8 @@ def targets(cur, cfg, org_id):
 
 
 HISTORY_DAYS = 183          # полгода: столько держим историю по дням
+DEEP_EVERY_H = 24           # как часто перебирать подробности об устройстве
+DEEP_PER_RUN = 60           # сколько адресов разбираем подробно за один обход
 
 
 def dns_name(ip, timeout_s=1.0):
@@ -236,8 +240,62 @@ def run(cur, cfg, org_id):
               checks = ip_day.checks + 1
         """, (org_id, ip, today, bool(r["alive"]), 1 if r["alive"] else 0))
 
+    deep = deep_pass(cur, org_id, up, names)
+
     cur.execute("delete from ip_day where org_id = %s and d < %s",
                 (org_id, today - datetime.timedelta(days=HISTORY_DAYS)))
     return {"at": started.isoformat(timespec="seconds"),
-            "checked": len(ips), "alive": alive,
+            "checked": len(ips), "alive": alive, "detailed": deep,
             "seconds": round((datetime.datetime.now() - started).total_seconds(), 1)}
+
+
+def deep_pass(cur, org_id, up, names):
+    """Подробности об устройствах: MAC, производитель, порты, баннер, тип.
+
+    Тяжелее обычного пинга — полтора десятка соединений на адрес плюс запрос
+    к веб-интерфейсу, — поэтому не на каждый обход: берём тех, о ком ещё
+    ничего не знаем или знаем сутками старше, и не больше DEEP_PER_RUN за раз.
+    Расписание обхода от этого не разъезжается.
+    """
+    if not up:
+        return 0
+    cur.execute("""select ip from ip_status
+                    where org_id = %s and ip = any(%s)
+                      and probed_at is not null
+                      and probed_at > now() - (%s || ' hours')::interval""",
+                (org_id, list(up), str(DEEP_EVERY_H)))
+    fresh = set(r["ip"] for r in cur.fetchall())
+    todo = [ip for ip in up if ip not in fresh][:DEEP_PER_RUN]
+    if not todo:
+        return 0
+
+    arp = netinfo.arp_table()
+    def one(ip):
+        try:
+            return ip, netinfo.collect(ip, arp.get(ip, ""), names.get(ip, ""))
+        except Exception:
+            return ip, None
+
+    with ThreadPoolExecutor(max_workers=min(10, len(todo))) as ex:
+        got = list(ex.map(one, todo))
+
+    done = 0
+    for ip, info in got:
+        if not info:
+            continue
+        done += 1
+        # пустым не затираем: MAC виден только пока адрес в одной сети с нами,
+        # а веб-интерфейс мог просто не ответить в этот раз
+        cur.execute("""
+            update ip_status set
+              mac    = case when %s <> '' then %s else mac end,
+              vendor = case when %s <> '' then %s else vendor end,
+              ports  = case when %s <> '' then %s else ports end,
+              banner = case when %s <> '' then %s else banner end,
+              kind   = case when %s <> '' then %s else kind end,
+              probed_at = now()
+             where org_id = %s and ip = %s
+        """, (info["mac"], info["mac"], info["vendor"], info["vendor"],
+              info["ports"], info["ports"], info["banner"], info["banner"],
+              info["kind"], info["kind"], org_id, ip))
+    return done

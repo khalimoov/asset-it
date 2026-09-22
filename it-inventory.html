@@ -7044,6 +7044,8 @@
         var ns = netOf(ip), dot = "";
         /* имя хоста опрос узнаёт сам — показываем сразу в подсказке, не открывая карточку */
         if(ns && ns.hostName) ttl += " · " + ns.hostName;
+        if(ns && ns.kind) ttl += " · " + ns.kind;
+        if(ns && ns.vendor) ttl += " (" + ns.vendor + ")";
         if(ns && ns.lastCheck){
           checkedN++;
           if(ns.alive){
@@ -7254,16 +7256,24 @@
     var st = (cfg.netStatus || {})[ip] || {};
     var kv = function(k, v){ return '<div><span>'+esc(k)+'</span><b>'+esc(v||"—")+'</b></div>'; };
     /* имя хоста: что вернул обход сети, иначе характеристика «PC-name» из карточки */
-    var ipKvFill = function(host){
+    var ipKvFill = function(d){
+      d = d || {};
+      var ports = (d.ports || "").split(",").filter(function(x){ return x; });
       $("ipKv").innerHTML =
-      kv("Имя хоста", host || st.hostName || (it ? specValueByName(it, "PC-name") : "")) +
+      kv("Имя хоста", d.hostName || st.hostName || (it ? specValueByName(it, "PC-name") : "")) +
+      kv("Что за устройство", d.kind || st.kind || "") +
+      kv("Производитель", d.vendor || st.vendor || "") +
+      kv("MAC-адрес", d.mac || st.mac || "") +
+      kv("Открытые порты", ports.length ? ports.join(", ") : "") +
+      kv("Веб-интерфейс", d.banner || "") +
       kv("Сейчас", st.lastCheck ? (st.alive ? "отвечает" : "не отвечает") : "не проверялся") +
       kv("Последний ответ", st.lastSeen ? fmtWhen(st.lastSeen) : "") +
+      kv("Разобран", d.probedAt ? fmtWhen(d.probedAt) : "") +
       kv("Оборудование", it ? ((it.inv || "—") + " · " + (typeName(it.type) || "")) : "не привязано") +
       kv("Ответственный", it ? ownerName(it.owner) : "") +
       kv("Резерв", en.res ? (en.res.note || "да") : "");
     };
-    ipKvFill("");
+    ipKvFill(null);
     var months = ipMonthList(183);
     $("ipMonth").innerHTML = months.map(function(k){
       return '<option value="'+esc(k)+'">'+esc(monthTitle(k))+'</option>'; }).join("");
@@ -7273,7 +7283,7 @@
     $("dlgIp").showModal();
     api("/api/ip/history?ip=" + encodeURIComponent(ip)).then(function(d){
       (d.days || []).forEach(function(x){ ipDaysMap[x.d] = x; });
-      if(d.hostName) ipKvFill(d.hostName);
+      ipKvFill(d);
       renderIpCal();
     }).catch(function(e){
       $("ipErr").textContent = "История не загрузилась" + apiWhy(e);

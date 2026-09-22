@@ -697,7 +697,8 @@ def load_state(user, org_id):
 
         net_status = {
             r["ip"]: {"alive": r["alive"], "method": r["method"],
-                      "hostName": r["host_name"] or "",
+                      "hostName": r["host_name"] or "", "kind": r["kind"] or "",
+                      "vendor": r["vendor"] or "", "mac": r["mac"] or "",
                       "lastSeen": r["last_seen"].isoformat() if r["last_seen"] else "",
                       "lastCheck": r["last_check"].isoformat() if r["last_check"] else ""}
             for r in by_org("ip_status")}
@@ -1731,10 +1732,13 @@ def api_ip_history():
                  "seen": r["seen"], "checks": r["checks"]} for r in cur.fetchall()]
         cur.execute("select * from ip_status where org_id = %s and ip = %s", (org_id, ip))
         st = cur.fetchone()
+    g = lambda k: ((st[k] if st else "") or "")
     return jsonify({"ip": ip, "days": days, "keepDays": netscan.HISTORY_DAYS,
-                    "hostName": (st["host_name"] if st else "") or "",
+                    "hostName": g("host_name"), "mac": g("mac"), "vendor": g("vendor"),
+                    "ports": g("ports"), "banner": g("banner"), "kind": g("kind"),
                     "alive": bool(st["alive"]) if st else False,
-                    "method": (st["method"] if st else "") or "",
+                    "method": g("method"),
+                    "probedAt": st["probed_at"].isoformat() if st and st["probed_at"] else "",
                     "lastSeen": st["last_seen"].isoformat() if st and st["last_seen"] else "",
                     "lastCheck": st["last_check"].isoformat() if st and st["last_check"] else ""})
 
