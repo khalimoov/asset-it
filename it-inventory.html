@@ -12,6 +12,7 @@
     --danger:#b42318;--danger-bg:#fdeceb;--info:#1e5eb8;--info-bg:#e7effb;
     --shadow:0 1px 2px rgba(16,24,40,.06),0 8px 24px rgba(16,24,40,.08);
     --side:236px;--rowh:44px;
+    --sb:#c9cfd8;--sb-hover:#a8b1bd;
   }
   @media (prefers-color-scheme: dark){
     :root:not([data-theme="light"]){
@@ -20,6 +21,7 @@
       --ok:#6ee7a0;--ok-bg:#12301f;--warn:#f2c168;--warn-bg:#332711;
       --danger:#f28b82;--danger-bg:#3a1c1a;--info:#8ab4f8;--info-bg:#16243d;
       --shadow:0 1px 2px rgba(0,0,0,.4),0 8px 24px rgba(0,0,0,.35);
+      --sb:#3b434e;--sb-hover:#525c69;
     }
   }
   :root[data-theme="dark"]{
@@ -27,6 +29,7 @@
     --text:#e8eaed;--muted:#9aa2ad;--accent:#5b90f0;--accent-fg:#0d1117;
     --ok:#6ee7a0;--ok-bg:#12301f;--warn:#f2c168;--warn-bg:#332711;
     --danger:#f28b82;--danger-bg:#3a1c1a;--info:#8ab4f8;--info-bg:#16243d;
+    --sb:#3b434e;--sb-hover:#525c69;
     --shadow:0 1px 2px rgba(0,0,0,.4),0 8px 24px rgba(0,0,0,.35);
   }
   *{box-sizing:border-box}
@@ -48,6 +51,19 @@
   .orgpick{margin:8px 0 2px;font-size:12.5px;font-weight:600;padding:7px 9px;
     border-radius:8px;background:var(--surface-2);border:1px solid var(--border)}
   .orgpick[hidden]{display:none !important}
+  /* Полосы прокрутки оформляем сами: стандартная в Chrome широкая и серая, внутри
+     карточки это бросается в глаза. Сначала стандартные свойства — их понимают
+     Firefox и Chrome с 121-го, потом ::-webkit-* для остальных сборок Blink и WebKit.
+     Прозрачная рамка с background-clip делает ползунок визуально тоньше дорожки. */
+  *{scrollbar-width:thin;scrollbar-color:var(--sb) transparent}
+  ::-webkit-scrollbar{width:11px;height:11px}
+  ::-webkit-scrollbar-track{background:transparent}
+  ::-webkit-scrollbar-thumb{background:var(--sb);border-radius:8px;
+    border:3px solid transparent;background-clip:content-box}
+  ::-webkit-scrollbar-thumb:hover{background:var(--sb-hover);background-clip:content-box}
+  ::-webkit-scrollbar-corner{background:transparent}
+  /* место под полосу держим всегда: иначе при её появлении поля дёргаются вбок */
+  .dlg-body{scrollbar-gutter:stable}
   .side-nav{flex:1 1 auto;min-height:0;overflow-y:auto;scrollbar-width:none}
   .side-nav::-webkit-scrollbar{width:0;height:0}
   .brand{display:flex;align-items:center;justify-content:space-between;gap:8px;
