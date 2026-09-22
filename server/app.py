@@ -566,6 +566,7 @@ def load_state(user, org_id):
 
         specs = [{"id": r["id"], "name": r["name"], "kind": r["kind"], "unit": r["unit"],
                   "options": r["options"], "req": r["req"], "uniq": r["uniq"], "opt": r["opt"],
+                  "multi": r["multi"],
                   "reqStatuses": r["req_statuses"], "group": r["grp"], "poolId": r["pool_id"] or "",
                   "subcategoryId": r["subcategory_id"] or "", "typeId": r["type_id"] or ""}
                  for r in rows("""select s.* from spec s
@@ -684,6 +685,7 @@ def load_state(user, org_id):
                     "owner": r["owner_id"] or "", "division": r["division_id"] or "",
                     "department": r["department_id"] or "", "notes": r["notes"],
                     "specs": r["specs"], "specsNone": r["specs_none"],
+                    "specSlots": r["spec_slots"] or {},
                     "warehouse": r["warehouse_id"] or "",
                     "transferred": bool(r["transferred_at"]),
                     "model": r["model_id"] or "", "holder": r["holder"] or "person",
@@ -881,6 +883,7 @@ def save_cfg(cfg, user, org_id):
                     "unit": lambda r: g(r, "unit"), "options": lambda r: json.dumps(g(r, "options", [])),
                     "req": lambda r: bool(g(r, "req", False)), "uniq": lambda r: bool(g(r, "uniq", False)),
                     "opt": lambda r: bool(g(r, "opt", False)),
+                    "multi": lambda r: bool(g(r, "multi", False)),
                     "req_statuses": lambda r: json.dumps(g(r, "reqStatuses", [])),
                     "grp": lambda r: g(r, "group"), "pool_id": lambda r: g(r, "poolId") or None,
                     "subcategory_id": lambda r: g(r, "subcategoryId") or None,
@@ -1074,11 +1077,11 @@ def save_items(items, user, org_id):
                 insert into item (id, registry_id, inv, cost, received_at, warranty_until,
                                   type_id, status, owner_id,
                                   division_id,
-                                  department_id, notes, specs, specs_none, master_id,
+                                  department_id, notes, specs, specs_none, spec_slots, master_id,
                                   status_date, status_note, warehouse_id,
                                   model_id, holder, place_id, parent_id, hide_attached,
                                   updated_by, updated_by_name, updated_at)
-                values (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s, now())
+                values (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s, now())
                 on conflict (id) do update set
                   registry_id = excluded.registry_id, inv = excluded.inv,
                   cost = excluded.cost, received_at = excluded.received_at,
@@ -1086,6 +1089,7 @@ def save_items(items, user, org_id):
                   status = excluded.status, owner_id = excluded.owner_id,
                   division_id = excluded.division_id, department_id = excluded.department_id,
                   notes = excluded.notes, specs = excluded.specs, specs_none = excluded.specs_none,
+                  spec_slots = excluded.spec_slots,
                   master_id = excluded.master_id, status_date = excluded.status_date,
                   status_note = excluded.status_note, warehouse_id = excluded.warehouse_id,
                   model_id = excluded.model_id, holder = excluded.holder,
@@ -1101,7 +1105,8 @@ def save_items(items, user, org_id):
                   it.get("type") or None, it.get("status", ""),
                   it.get("owner") or None, it.get("division") or None, it.get("department") or None,
                   it.get("notes", ""), json.dumps(it.get("specs", {})),
-                  json.dumps(it.get("specsNone", {})), it.get("masterId") or None,
+                  json.dumps(it.get("specsNone", {})), json.dumps(it.get("specSlots", {})),
+                  it.get("masterId") or None,
                   it.get("statusDate") or None, it.get("statusNote", ""),
                   it.get("warehouse") or None,
                   it.get("model") or None, holder,

@@ -775,6 +775,7 @@
             <label class="chk"><input type="checkbox" id="newSpecReq"> Обязательная</label>
             <label class="chk"><input type="checkbox" id="newSpecUniq"> Уникальная — значение не должно повторяться</label>
             <label class="chk"><input type="checkbox" id="newSpecOpt"> Разрешить «нет значения» (галочка в карточке)</label>
+            <label class="chk"><input type="checkbox" id="newSpecMulti"> Может быть несколько (второй диск, третья планка)</label>
           </div>
           <div class="field" id="reqStWrap" hidden style="margin-top:10px">
             <label>Обязательна при статусах</label>
@@ -1045,6 +1046,8 @@
               </select></div>
             <div class="field" id="isUserWrap"><label for="isUser">Сотрудник</label><select id="isUser"></select></div>
             <div class="field" id="isItemWrap" hidden><label for="isItem">Оборудование</label><select id="isItem"></select></div>
+            <div class="field" id="isSpecWrap" hidden><label for="isSpec">Занимает характеристику</label>
+              <select id="isSpec"></select></div>
             <div class="field"><label for="isDate">Дата</label><input id="isDate" type="date"></div>
             <div class="field"><label for="isNote">Примечание</label>
               <input id="isNote" placeholder="Залили краску в принтер, заменили термопасту"></div>
@@ -1594,6 +1597,8 @@
       <div class="field" id="wrapWh"><label for="f_wh">Склад</label><select id="f_wh"></select></div>
       <div class="field" id="wrapPlace" hidden><label for="f_place">Место</label><select id="f_place"></select></div>
       <div class="field" id="wrapParent" hidden><label for="f_parent">Прикрепить к оборудованию</label><select id="f_parent"></select></div>
+      <div class="field" id="wrapPSpec" hidden><label for="f_pspec">Занимает характеристику</label>
+        <select id="f_pspec"></select></div>
       <div class="field" id="wrapHide" hidden><label>&nbsp;</label>
         <label class="chk" style="margin:0"><input type="checkbox" id="f_hide"> Убрать из списка</label></div>
     </div>
@@ -4255,9 +4260,11 @@
         ? '<label class="chk"><input type="checkbox" data-rule="req"'+(sp.req?' checked':'')+'> обяз.</label>'+
           '<label class="chk"><input type="checkbox" data-rule="uniq"'+(sp.uniq?' checked':'')+'> уник.</label>'+
           '<label class="chk"><input type="checkbox" data-rule="opt"'+(sp.opt?' checked':'')+'> «нет значения»</label>'+
+          '<label class="chk"><input type="checkbox" data-rule="multi"'+(sp.multi?' checked':'')+'> несколько</label>'+
           reqChip(sp)
         : ((sp.req?'<span class="chip">обяз.</span>'+reqChip(sp):'')+(sp.uniq?'<span class="chip">уник.</span>':'')+
-           (sp.opt?'<span class="chip">можно без значения</span>':'') || "—"))+'</td>'+
+           (sp.opt?'<span class="chip">можно без значения</span>':'')+
+           (sp.multi?'<span class="chip">несколько</span>':'') || "—"))+'</td>'+
       kindCell(sp, editable) + unitCell(sp, editable) +
       '<td title="'+esc((sp.options||[]).join(", "))+'">'+
         ((sp.options&&sp.options.length)?sp.options.map(function(o){return '<span class="chip">'+esc(o)+'</span>';}).join(""):"—")+'</td>'+
@@ -4343,6 +4350,7 @@
     var rec = {id:uid("s"), name:nm, kind:k, unit:$("newSpecUnit").value.trim(),
       options: k==="list" ? $("newSpecOpts").value.split(",").map(function(x){return x.trim();}).filter(Boolean) : [],
       req: $("newSpecReq").checked, uniq: $("newSpecUniq").checked, opt: $("newSpecOpt").checked,
+      multi: $("newSpecMulti").checked,
       poolId: k==="ip" ? $("newSpecPool").value : "",
       group: $("newSpecGroup").value.trim(),
       reqStatuses: $("newSpecReq").checked ? pickedStatuses("newSpecReqSts", statusesOf()) : []};
@@ -6153,6 +6161,7 @@
           }).join("") + '</optgroup>';
       }).join("");
     if(keepI && items.some(function(x){ return x.id===keepI; })) $("isItem").value = keepI;
+    fillIssueSpecs();
     syncIssueTarget();
     if(!$("isDate").value) $("isDate").value = today();
 
@@ -6182,10 +6191,48 @@
   }
   $("qIssue").oninput = renderIssued;
   $("isModel").onchange = renderIssued;
+  /* Какую характеристику займёт материал: список берём у выбранной техники,
+     и только те, где разрешено несколько значений. */
+  function fillIssueSpecs(){
+    var it = items.find(function(x){ return x.id === $("isItem").value; });
+    var list = multiSpecsOf(it), keep = $("isSpec").value;
+    $("isSpec").innerHTML = '<option value="">— не занимает —</option>' + list.map(function(sp){
+      var n = freeSlot(it, sp.id);
+      return '<option value="'+esc(sp.id)+'">'+esc(slotLabel(sp, n || 1))+'</option>';
+    }).join("");
+    if(keep && list.some(function(sp){ return sp.id === keep; })) $("isSpec").value = keep;
+    $("isSpecWrap").hidden = !list.length || $("isTo").value !== "item";
+  }
+  $("isItem").addEventListener("change", fillIssueSpecs);
+
+  /* Характеристики того оборудования, к которому прикрепляют. Значение возьмём
+     из самой детали: одноимённая характеристика, иначе модель, иначе тип. */
+  function partValue(child, spName){
+    if(!child) return "";
+    var byName = specValueByName(child, spName);
+    return byName || modelName(child.model) || typeName(child.type) || child.inv || "";
+  }
+  function fillParentSpecs(){
+    if(!$("f_pspec")) return;
+    var parent = items.find(function(x){ return x.id === $("f_parent").value; });
+    var show = $("f_holder").value === "item" && !!parent;
+    var list = show ? multiSpecsOf(parent) : [];
+    var keep = $("f_pspec").value;
+    $("f_pspec").innerHTML = '<option value="">— не занимает —</option>' + list.map(function(sp){
+      var n = freeSlot(parent, sp.id);
+      return '<option value="'+esc(sp.id)+'">'+esc(slotLabel(sp, n || 1))+'</option>';
+    }).join("");
+    if(keep && list.some(function(sp){ return sp.id === keep; })) $("f_pspec").value = keep;
+    $("wrapPSpec").hidden = !list.length;
+  }
+  $("f_parent").addEventListener("change", fillParentSpecs);
+
   function syncIssueTarget(){
     var toItem = $("isTo").value === "item";
     $("isUserWrap").hidden = toItem;
     $("isItemWrap").hidden = !toItem;
+    if($("isSpecWrap")) $("isSpecWrap").hidden = !toItem || !$("isSpec").options.length ||
+      $("isSpec").options.length < 2;
     $("btnIssue").textContent = toItem ? "Установить в оборудование" : "Списать на сотрудника";
   }
   $("isTo").onchange = syncIssueTarget;
@@ -6203,11 +6250,23 @@
     var left = lotLeft(l);
     if(left <= 0){ toast("«"+lotLabel(l)+"» закончился — сначала оприходуйте приход"); return; }
     if(qty > left){ toast("На складе только "+left+" "+(m.unit||"шт")+" — списать больше нельзя"); return; }
-    cfg.issues.push({id:uid("is"), supplyId:l.supplyId, sku:l.sku, cost:l.cost,
+    var isId = uid("is");
+    cfg.issues.push({id:isId, supplyId:l.supplyId, sku:l.sku, cost:l.cost,
                      userId:u ? u.id : "", itemId:it ? it.id : "",
                      qty:qty, date:d, note:$("isNote").value.trim()});
+    /* материал занял характеристику — вписываем его в свободную строку и
+       помечаем, что строка появилась от установленной запчасти */
+    var slotMsg = "";
+    if(toItem && it && $("isSpec").value){
+      var label = fillSlot(it, $("isSpec").value, m.name, "issue:" + isId);
+      if(label){
+        addHistory(it, "Установлено: " + label + " — " + m.name);
+        saveItems([it]);
+        slotMsg = ", " + label;
+      }
+    }
     $("isNote").value=""; $("isQty").value="1";
-    saveCfg(); toast("Списано: "+lotLabel(l)+" × "+qty+" → "+(u ? u.name : "инв. "+(it.inv||"—")));
+    saveCfg(); toast("Списано: "+lotLabel(l)+" × "+qty+slotMsg+" → "+(u ? u.name : "инв. "+(it.inv||"—")));
   };
   $("issuedBody").addEventListener("click", function(e){
     if(e.target.classList.contains("js-isitem")){
@@ -7927,6 +7986,58 @@
     $("f_owner").innerHTML = html;
     if(cur) $("f_owner").value = cur;
   }
+  /* Характеристика, которой может быть несколько, живёт слотами. Первый слот —
+     это сам id характеристики, дальше к нему приписывается номер: «s1», «s1#2»,
+     «s1#3». Так всё, что читает specs[id], продолжает видеть основное значение,
+     а лишние строки не мешаются. */
+  function slotKey(id, n){ return n > 1 ? id + "#" + n : id; }
+  function slotNum(key){
+    var i = String(key).indexOf("#");
+    return i === -1 ? 1 : (parseInt(key.slice(i + 1), 10) || 1);
+  }
+  function slotLabel(sp, n){ return sp.name + (n > 1 ? " " + n : ""); }
+  /* какие слоты заведены у характеристики: первый всегда, дальше — по значениям
+     и по служебным сведениям (слот могли добавить и ещё не заполнить) */
+  function slotsOf(sp, values){
+    var out = [1];
+    for(var n = 2; n <= 40; n++){
+      var k = slotKey(sp.id, n);
+      if((values && values[k] !== undefined) || curSlots[k]) out.push(n);
+    }
+    return out;
+  }
+  var curSlots = {};      /* {ключ: {src, off}} — откуда строка и когда сняли */
+
+  /* Характеристики записи, у которых разрешено несколько значений. */
+  function multiSpecsOf(it){
+    if(!it) return [];
+    return specsOf(it.type).filter(function(sp){ return sp.multi; });
+  }
+  /* Первый свободный слот характеристики у записи: занятыми считаем и те,
+     что «сняты» — место держится за прежней деталью, пока её не уберут. */
+  function freeSlot(it, specId){
+    var vals = (it && it.specs) || {}, meta = (it && it.specSlots) || {};
+    for(var n = 1; n <= 40; n++){
+      var k = slotKey(specId, n);
+      if(!vals[k] && !meta[k]) return n;
+    }
+    return 0;
+  }
+  /* Кладёт значение в свободную строку характеристики. Возвращает подпись
+     строки («HDD 2») или пусто, если места не нашлось. */
+  function fillSlot(it, specId, value, src){
+    var sp = cfg.specs.find(function(x){ return x.id === specId; });
+    if(!it || !sp || !value) return "";
+    var n = freeSlot(it, specId);
+    if(!n) return "";
+    var key = slotKey(specId, n);
+    it.specs = it.specs || {};
+    it.specSlots = it.specSlots || {};
+    it.specs[key] = String(value);
+    it.specSlots[key] = {src: src || ""};
+    return slotLabel(sp, n);
+  }
+
   function specField(s, values, noneMap, status){
     var none = !!(noneMap && noneMap[s.id]);
     var v = (!none && values && values[s.id]) ? values[s.id] : "";
@@ -7986,9 +8097,78 @@
           (later ? '<span class="chip">при статусе «'+esc(status)+'» можно заполнить позже</span>' : '')+'</div>';
       }
       return head + '<div class="grid3" style="margin-top:8px">' +
-        g.items.map(function(sp){ return specField(sp, values, noneMap, status); }).join("") + '</div>';
+        g.items.map(function(sp){
+          if(!sp.multi) return specField(sp, values, noneMap, status);
+          return slotsOf(sp, values).map(function(n){
+            return specSlotField(sp, n, values, noneMap, status);
+          }).join("") + specAddBtn(sp);
+        }).join("") + '</div>';
     }).join("");
   }
+  /* Добавленная строка: та же разметка, что и у основной, но с другим ключом,
+     своей подписью и кнопками «снять» / «вернуть» / «убрать». */
+  function specSlotField(sp, n, values, noneMap, status){
+    if(n === 1) return specField(sp, values, noneMap, status);
+    var key = slotKey(sp.id, n), meta = curSlots[key] || {};
+    var fake = {};
+    for(var k in sp) if(Object.prototype.hasOwnProperty.call(sp, k)) fake[k] = sp[k];
+    fake.id = key;
+    fake.name = slotLabel(sp, n);
+    fake.req = false;               /* обязательной бывает только первая строка */
+    fake.uniq = false;
+    fake.subcategoryId = "";        /* значок «станд.» у добавленной строки ни к чему */
+    var html = specField(fake, values, noneMap, status);
+    var marks = meta.src ? '<span class="chip" title="строка появилась от установленной запчасти">⚙</span>' : "";
+    if(meta.off){
+      marks += '<span class="chip">снято ' + esc(fmtDate(meta.off)) + '</span>' +
+               '<button class="btn-sm js-slotback" data-k="' + esc(key) + '">Вернуть</button>';
+    } else {
+      marks += '<button class="btn-sm js-slotoff" data-k="' + esc(key) + '">Снять</button>';
+    }
+    marks += '<button class="ic btn-danger js-slotdel" data-k="' + esc(key) + '" title="Убрать строку">✕</button>';
+    return html.replace("</div>", '<div class="row" style="margin-top:6px">' + marks + "</div></div>");
+  }
+  function specAddBtn(sp){
+    return '<div class="field"><label>&nbsp;</label>' +
+      '<button class="btn-sm js-slotadd" data-s="' + esc(sp.id) + '">+ ещё ' + esc(sp.name) + '</button></div>';
+  }
+  /* Кнопки добавленных строк. Значения перечитываем до перерисовки, иначе
+     набранное в соседних полях пропадёт. */
+  function slotValues(){
+    var cur = {};
+    document.querySelectorAll("#specFields [data-spec]").forEach(function(el){
+      cur[el.dataset.spec] = fieldValue(el); });
+    return cur;
+  }
+  $("specFields").addEventListener("click", function(e){
+    var add = e.target.closest(".js-slotadd");
+    var off = e.target.closest(".js-slotoff");
+    var back = e.target.closest(".js-slotback");
+    var del = e.target.closest(".js-slotdel");
+    if(!add && !off && !back && !del) return;
+    e.preventDefault();
+    var cur = slotValues(), none = currentNone();
+    if(add){
+      var sp = cfg.specs.find(function(x){ return x.id === add.dataset.s; });
+      if(sp){
+        var n = 2;
+        while(cur[slotKey(sp.id, n)] !== undefined || curSlots[slotKey(sp.id, n)]) n++;
+        curSlots[slotKey(sp.id, n)] = {};
+        cur[slotKey(sp.id, n)] = "";
+      }
+    } else if(off){
+      /* «снято» — значение остаётся видимым, пока на это место не поставят новое */
+      curSlots[off.dataset.k] = curSlots[off.dataset.k] || {};
+      curSlots[off.dataset.k].off = today();
+    } else if(back){
+      if(curSlots[back.dataset.k]) delete curSlots[back.dataset.k].off;
+    } else if(del){
+      delete curSlots[del.dataset.k];
+      delete cur[del.dataset.k];
+    }
+    renderSpecFields($("f_type").value, cur, none);
+  });
+
   /* перерисовать поля, сохранив введённое (нужно при смене статуса) */
   function refreshSpecFields(){
     var cur = {}, none = currentNone();
@@ -8282,6 +8462,13 @@
     $("f_xnote").value = ""; $("f_xfile").value = "";
     $("f_wh").disabled = false;
     $("btnDel").hidden = !it;
+    if($("f_pspec")) $("f_pspec").value = "";
+    curSlots = {};
+    if(it && it.specSlots){
+      for(var sk in it.specSlots)
+        if(Object.prototype.hasOwnProperty.call(it.specSlots, sk))
+          curSlots[sk] = {src: it.specSlots[sk].src || "", off: it.specSlots[sk].off || ""};
+    }
     renderSpecFields($("f_type").value, it ? it.specs : null, it ? it.specsNone : null);
     var reps = it ? cfg.repairs.filter(function(r){ return r.itemId===it.id; })
       .sort(function(a,b){ return (b.from||"").localeCompare(a.from||""); }) : [];
@@ -8381,6 +8568,20 @@
   }
   $("f_inv").addEventListener("input", showInvHint);
 
+  /* В базу кладём сведения только о тех строках, которые остались: убрали
+     строку — ушла и её пометка. */
+  function slotsToSave(specs){
+    var out = {};
+    for(var k in curSlots){
+      if(!Object.prototype.hasOwnProperty.call(curSlots, k)) continue;
+      if(specs[k] === undefined && !curSlots[k].off && !curSlots[k].src) continue;
+      var m = {};
+      if(curSlots[k].src) m.src = curSlots[k].src;
+      if(curSlots[k].off) m.off = curSlots[k].off;
+      if(m.src || m.off) out[k] = m;
+    }
+    return out;
+  }
   function collect(){
     var prev = editingId ? items.find(function(x){ return x.id===editingId; }) : null;
     var specs = {}, none = currentNone();
@@ -8415,6 +8616,7 @@
       statusNote: $("wrapSNote").hidden ? "" : $("f_snote").value.trim(),
       specs: attached ? (prev.specs || {}) : specs,
       specsNone: attached ? (prev.specsNone || {}) : none,
+      specSlots: attached ? ((prev && prev.specSlots) || {}) : slotsToSave(specs),
       history: (prev && prev.history) ? prev.history.slice() : []
     };
     var now = new Date().toLocaleDateString("ru-RU");
@@ -8459,6 +8661,22 @@
   $("btnCancel").onclick = function(){ $("dlg").close(); };
   $("btnSave").onclick = function(){
     var o = collect();
+    /* прикрепили деталь и указали, какую характеристику она занимает —
+       вписываем её в свободную строку основного оборудования */
+    var extra = [];
+    if($("f_pspec") && $("f_pspec").value && o.holder === "item" && o.parent){
+      var parent = items.find(function(x){ return x.id === o.parent; });
+      if(parent){
+        var sp = cfg.specs.find(function(x){ return x.id === $("f_pspec").value; });
+        var val = partValue(o, sp ? sp.name : "");
+        var label = fillSlot(parent, $("f_pspec").value, val, "item:" + o.id);
+        if(label){
+          addHistory(parent, "Установлено: " + label + " — " + val +
+                             (o.inv ? " (инв. " + o.inv + ")" : ""));
+          extra.push(parent);
+        }
+      }
+    }
     var prevIt = editingId ? items.find(function(x){ return x.id===editingId; }) : null;
     /* Старые записи с номерами другого вида не трогаем: проверяем только то,
        что человек ввёл или поменял сейчас. */
@@ -8548,7 +8766,11 @@
       saveItems(batch).then(function(){ toast("Принято на склад: "+qty); });
       $("dlg").close(); return;
     }
-    saveItem(o); $("dlg").close();
+    /* основное оборудование, которому досталась строка характеристики,
+       сохраняем тем же запросом — иначе правка потеряется */
+    if(extra.length) saveItems([o].concat(extra));
+    else saveItem(o);
+    $("dlg").close();
   };
   $("attList").addEventListener("click", function(e){
     var tr = e.target.closest("tr[data-open]"); if(!tr) return;
