@@ -1557,6 +1557,19 @@
       <div class="field" id="wrapHide" hidden><label>&nbsp;</label>
         <label class="chk" style="margin:0"><input type="checkbox" id="f_hide"> Убрать из списка</label></div>
     </div>
+    <div id="xferWrap" hidden>
+      <label class="chk" style="margin-top:8px"><input type="checkbox" id="f_xfer"> Передать другому складу</label>
+      <div class="sec" id="xferBox" hidden>
+        <b>Передача между складами</b>
+        <div class="grid2" style="margin-top:10px">
+          <div class="field"><label for="f_xwh">Склад-получатель</label><select id="f_xwh"></select></div>
+          <div class="field"><label for="f_xnote">Примечание к передаче</label>
+            <input id="f_xnote" placeholder="Почему передают"></div>
+          <div class="field"><label for="f_xfile">Загрузить накладную</label>
+            <input type="file" id="f_xfile" accept=".pdf,.png,.jpg,.jpeg,.tif,.tiff,.bmp"></div>
+        </div>
+      </div>
+    </div>
     <div class="note" id="attLockNote" hidden style="color:var(--warn)"></div>
     <div class="secrow">
       <div class="sec" id="attBox" hidden><b>Прикреплённое оборудование</b><div id="attList"></div></div>
@@ -1571,19 +1584,6 @@
         <div class="field" id="wrapSDate" hidden><label for="f_sdate">Дата</label><input id="f_sdate" type="date"></div>
         <div class="field" id="wrapSNote" hidden><label for="f_snote">Примечание к статусу</label>
           <input id="f_snote" placeholder="Причина, номер акта, что именно чинят"></div>
-      </div>
-    </div>
-    <div id="xferWrap" hidden>
-      <label class="chk" style="margin-top:8px"><input type="checkbox" id="f_xfer"> Передать другому складу</label>
-      <div class="sec" id="xferBox" hidden>
-        <b>Передача между складами</b>
-        <div class="grid2" style="margin-top:10px">
-          <div class="field"><label for="f_xwh">Склад-получатель</label><select id="f_xwh"></select></div>
-          <div class="field"><label for="f_xnote">Примечание к передаче</label>
-            <input id="f_xnote" placeholder="Почему передают"></div>
-          <div class="field"><label for="f_xfile">Загрузить накладную</label>
-            <input type="file" id="f_xfile" accept=".pdf,.png,.jpg,.jpeg,.tif,.tiff,.bmp"></div>
-        </div>
       </div>
     </div>
     <div class="field" style="margin-top:12px"><label for="f_notes">Примечание</label><textarea id="f_notes" rows="2"></textarea></div>
