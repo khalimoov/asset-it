@@ -666,7 +666,7 @@ def load_state(user, org_id):
                 items.append({
                     "id": r["id"], "registryId": r["registry_id"], "inv": r["inv"],
                     "cost": js_num(r["cost"]), "receivedAt": js_date(r["received_at"]),
-                    "warranty": r["warranty"] or "",
+                    "warrantyUntil": js_date(r["warranty_until"]),
                     "type": r["type_id"] or "", "status": r["status"],
                     "owner": r["owner_id"] or "", "division": r["division_id"] or "",
                     "department": r["department_id"] or "", "notes": r["notes"],
@@ -1039,7 +1039,7 @@ def save_items(items, user, org_id):
             if parent == it["id"]:
                 parent = ""                      # к самой себе не прикрепить
             cur.execute("""
-                insert into item (id, registry_id, inv, cost, received_at, warranty,
+                insert into item (id, registry_id, inv, cost, received_at, warranty_until,
                                   type_id, status, owner_id,
                                   division_id,
                                   department_id, notes, specs, specs_none, master_id,
@@ -1050,7 +1050,7 @@ def save_items(items, user, org_id):
                 on conflict (id) do update set
                   registry_id = excluded.registry_id, inv = excluded.inv,
                   cost = excluded.cost, received_at = excluded.received_at,
-                  warranty = excluded.warranty, type_id = excluded.type_id,
+                  warranty_until = excluded.warranty_until, type_id = excluded.type_id,
                   status = excluded.status, owner_id = excluded.owner_id,
                   division_id = excluded.division_id, department_id = excluded.department_id,
                   notes = excluded.notes, specs = excluded.specs, specs_none = excluded.specs_none,
@@ -1065,7 +1065,7 @@ def save_items(items, user, org_id):
                                         then item.transferred_at else null end
             """, (it["id"], reg, it.get("inv", ""),
                   to_num(it.get("cost")), it.get("receivedAt") or None,
-                  (it.get("warranty") or "").strip(),
+                  it.get("warrantyUntil") or None,
                   it.get("type") or None, it.get("status", ""),
                   it.get("owner") or None, it.get("division") or None, it.get("department") or None,
                   it.get("notes", ""), json.dumps(it.get("specs", {})),

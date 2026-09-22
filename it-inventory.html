@@ -185,6 +185,12 @@
   .field input,.field select,.field textarea{width:100%}
   .grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
   @media(max-width:560px){.grid2{grid-template-columns:1fr}}
+  /* поля карточки: чем шире экран, тем больше колонок — так карточка влезает
+     по высоте и до кнопок не нужно листать */
+  .grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+  @media(min-width:1200px){.grid3{grid-template-columns:repeat(4,1fr)}}
+  @media(max-width:900px){.grid3{grid-template-columns:1fr 1fr}}
+  @media(max-width:560px){.grid3{grid-template-columns:1fr}}
   .chk{display:inline-flex;align-items:center;gap:6px;font-size:12px;color:var(--muted);
     font-weight:600;margin:6px 12px 0 0;cursor:pointer}
   .chk input{width:auto;margin:0;accent-color:var(--accent)}
@@ -352,7 +358,9 @@
   @media(max-width:820px){ .hide-sm{display:none} }
 
   dialog{border:1px solid var(--border);border-radius:14px;background:var(--surface);color:var(--text);
-    padding:0;width:min(700px,94vw);box-shadow:var(--shadow)}
+    padding:0;width:min(700px,94vw);box-shadow:var(--shadow);max-height:94vh;overflow:hidden}
+  /* только у открытого: закрытому display задаёт браузер, и flex его бы показал */
+  dialog[open]{display:flex;flex-direction:column}
   dialog::backdrop{background:rgba(0,0,0,.45)}
   dialog.wide{width:min(860px,96vw)}
   dialog.xwide{width:min(1120px,97vw)}
@@ -383,8 +391,11 @@
   }
   .dlg-head{padding:16px 18px;border-bottom:1px solid var(--border);font-weight:650;font-size:16px;
     overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-  .dlg-body{padding:16px 18px;max-height:76vh;overflow-y:auto;overflow-x:hidden}
-  .dlg-foot{padding:12px 18px;border-top:1px solid var(--border);display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap}
+  /* прокручивается только середина: кнопки внизу видны всегда, до них не листают */
+  .dlg-body{padding:16px 18px;flex:1 1 auto;min-height:0;overflow-y:auto;overflow-x:hidden}
+  .dlg-head{flex:0 0 auto}
+  .dlg-foot{padding:12px 18px;border-top:1px solid var(--border);display:flex;gap:8px;
+    justify-content:flex-end;flex-wrap:wrap;flex:0 0 auto;background:var(--surface)}
   .hist ul{margin:6px 0 0;padding-left:18px;max-height:140px;overflow:auto}
   .hist li{font-size:12.5px;color:var(--muted);margin-bottom:3px}
   /* Всплывашка: скрыта не сдвигом за край (у пустого элемента высота меньше сдвига,
@@ -1504,10 +1515,10 @@
 </div>
 
 <!-- ================= КАРТОЧКА ЗАПИСИ ================= -->
-<dialog id="dlg">
+<dialog id="dlg" class="xxwide">
   <div class="dlg-head" id="dlgTitle">Запись</div>
   <div class="dlg-body">
-    <div class="grid2">
+    <div class="grid3">
       <div class="field"><label for="f_inv">Инвентарный номер</label>
         <input id="f_inv" inputmode="numeric" placeholder="7 цифр — номенклатурный, 10 — инвентарный">
         <div class="note" id="f_invHint" style="margin:3px 0 0;min-height:14px"></div></div>
@@ -1515,8 +1526,8 @@
         <input id="f_cost" inputmode="decimal" placeholder="цена из накладной"></div>
       <div class="field"><label for="f_recv">Дата прихода</label>
         <input id="f_recv" type="date"></div>
-      <div class="field"><label for="f_warr">Гарантия</label>
-        <input id="f_warr" placeholder="24 месяца или 12.09.2027"></div>
+      <div class="field"><label for="f_warr">Гарантия до</label>
+        <input id="f_warr" type="date"></div>
       <div class="field"><label for="f_cat">Категория</label><select id="f_cat"></select></div>
       <div class="field col-sub" id="wrapSub"><label for="f_sub">Подкатегория</label><select id="f_sub"></select></div>
       <div class="field" id="wrapModel"><label for="f_model">Модель</label><select id="f_model"></select></div>
@@ -1534,7 +1545,7 @@
       <div class="field" id="wrapPlace" hidden><label for="f_place">Место</label><select id="f_place"></select></div>
       <div class="field" id="wrapParent" hidden><label for="f_parent">Прикрепить к оборудованию</label><select id="f_parent"></select></div>
       <div class="field" id="wrapHide" hidden><label>&nbsp;</label>
-        <label class="chk" style="margin:0"><input type="checkbox" id="f_hide"> Убрать из списка</label>
+        <label class="chk" style="margin:0"><input type="checkbox" id="f_hide"> Убрать из списка</label></div>
     </div>
     <div class="note" id="attLockNote" hidden style="color:var(--warn)"></div>
     <div class="sec" id="attBox" hidden><b>Прикреплённое оборудование</b><div id="attList"></div></div>
@@ -1699,7 +1710,7 @@
       <div class="field"><label for="m_note">Примечание</label><input id="m_note"></div>
     </div>
     <div class="field" style="margin-top:12px"><label for="m_file">Фотография</label>
-      <input type="file" id="m_file" accept="image/*">
+      <input type="file" id="m_file" accept="image/*"></div>
     <div id="m_photoWrap" style="margin-top:12px" hidden>
       <img id="m_preview" alt="">
       <div class="row" style="margin-top:8px"><button class="btn-sm btn-danger" id="btnModelPhotoDel">Убрать фото</button></div>
@@ -1721,7 +1732,7 @@
       <div class="field"><label for="w_name">Название</label><input id="w_name" placeholder="Центральный склад Завод-1"></div>
     </div>
     <div class="field" style="margin-top:12px"><label for="w_note">Примечание</label><input id="w_note"></div>
-    <div class="field col-adm" style="margin-top:12px" id="wrapWhOrg"><label for="w_org">Учреждение</label><select id="w_org"></select>
+    <div class="field col-adm" style="margin-top:12px" id="wrapWhOrg"><label for="w_org">Учреждение</label><select id="w_org"></select></div>
     <div class="err" id="w_err"></div>
   </div>
   <div class="dlg-foot">
@@ -7552,7 +7563,7 @@
         head = '<div class="grphead">'+esc(g.name)+
           (later ? '<span class="chip">при статусе «'+esc(status)+'» можно заполнить позже</span>' : '')+'</div>';
       }
-      return head + '<div class="grid2" style="margin-top:8px">' +
+      return head + '<div class="grid3" style="margin-top:8px">' +
         g.items.map(function(sp){ return specField(sp, values, noneMap, status); }).join("") + '</div>';
     }).join("");
   }
@@ -7830,7 +7841,7 @@
     $("f_inv").value = it ? (it.inv||"") : "";
     $("f_cost").value = it && it.cost != null ? money(it.cost) : "";
     $("f_recv").value = it ? (it.receivedAt||"") : "";
-    $("f_warr").value = it ? (it.warranty||"") : "";
+    $("f_warr").value = it ? (it.warrantyUntil||"") : "";
     showInvHint();
     $("f_status").value = it && it.status ? it.status : sts[0];
     $("f_qty").value = "1";
@@ -7963,7 +7974,7 @@
       inv: $("f_inv").value.trim(),
       cost: numVal($("f_cost").value),
       receivedAt: $("f_recv").value || "",
-      warranty: $("f_warr").value.trim(),
+      warrantyUntil: $("f_warr").value || "",
       type: $("f_type").value,
       status: attached ? (prev.status || $("f_status").value) : $("f_status").value,
       owner:      ownerless($("f_status").value) || $("f_holder").value !== "person" ? "" : $("f_owner").value,
