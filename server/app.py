@@ -616,6 +616,8 @@ def load_state(user, org_id):
         # документальный склад: списания «по бумагам», на фактические остатки не влияют
         writeoffs = [{"id": r["id"], "supplyId": r["supply_id"], "sku": r["sku"] or "",
                       "cost": js_num(r["cost"]), "qty": r["qty"], "date": js_date(r["d"]),
+                      "divisionId": r["division_id"] or "", "departmentId": r["department_id"] or "",
+                      "warehouseId": r["warehouse_id"] or "",
                       "note": r["note"], "who": r["who"] or "",
                       "at": r["at"].isoformat() if r["at"] else ""}
                      for r in by_org("stock_writeoff", "order by d desc nulls last, at desc")]
@@ -920,6 +922,9 @@ def save_cfg(cfg, user, org_id):
                 "supply_id": lambda r: g(r, "supplyId"),
                 "sku": lambda r: g(r, "sku"), "cost": lambda r: to_num(r.get("cost")),
                 "qty": lambda r: int(g(r, "qty", 0) or 0),
+                "division_id": lambda r: g(r, "divisionId") or None,
+                "department_id": lambda r: g(r, "departmentId") or None,
+                "warehouse_id": lambda r: g(r, "warehouseId") or None,
                 "d": lambda r: g(r, "date") or None, "note": lambda r: g(r, "note"),
                 "who": lambda r: g(r, "who"), "org_id": org},
                 cfg["writeoffs"], scope=in_org)
