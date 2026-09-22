@@ -7042,6 +7042,8 @@
         }
         /* опрос сети: точка в углу и подпись в подсказке */
         var ns = netOf(ip), dot = "";
+        /* имя хоста опрос узнаёт сам — показываем сразу в подсказке, не открывая карточку */
+        if(ns && ns.hostName) ttl += " · " + ns.hostName;
         if(ns && ns.lastCheck){
           checkedN++;
           if(ns.alive){

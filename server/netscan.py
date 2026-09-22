@@ -11,6 +11,7 @@
 """
 import datetime
 import ipaddress
+import re
 import socket
 import subprocess
 import sys
@@ -129,20 +130,64 @@ def targets(cur, cfg, org_id):
 HISTORY_DAYS = 183          # полгода: столько держим историю по дням
 
 
-def host_name(ip, timeout_s=1.0):
-    """Имя хоста обратным разрешением.
-
-    Спрашиваем только у тех, кто ответил: у молчащего адреса запрос всё равно
-    упрётся в таймаут резолвера и растянет обход.
-    """
-    old = socket.getdefaulttimeout()
+def dns_name(ip, timeout_s=1.0):
+    """Имя по обратной записи DNS. Пусто, если PTR нет."""
+    was = socket.getdefaulttimeout()
     try:
         socket.setdefaulttimeout(timeout_s)
         return socket.gethostbyaddr(ip)[0]
     except Exception:
         return ""
     finally:
-        socket.setdefaulttimeout(old)
+        socket.setdefaulttimeout(was)
+
+
+# Строка таблицы NetBIOS. У nbtstat это «PC-IVANOV <00> UNIQUE Registered»,
+# у nmblookup — «PLANT1-PC01 <00> - B <ACTIVE>»: слова UNIQUE там нет, зато
+# групповые записи помечены GROUP. Поэтому ловим имя и тип, а групповые
+# отсеиваем по остатку строки.
+RE_NB = re.compile(r"^[ \t]*([^\s<][^<\r\n]*?)[ \t]*<(\w\w)>(.*)$", re.MULTILINE)
+
+
+def parse_netbios(out):
+    """Имя узла из вывода nbtstat или nmblookup, или пусто."""
+    for m in RE_NB.finditer(out or ""):
+        name, kind, rest = m.group(1).strip(), m.group(2).upper(), m.group(3).upper()
+        if "GROUP" in rest:            # рабочая группа или домен, не имя машины
+            continue
+        # <00> — сам узел, <20> — служба файлов; оба годятся как имя машины
+        if kind not in ("00", "20"):
+            continue
+        if not name or name.startswith("__") or name.startswith("MSBROWSE"):
+            continue
+        return name
+    return ""
+
+
+def netbios_name(ip, timeout_s=2.0):
+    """Имя по NetBIOS — запасной путь, когда обратной записи в DNS нет.
+
+    В доменной сети PTR заводят не для всех рабочих станций, а имя по NetBIOS
+    машина отдаёт сама. На Windows это nbtstat, на Linux — nmblookup из
+    samba-common-bin; нет его — просто возвращаем пусто.
+    """
+    cmd = ["nbtstat", "-A", ip] if sys.platform.startswith("win") else ["nmblookup", "-A", ip]
+    try:
+        r = subprocess.run(cmd, capture_output=True, timeout=timeout_s)
+    except Exception:
+        return ""
+    out = (r.stdout or b"").decode("cp866" if sys.platform.startswith("win") else "utf-8",
+                                   "replace")
+    return parse_netbios(out)
+
+
+def host_name(ip, timeout_s=1.0):
+    """Имя хоста: сначала DNS, потом NetBIOS.
+
+    Спрашиваем только у тех, кто ответил: у молчащего адреса запрос всё равно
+    упрётся в таймаут и растянет обход.
+    """
+    return dns_name(ip, timeout_s) or netbios_name(ip)
 
 
 def run(cur, cfg, org_id):
