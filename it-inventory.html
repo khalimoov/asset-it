@@ -271,6 +271,11 @@
     border:3px solid var(--border);border-top-color:var(--accent);animation:spin .8s linear infinite}
   .docwait b{display:block;font-size:14px;margin-bottom:4px}
   .docwait span{display:block;font-size:12.5px;color:var(--muted)}
+  /* «Не смог прочитать» под ячейкой: не ошибка, а приглашение вписать самому */
+  .unread{display:block;font-size:11.5px;line-height:1.3;color:var(--warn);margin-top:2px}
+  .docwait #dwJoke{margin-top:6px;font-size:13px;color:var(--muted)}
+  /* после сорока секунд подпись становится заметной — ждать дольше уже странно */
+  .docwait #dwJoke.loud{font-size:19px;font-weight:700;color:var(--warn);letter-spacing:.3px}
   .docwait .pbar{height:6px;max-width:340px;margin:12px auto 0;border-radius:3px;
     background:var(--border);overflow:hidden;position:relative}
   .docwait .pbar i{display:block;height:100%;background:var(--accent);width:0;transition:width .2s}
@@ -413,7 +418,7 @@
   <!-- первый запуск: учётных записей ещё нет, администратор заводит себя сам -->
   <form id="setupForm" autocomplete="off" hidden>
     <h1>Учёт ИТ-отдела</h1>
-    <div class="sub">Первый запуск. Учётных записей ещё нет — задайте логин и пароль администратора. Остальных пользователей вы заведёте потом в разделе «Пользователи ИТ».</div>
+    <div class="sub">Первый запуск — задайте логин и пароль администратора.</div>
     <div class="field"><label for="su_name">Ваше имя</label>
       <input id="su_name" placeholder="Фамилия Имя" autocomplete="off"></div>
     <div class="field"><label for="su_login">Логин</label>
@@ -621,7 +626,6 @@
           </div>
           <div class="empty" id="itemsEmpty" hidden></div>
         </div>
-        <div class="note">Длинные названия обрезаются — наведите курсор, чтобы увидеть целиком, или откройте карточку.</div>
       </section>
 
       <!-- ---- категории ---- -->
@@ -632,7 +636,6 @@
             <input id="newCategories" placeholder="Например: Компьютеры" style="flex:1;min-width:240px">
             <button class="btn-primary" data-add="categories">Добавить</button>
           </div>
-          <div class="note">Верхний уровень раздела. Внутри категории заводятся подкатегории, а внутри них — типы.</div>
         </div>
         <div class="card">
           <div class="tablewrap">
@@ -656,7 +659,6 @@
               <input id="newSubcategories" placeholder="Например: Системные блоки"></div>
           </div>
           <div class="row" style="margin-top:12px"><button class="btn-primary" id="btnAddSub">Добавить подкатегорию</button></div>
-          <div class="note">Стандартные характеристики задаются один раз на подкатегорию и действуют для всех её типов.</div>
         </div>
         <div class="card">
           <div class="tablewrap">
@@ -728,7 +730,6 @@
           <div class="field" id="reqStWrap" hidden style="margin-top:10px">
             <label>Обязательна при статусах</label>
             <div class="stlist" id="newSpecReqSts"></div>
-            <div class="note" style="margin-top:6px">Снимите «На складе» — и технику можно будет принять, не заполняя эти поля. Если не отмечен ни один статус, поле обязательно всегда.</div>
           </div>
           <div class="row" style="margin-top:12px"><button class="btn-primary" id="btnAddSpec">Добавить характеристику</button></div>
           <div class="sec" id="presetRow" hidden>
@@ -761,7 +762,6 @@
             <input id="newPresets" placeholder="Например: Компьютер" style="flex:1;min-width:240px">
             <button class="btn-primary" data-add="presets">Создать набор</button>
           </div>
-          <div class="note">Набор — ваша заготовка из характеристик с правилами. Наборы общие для всех разделов: создаёте один раз и применяете к любой подкатегории или типу. Применение копирует характеристики — правки набора уже применённые не меняют.</div>
         </div>
         <div class="card pad" style="margin-bottom:14px">
           <div class="field" style="max-width:470px">
@@ -844,7 +844,6 @@
         </div>
         <div class="empty" id="repairsEmpty" hidden>Ремонтов пока не было.</div>
       </div>
-      <div class="note">Клик по строке открывает окно ремонта с полным текстом причины и выполненных работ. Незавершённые ремонты отмечены строкой «в ремонте» и считают дни по сегодняшний день.</div>
     </section>
 
     <!-- ================= ИСТОРИЯ УДАЛЕНИЙ ================= -->
@@ -866,7 +865,6 @@
         </div>
         <div class="empty" id="xhistEmpty" hidden>Передач между складами пока не было.</div>
       </div>
-      <div class="note">Все передачи подряд — с накладной и без. Удалить запись может только администратор, с причиной; след остаётся в «Истории удалений».</div>
     </section>
 
     <section id="v-dels" hidden>
@@ -900,7 +898,6 @@
         </div>
         <div class="empty" id="delsEmpty" hidden>Удалений пока не было.</div>
       </div>
-      <div class="note">Журнал ведёт сервер: автора и время проставляет он сам, из журнала ничего нельзя убрать. Клик по строке открывает всё, что было в карточке, вместе с её историей.</div>
     </section>
 
     <!-- ================= УВЕДОМЛЕНИЯ ================= -->
@@ -911,7 +908,6 @@
       </div>
       <div id="noticesList"></div>
       <div class="empty" id="noticesEmpty" hidden>Уведомлений пока нет.</div>
-      <div class="note">Сюда попадают события по ремонту: отправка мастеру, готовность и списание. После открытия уведомление уходит в раздел «Прочитанные» — история событий не удаляется. Когда появится вход в систему, они станут адресными — мастеру придёт о новой технике на ремонт, а тому, кто отправлял, о готовности.</div>
     </section>
 
     <!-- ================= РАСХОДНЫЕ МАТЕРИАЛЫ ================= -->
@@ -946,10 +942,6 @@
               <input id="supNote" placeholder="Партия, поставщик, счёт"></div>
           </div>
           <div class="row" style="margin-top:12px"><button class="btn-primary" id="btnAddSup">Оприходовать</button></div>
-          <div class="note">Каждый приход записывается отдельной строкой с датой — их видно на вкладке «История поступлений». Если материал с таким названием уже есть, количество прибавится к остатку.
-          Кнопки «Импорт CSV» и «Экспорт CSV» вверху работают с этой вкладкой: выгружаются материалы
-          с остатками, а при загрузке колонка «Поступило» из файла заменяет текущее значение
-          (так выгрузка и загрузка не удваивают остаток).</div>
         </div>
         <div class="card">
           <div class="tablewrap">
@@ -977,7 +969,6 @@
           </div>
           <div class="empty" id="receiptsEmpty" hidden>Поступлений пока не было.</div>
         </div>
-        <div class="note">Удаление строки уменьшает «Поступило» и остаток по этому материалу.</div>
       </section>
 
       <section id="s-issued" hidden>
@@ -999,7 +990,6 @@
               <input id="isNote" placeholder="Залили краску в принтер, заменили термопасту"></div>
           </div>
           <div class="row" style="margin-top:12px"><button class="btn-primary" id="btnIssue">Списать на сотрудника</button></div>
-          <div class="note" id="isHint">Подразделение и отдел подставляются из карточки сотрудника. Списание попадает в его профиль.</div>
         </div>
         <div class="searchbar">
           <div class="searchbox"><input id="qIssue" type="search" placeholder="Поиск по материалу, сотруднику, оборудованию, примечанию…"></div>
@@ -1074,19 +1064,12 @@
           </div>
         </div>
         <div class="ipgrid" id="ipGrid"></div>
-        <div class="note">Клик по занятому адресу открывает карточку записи, по свободному — добавляет в резерв. Адрес попадает сюда из любой характеристики вида «IP-адрес», а также из обычного текстового поля, если в нём лежит корректный IPv4.
-        Точка в углу — результат последнего опроса сети: зелёная — отвечает, серая — молчит, без точки — ещё не опрашивали. Оранжевая на свободном адресе — в сети кто-то есть, а в учёте его нет.</div>
       </div>
 
       <div class="card pad" id="pingCard" style="margin-bottom:16px" hidden>
         <div class="row" style="justify-content:space-between;align-items:center">
           <h2 style="margin:0">Опрос сети</h2>
           <span class="note" id="pingLast" style="margin:0"></span>
-        </div>
-        <div class="note" style="margin-top:6px">
-          Сервер сам обходит адреса и запоминает, когда каждый последний раз отвечал.
-          Сначала обычный ping, молчунам — стук в порты 445 и 3389: у машин с включённым
-          брандмауэром ping закрыт, а общий доступ и удалённый рабочий стол отвечают.
         </div>
         <div class="grid2" style="margin-top:12px">
           <div class="field"><label for="pg_every">Опрашивать каждые, минут</label>
@@ -1142,7 +1125,6 @@
         </div>
         <div class="empty" id="usersEmpty" hidden>Сотрудники пока не заведены.</div>
       </div>
-      <div class="note">Клик по строке открывает профиль сотрудника: закреплённое оборудование и выданные материалы. Карандаш — правка данных. «Собрать из записей» создаёт сотрудников из текстовых значений поля «Ответственный» во всех разделах и подставляет вместо них ссылку на справочник.</div>
     </section>
 
     <!-- ================= НАКЛАДНЫЕ ================= -->
@@ -1160,6 +1142,7 @@
             <div class="spin"></div>
             <b id="dwTitle">Загружаем файл…</b>
             <span id="dwSub"></span>
+            <span id="dwJoke"></span>
             <div class="pbar" id="dwBar"><i></i></div>
           </div>
         </div>
@@ -1178,7 +1161,6 @@
           <div class="field"><label>&nbsp;</label>
             <button id="btnDocCfgSave">Сохранить</button></div>
         </div>
-        <div class="note">Файлы раскладываются по учреждению, году и месяцу. При переезде в Docker здесь указывается точка монтирования, например <code>/opt/asset-it/documents</code>.</div>
       </div>
 
       <div class="card" style="margin-top:14px">
@@ -1194,7 +1176,6 @@
         </div>
         <div class="empty" id="docsEmpty" hidden>Приходные накладные пока не загружались.</div>
       </div>
-      <div class="note">Клик по строке открывает разбор: строки накладной с распознанными номенклатурой, наименованием и количеством. Каждую строку вы направляете в свой раздел — одна накладная может разойтись и по оборудованию, и по материалам.</div>
     </section>
 
     <!-- ================= НАКЛАДНЫЕ ПО ПЕРЕДАЧЕ ================= -->
@@ -1215,7 +1196,6 @@
         </div>
         <div class="empty" id="xferEmpty" hidden>Накладных по передаче пока нет.</div>
       </div>
-      <div class="note">Здесь только передачи, к которым приложили накладную; все передачи подряд — на экране «История передач». Клик по строке открывает карточку передачи. Сама передача делается в карточке оборудования: галочка «Передать другому складу», склад-получатель, причина и скан накладной.</div>
     </section>
 
     <!-- ================= СВОДКА ПО УЧРЕЖДЕНИЯМ ================= -->
@@ -1235,7 +1215,6 @@
         </div>
         <div class="empty" id="allEmpty" hidden>Учреждений пока нет.</div>
       </div>
-      <div class="note">Клик по строке открывает это учреждение. Сводка считается на сервере по всем учреждениям сразу — независимо от того, в каком вы сейчас находитесь.</div>
     </section>
 
     <!-- ================= УЧРЕЖДЕНИЯ ================= -->
@@ -1256,11 +1235,9 @@
         </div>
         <div class="empty" id="orgsEmpty" hidden>Учреждений пока нет.</div>
       </div>
-      <div class="note">У каждого учреждения свои разделы учёта, записи, сотрудники, подразделения, отделы, материалы, IP-адреса и настройки домена. Новое учреждение сразу получает четыре заводских раздела. Удалить можно только пустое.</div>
 
       <div class="card" style="margin-top:16px">
         <div class="pad" style="padding-bottom:0"><h2>Кто где работает</h2>
-          <div class="note" style="margin-top:4px">Пользователь ИТ обслуживает одно учреждение. Администратору открыты все — его учреждение задаёт лишь то, что он видит при входе.</div>
         </div>
         <div class="tablewrap">
           <table>
@@ -1277,11 +1254,6 @@
       <div class="card">
         <div class="pad">
           <h2>Откуда брать сотрудников</h2>
-          <div class="note" style="margin-top:0">
-            В учёт попадают только те учётные записи домена, у которых в указанном
-            атрибуте стоит условленное значение. Открыть его: «Пользователи и компьютеры
-            Active Directory» → свойства пользователя → «Редактор атрибутов».
-          </div>
           <div class="field" style="margin-top:14px;max-width:420px">
             <label for="ad_org">Куда грузить сотрудников</label>
             <select id="ad_org"></select>
@@ -1323,13 +1295,6 @@
       <div class="card" style="margin-top:14px">
         <div class="pad">
           <h2>Вход через Active Directory</h2>
-          <div class="note" style="margin-top:0">
-            Пользователи ИТ заходят своим доменным логином и паролем — тем же, что и в Windows.
-            Пароль у нас не хранится: его каждый раз проверяет контроллер домена, поэтому
-            смена пароля в домене ничего здесь не ломает. Кто ещё не заведён, заводится сам
-            при первом входе — с ролью и учреждением, указанными ниже; права потом меняете в
-            «Пользователях ИТ».
-          </div>
           <div class="grid2" style="margin-top:14px">
             <div class="field"><label>&nbsp;</label>
               <label class="chk" style="margin:0"><input type="checkbox" id="aa_on"> Разрешить вход через домен</label></div>
@@ -1363,7 +1328,6 @@
             <div><span>&nbsp;</span><b>Отдел → Отдел</b></div>
             <div><span>&nbsp;</span><b>Организация → Подразделение</b></div>
           </div>
-          <div class="note">Отделы и подразделения, которых в учёте ещё нет, заводятся сами — <b>в том учреждении, которое выбрано выше</b>. Никого не удаляем: сотрудник, пропавший из выборки домена, остаётся в справочнике — за ним может числиться техника.</div>
         </div>
       </div>
 
@@ -1395,7 +1359,6 @@
         </div>
         <div class="empty" id="whEmpty" hidden>Склады пока не заведены.</div>
       </div>
-      <div class="note">Номер склада приходит из накладной: из строки «Получатель» в требовании-накладной или из «Склад - получатель» в счёте-фактуре. Если такого номера ещё нет, склад заводится сам — название потом поправите здесь. У расходных материалов склада нет.</div>
     </section>
 
     <!-- ================= СОТРУДНИКИ ИТ ================= -->
@@ -1414,7 +1377,6 @@
         </div>
         <div class="empty" id="staffEmpty" hidden>Пользователи ИТ пока не заведены.</div>
       </div>
-      <div class="note">Клик по строке открывает профиль: что сейчас у мастера в ремонте и с какого числа. Галочка «мастер по ремонту» переключается прямо в строке — эти люди попадают в выбор при статусе «В ремонте». Логин и роль заполняются на будущее: вход в систему и разграничение доступа будут подключены отдельно, пароли здесь не хранятся.</div>
     </section>
 
     <!-- ================= РОЛИ И ДОСТУП ================= -->
@@ -1434,7 +1396,6 @@
         </div>
         <div class="empty" id="rolesEmpty" hidden>Роли не заведены.</div>
       </div>
-      <div class="note">Роль — это набор прав. Сотруднику ИТ назначается одна роль, и он получает ровно то, что в ней отмечено. Заводские роли переименовать можно, удалить — нет. Роль, назначенную хоть одному сотруднику, удалить нельзя.</div>
     </section>
 
     <!-- ================= ПОДРАЗДЕЛЕНИЯ ================= -->
@@ -1449,7 +1410,6 @@
           <input id="newDivisions" placeholder="Например: Управление" style="flex:1;min-width:240px">
           <button class="btn-primary" data-add="divisions">Добавить</button>
         </div>
-        <div class="note">Справочник общий для всех разделов учёта.</div>
       </div>
       <div class="card">
         <div class="tablewrap">
@@ -1479,7 +1439,6 @@
               <input id="newModelNote" placeholder="Необязательно"></div>
           </div>
           <div class="row" style="margin-top:12px"><button class="btn-primary" id="btnAddModel">Добавить модель</button></div>
-          <div class="note">Модель выбирается в карточке оборудования перед типом — из моделей своего раздела. Фотографию можно добавить кнопкой в строке — она видна только здесь, чтобы понимать, что это за техника.</div>
         </div>
         <div class="card">
           <div class="tablewrap">
@@ -1491,7 +1450,6 @@
           </div>
           <div class="empty" id="modelsEmpty" hidden>Модели пока не заведены.</div>
         </div>
-        <div class="note">Клик по модели открывает её карточку со всем оборудованием этой модели; наведите на миниатюру — фото покажется крупнее.</div>
       </section>
 
     <section id="v-places" hidden>
@@ -1505,7 +1463,6 @@
           <input id="newPlaces" placeholder="Например: Серверная, Кабинет 214, Пост охраны" style="flex:1;min-width:240px">
           <button class="btn-primary" data-add="places">Добавить</button>
         </div>
-        <div class="note">За местом закрепляют технику, у которой нет ответственного сотрудника: в карточке «За кем закреплено» → «За местом».</div>
       </div>
       <div class="card">
         <div class="tablewrap">
@@ -1531,7 +1488,6 @@
           <select id="newDepartmentsDiv" style="min-width:200px"></select>
           <button class="btn-primary" data-add="departments">Добавить</button>
         </div>
-        <div class="note">Справочник общий для всех разделов учёта.</div>
       </div>
       <div class="card">
         <div class="tablewrap">
@@ -1557,6 +1513,10 @@
         <div class="note" id="f_invHint" style="margin:3px 0 0;min-height:14px"></div></div>
       <div class="field"><label for="f_cost">Стоимость</label>
         <input id="f_cost" inputmode="decimal" placeholder="цена из накладной"></div>
+      <div class="field"><label for="f_recv">Дата прихода</label>
+        <input id="f_recv" type="date"></div>
+      <div class="field"><label for="f_warr">Гарантия</label>
+        <input id="f_warr" placeholder="24 месяца или 12.09.2027"></div>
       <div class="field"><label for="f_cat">Категория</label><select id="f_cat"></select></div>
       <div class="field col-sub" id="wrapSub"><label for="f_sub">Подкатегория</label><select id="f_sub"></select></div>
       <div class="field" id="wrapModel"><label for="f_model">Модель</label><select id="f_model"></select></div>
@@ -1575,7 +1535,6 @@
       <div class="field" id="wrapParent" hidden><label for="f_parent">Прикрепить к оборудованию</label><select id="f_parent"></select></div>
       <div class="field" id="wrapHide" hidden><label>&nbsp;</label>
         <label class="chk" style="margin:0"><input type="checkbox" id="f_hide"> Убрать из списка</label>
-        <div class="note" style="margin:4px 0 0">С галочкой запись видна только в карточке оборудования, к которому прикреплена, и у сотрудника. Без галочки остаётся в списке с показателями того оборудования.</div></div>
     </div>
     <div class="note" id="attLockNote" hidden style="color:var(--warn)"></div>
     <div class="sec" id="attBox" hidden><b>Прикреплённое оборудование</b><div id="attList"></div></div>
@@ -1603,7 +1562,6 @@
           <div class="field"><label for="f_xfile">Загрузить накладную</label>
             <input type="file" id="f_xfile" accept=".pdf,.png,.jpg,.jpeg,.tif,.tiff,.bmp"></div>
         </div>
-        <div class="note">Склад в карточке поменяется на получателя, статус станет «На складе», ответственный снимется; в истории останется запись с причиной и накладной. Если склад-получатель принадлежит другому учреждению, техника перейдёт в его учёт. Файл ложится в папку архива, в подпапку «передача».</div>
       </div>
     </div>
     <div class="field" style="margin-top:12px"><label for="f_notes">Примечание</label><textarea id="f_notes" rows="2"></textarea></div>
@@ -1646,7 +1604,6 @@
           <tbody id="rl_regs"></tbody>
         </table>
       </div>
-      <div class="note">«Нет доступа» полностью убирает раздел: он не появится в меню, а его записи не придут в браузер.</div>
     </div>
   </div>
   <div class="dlg-foot">
@@ -1661,8 +1618,11 @@
   <div class="dlg-head" id="dlgDocTitle">Накладная</div>
   <div class="dlg-body">
     <div class="kv">
-      <div><span>Номер</span><b id="dr_num">—</b></div>
+      <div><span>Номер</span><b id="dr_num">—</b><span class="unread" id="dr_numWarn" hidden>Не смог прочитать</span></div>
       <div><span>Дата</span><b id="dr_date">—</b></div>
+      <div><span>Дата прихода</span>
+        <input id="dr_recv" type="date" style="margin-top:2px">
+        <span class="unread" id="dr_recvWarn" hidden>Не смог прочитать — выберите дату сами</span></div>
       <div><span>Файл</span><b><a id="dr_file" href="#" target="_blank">открыть</a></b></div>
       <div><span>Принял</span><b id="dr_who">—</b></div>
       <div><span>Склад-получатель</span>
@@ -1693,7 +1653,6 @@
       <button class="btn-sm" id="btnDrAdd">+ Строка вручную</button>
     </div>
     <div class="err" id="dr_err"></div>
-    <div class="note">Оборудование заводится по отдельной записи на каждую единицу — у них разные инвентарные номера. Материалы приходуются одной строкой на всё количество. Выбор по номенклатуре запоминается: в следующей накладной подставится сам.</div>
   </div>
   <div class="dlg-foot">
     <button id="btnDrDel" class="btn-danger">Удалить накладную</button>
@@ -1741,7 +1700,6 @@
     </div>
     <div class="field" style="margin-top:12px"><label for="m_file">Фотография</label>
       <input type="file" id="m_file" accept="image/*">
-      <div class="note" style="margin:4px 0 0">Хранится в базе, ужимается до 900 px. Видна только на вкладке «Модели».</div></div>
     <div id="m_photoWrap" style="margin-top:12px" hidden>
       <img id="m_preview" alt="">
       <div class="row" style="margin-top:8px"><button class="btn-sm btn-danger" id="btnModelPhotoDel">Убрать фото</button></div>
@@ -1764,7 +1722,6 @@
     </div>
     <div class="field" style="margin-top:12px"><label for="w_note">Примечание</label><input id="w_note"></div>
     <div class="field col-adm" style="margin-top:12px" id="wrapWhOrg"><label for="w_org">Учреждение</label><select id="w_org"></select>
-      <div class="note" style="margin:4px 0 0">Техника, переданная на этот склад, появится в учёте этого учреждения. Отдать склад другому учреждению можно, пока на нём не числится техника.</div></div>
     <div class="err" id="w_err"></div>
   </div>
   <div class="dlg-foot">
@@ -1805,7 +1762,6 @@
         placeholder="Например: заведено по ошибке, дубль записи, техника передана другому предприятию"></textarea>
     </div>
     <div class="err" id="da_err"></div>
-    <div class="note">Причина попадёт в журнал удалений вместе с вашим именем и временем. Восстановить запись после удаления нельзя.</div>
   </div>
   <div class="dlg-foot">
     <button id="btnDaCancel">Отмена</button>
@@ -1943,12 +1899,10 @@
         <div class="field"><label for="ipMapPer">Адресов в одной колонке</label>
           <input id="ipMapPer" type="number" min="5" max="255" value="50"></div>
       </div>
-      <div class="note">Диапазон пула режется на куски по N и раскладывается рядом по горизонтали: первый столбец — хосты 1–50, второй — 51–100 и так далее. Свободные адреса остаются пустыми, поэтому занятые видно сразу.</div>
     </div>
 
     <div class="sec" id="ipModeList">
       <label class="chk"><input type="checkbox" id="ipExpFree"> Включая свободные адреса пула</label>
-      <div class="note" style="margin-top:6px">Тогда в файл попадут все адреса диапазона. У свободных ячейки останутся пустыми.</div>
     </div>
 
     <div class="sec" id="ipColsSec">
@@ -1959,7 +1913,6 @@
       <b>Характеристики оборудования</b>
       <div class="stlist" id="ipExpSpecs" style="margin-top:8px"></div>
       <div class="note" id="ipExpNoSpecs" hidden>Характеристики ещё не заведены.</div>
-      <div class="note">Значение берётся из карточки записи, за которой закреплён адрес. Одноимённые характеристики разных разделов идут одной колонкой.</div>
     </div>
   </div>
   <div class="dlg-foot">
@@ -2000,7 +1953,6 @@
         <input id="rg_stNew" placeholder="Например: В резерве" style="flex:1;min-width:190px">
         <button class="btn-sm" id="btnAddRegStatus">Добавить статус</button>
       </div>
-      <div class="note">Первый статус в списке подставляется новым записям. Статусы «На складе», «В ремонте» и «Списано» управляют поведением карточки, поэтому их нельзя переименовать — только убрать из списка или переставить.</div>
     </div>
   </div>
   <div class="dlg-foot">
@@ -2111,7 +2063,6 @@
           <input id="poolNote" placeholder="Компьютеры, мониторы, принтеры"></div>
       </div>
       <div class="row" style="margin-top:12px"><button class="btn-primary" id="btnAddPool">Создать пул</button></div>
-      <div class="note">Диапазонов у раздела может быть несколько — заведите их по одному, и в карточке рядом с полем появится выбор подсети. Укажите, какому разделу принадлежит диапазон — и характеристика вида «IP-адрес» в этом разделе подхватит его сама, без ручной привязки. Категорию можно не указывать: тогда пул действует на весь раздел. Если в разделе несколько диапазонов, задайте каждому свою категорию.</div>
     </div>
 
     <div class="card">
@@ -2137,7 +2088,6 @@
     <div class="sec">
       <b>Обязательна при статусах</b>
       <div class="stlist" id="req_sts" style="margin-top:10px"></div>
-      <div class="note">Ничего не отмечено — поле обязательно при любом статусе. Обычно снимают «На складе» и «Списано»: пока техника не выдана, данные AD и IP ещё неизвестны.</div>
       <label class="chk" id="reqAllWrap" hidden style="margin-top:10px">
         <input type="checkbox" id="req_all" checked> Применить ко всем характеристикам этой группы</label>
     </div>
@@ -2174,7 +2124,6 @@
         <label class="chk"><input type="checkbox" id="st_edit"> Разрешено редактирование</label>
       </div>
     </div>
-    <div class="note">Логин и пароль нужны для входа в систему; права берутся из роли. Снятая галочка «Доступ разрешён» оставляет сотрудника в списке, но закрывает ему вход.</div>
   </div>
   <div class="dlg-foot">
     <button id="btnStaffDel" class="btn-danger" hidden>Удалить</button>
@@ -4918,6 +4867,8 @@
     dz.classList.remove("busy");
     $("dwBar").classList.remove("ind");
     $("dwBar").firstChild.style.width = "0";
+    $("dwJoke").textContent = "";
+    $("dwJoke").classList.remove("loud");
   }
   function sendDoc(file){
     if(!file) return;
@@ -4934,6 +4885,9 @@
       bar.classList.add("ind"); bar.firstChild.style.width = "";
       var tick = function(){
         var s = Math.round((Date.now() - started) / 1000);
+        var j = $("dwJoke");
+        j.textContent = s < 40 ? "Не кипишуй, ща отсканирую" : "А ВОТ ТЕПЕРЬ МОЖНО КИПИШОВАТЬ";
+        j.classList.toggle("loud", s >= 40);
         $("dwSub").textContent = "Прошло " + s + " с. " +
           (docsOcr && docsOcr.ready === false
             ? "Распознавание на сервере выключено — читаем только текстовый слой."
@@ -5046,16 +5000,24 @@
   }
   function renderDocRows(){
     var rows = (curDoc && curDoc.rows) || [];
+    /* пустое поле после разбора значит «не прочиталось»: говорим об этом прямо,
+       иначе человек решит, что в накладной этого и не было */
+    var unread = function(v){
+      return (v === "" || v === null || v === undefined)
+        ? '<span class="unread">Не смог прочитать</span>' : "";
+    };
     $("drBody").innerHTML = rows.map(function(r, i){
       var done = !!r.done;
       return '<tr data-r="'+i+'"'+(done ? ' class="row-done" title="уже заведено"' : '')+
         '><td class="num">'+(i+1)+(done ? " ✓" : "")+'</td>'+
-        '<td><input class="js-sku" value="'+esc(r.sku||"")+'"></td>'+
+        '<td><input class="js-sku" value="'+esc(r.sku||"")+'">'+unread(r.sku)+'</td>'+
         '<td><textarea class="js-name" rows="1" title="'+esc(r.name||"")+'">'+
-          esc(r.name||"")+'</textarea></td>'+
-        '<td><input class="js-qty" type="number" min="1" value="'+esc(r.qty||"1")+'"></td>'+
+          esc(r.name||"")+'</textarea>'+unread(r.name)+'</td>'+
+        '<td><input class="js-qty" type="number" min="1" value="'+esc(r.qty||"1")+'">'+
+          unread(r.qty)+'</td>'+
         '<td><input class="js-cost" inputmode="decimal" value="'+esc(r.cost==null?"":money(r.cost))+
-          '" title="цена за единицу из колонки «Цена в валюте»"></td>'+
+          '" title="цена за единицу из колонки «Цена в валюте»">'+
+          unread(r.cost==null?"":r.cost)+'</td>'+
         '<td class="mono js-sum" title="стоимость × количество">'+
           esc(money(lineSum(r.cost, r.qty || 1)) || "—")+'</td>'+
         '<td><select class="js-target">'+targetOptions(r.target)+'</select></td>'+
@@ -5131,7 +5093,12 @@
                     : " Чтобы дописать пропущенное, обратитесь к администратору."))
       : "";
     $("dr_num").textContent  = d.number || "—";
-    $("dr_date").textContent = d.date ? fmtDate(d.date) : "—";
+    $("dr_numWarn").hidden   = !!d.number;
+    /* «Дата» — когда документ отсканировали, её всегда знает сервер.
+       «Дата прихода» — дата самого документа из шапки; не прочиталась — вписывают сами. */
+    $("dr_date").textContent = d.at ? fmtWhen(d.at) : "—";
+    $("dr_recv").value       = d.date || "";
+    $("dr_recvWarn").hidden  = !!d.date;
     $("dr_who").textContent  = d.who || "—";
     /* В плохих сканах номер склада не пропечатывается — тогда его вписывают
        руками, иначе техника осядет без склада. Поэтому здесь поле с подсказками,
@@ -5250,6 +5217,7 @@
     $("dr_err").textContent = "";
     $("btnDrApply").disabled = true;
     api("/api/docs/apply", {id:curDoc.id, rows:all,
+                            date:$("dr_recv").value || "",
                             warehouse:$("dr_wh").value.trim()})
       .then(function(d){
         var m = d.made || {};
@@ -5979,9 +5947,6 @@
     $("isUserWrap").hidden = toItem;
     $("isItemWrap").hidden = !toItem;
     $("btnIssue").textContent = toItem ? "Установить в оборудование" : "Списать на сотрудника";
-    $("isHint").textContent = toItem
-      ? "Материал уходит в конкретную единицу техники: краска в принтер, термопаста в компьютер. Списание видно в карточке этого оборудования, подразделение и отдел берутся из неё."
-      : "Подразделение и отдел подставляются из карточки сотрудника. Списание попадает в его профиль.";
   }
   $("isTo").onchange = syncIssueTarget;
   $("btnIssue").onclick = function(){
@@ -7864,6 +7829,8 @@
     $("dlgTitle").textContent = (it ? "Карточка: " + (it.inv || typeName(it.type) || "") : "Новая запись") + " · " + reg().name;
     $("f_inv").value = it ? (it.inv||"") : "";
     $("f_cost").value = it && it.cost != null ? money(it.cost) : "";
+    $("f_recv").value = it ? (it.receivedAt||"") : "";
+    $("f_warr").value = it ? (it.warranty||"") : "";
     showInvHint();
     $("f_status").value = it && it.status ? it.status : sts[0];
     $("f_qty").value = "1";
@@ -7995,6 +7962,8 @@
       registryId: prev ? rid(prev) : curReg,
       inv: $("f_inv").value.trim(),
       cost: numVal($("f_cost").value),
+      receivedAt: $("f_recv").value || "",
+      warranty: $("f_warr").value.trim(),
       type: $("f_type").value,
       status: attached ? (prev.status || $("f_status").value) : $("f_status").value,
       owner:      ownerless($("f_status").value) || $("f_holder").value !== "person" ? "" : $("f_owner").value,

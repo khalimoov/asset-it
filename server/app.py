@@ -665,7 +665,8 @@ def load_state(user, org_id):
             for r in rows("select * from item where registry_id = any(%s) order by inv", (reg_ids,)):
                 items.append({
                     "id": r["id"], "registryId": r["registry_id"], "inv": r["inv"],
-                    "cost": js_num(r["cost"]),
+                    "cost": js_num(r["cost"]), "receivedAt": js_date(r["received_at"]),
+                    "warranty": r["warranty"] or "",
                     "type": r["type_id"] or "", "status": r["status"],
                     "owner": r["owner_id"] or "", "division": r["division_id"] or "",
                     "department": r["department_id"] or "", "notes": r["notes"],
@@ -1038,16 +1039,18 @@ def save_items(items, user, org_id):
             if parent == it["id"]:
                 parent = ""                      # к самой себе не прикрепить
             cur.execute("""
-                insert into item (id, registry_id, inv, cost, type_id, status, owner_id,
+                insert into item (id, registry_id, inv, cost, received_at, warranty,
+                                  type_id, status, owner_id,
                                   division_id,
                                   department_id, notes, specs, specs_none, master_id,
                                   status_date, status_note, warehouse_id,
                                   model_id, holder, place_id, parent_id, hide_attached,
                                   updated_by, updated_by_name, updated_at)
-                values (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s, now())
+                values (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s, now())
                 on conflict (id) do update set
                   registry_id = excluded.registry_id, inv = excluded.inv,
-                  cost = excluded.cost, type_id = excluded.type_id,
+                  cost = excluded.cost, received_at = excluded.received_at,
+                  warranty = excluded.warranty, type_id = excluded.type_id,
                   status = excluded.status, owner_id = excluded.owner_id,
                   division_id = excluded.division_id, department_id = excluded.department_id,
                   notes = excluded.notes, specs = excluded.specs, specs_none = excluded.specs_none,
@@ -1061,7 +1064,9 @@ def save_items(items, user, org_id):
                   transferred_at = case when excluded.status = 'На складе'
                                         then item.transferred_at else null end
             """, (it["id"], reg, it.get("inv", ""),
-                  to_num(it.get("cost")), it.get("type") or None, it.get("status", ""),
+                  to_num(it.get("cost")), it.get("receivedAt") or None,
+                  (it.get("warranty") or "").strip(),
+                  it.get("type") or None, it.get("status", ""),
                   it.get("owner") or None, it.get("division") or None, it.get("department") or None,
                   it.get("notes", ""), json.dumps(it.get("specs", {})),
                   json.dumps(it.get("specsNone", {})), it.get("masterId") or None,
@@ -1862,6 +1867,8 @@ def api_docs_apply():
         return jsonify({"error": "read_only", "message": "Вам открыт только просмотр."}), 403
     d = request.get_json(silent=True) or {}
     did, rows = d.get("id"), d.get("rows") or []
+    # дату прихода могли поправить руками: в плохом скане шапка не читается
+    want_date = (d.get("date") or "").strip()
     org_id = current_org(request.user)
     made = {"items": 0, "receipts": 0, "skipped": 0, "already": 0}
     log = []
@@ -1876,6 +1883,10 @@ def api_docs_apply():
                             "message": "По этой накладной уже заводили записи. "
                                        "Чтобы дописать пропущенное, попросите "
                                        "администратора открыть её заново."}), 400
+        if want_date and js_date(doc["doc_date"]) != want_date:
+            cur.execute("update document set doc_date = %s where id = %s", (want_date, did))
+            cur.execute("select * from document where id = %s", (did,))
+            doc = cur.fetchone()
         # что уже заведено в прошлый раз — по нему и сверяем
         done = {r.get("sku", "") + "|" + (r.get("name") or "")
                 for r in (doc["rows_json"] or []) if r.get("done")}
@@ -1989,11 +2000,12 @@ def api_docs_apply():
                     # одинаковая номенклатура на несколько единиц: 12345678, /2, /3…
                     inv = next_inv(cur, org_id, sku)
                     cur.execute("""
-                        insert into item (id, registry_id, inv, cost, type_id, status, notes,
+                        insert into item (id, registry_id, inv, cost, received_at,
+                                          type_id, status, notes,
                                           specs, specs_none, document_id, warehouse_id,
                                           updated_by, updated_by_name)
-                        values (%s,%s,%s,%s,%s,'На складе',%s,'{}','{}',%s,%s,%s,%s)
-                    """, (item_id, target, inv, to_num(r.get("cost")), tid,
+                        values (%s,%s,%s,%s,%s,%s,'На складе',%s,'{}','{}',%s,%s,%s,%s)
+                    """, (item_id, target, inv, to_num(r.get("cost")), doc["doc_date"], tid,
                           "накладная " + doc["number"] if doc["number"] else "",
                           did, wh_id, request.user["id"], request.user["name"]))
                     # в истории записи должно быть видно, кто и по какому
