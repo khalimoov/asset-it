@@ -215,8 +215,8 @@ def guess_kind(vendor, ports, banner, host):
         return "Радиомост / точка доступа"
     if any_in(NET_VENDORS) and (23 in ps or 22 in ps or 80 in ps):
         return "Коммутатор / маршрутизатор"
-    if 80 in ps or 443 in ps:
-        return "Устройство с веб-интерфейсом"
+    # веб-интерфейс сам по себе ни о чём не говорит: он есть и у камеры,
+    # и у коммутатора, и у ИБП. Не уверены — не называем
     return ""
 
 

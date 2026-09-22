@@ -6836,22 +6836,46 @@
     return names.sort(function(a,b){ return a.toLowerCase()<b.toLowerCase()?-1:1; });
   }
   var IP_LABELS = [
+    {k:"host",    t:"Имя хоста"},
+    {k:"device",  t:"Что за устройство"},
     {k:"owner",   t:"Сотрудник"},
     {k:"inv",     t:"Инвентарный номер"},
     {k:"type",    t:"Тип"},
     {k:"regName", t:"Раздел"},
     {k:"busy",    t:"Занят / свободен"}
   ];
+  /* Как подписать адрес по данным опроса: имя хоста, а если его нет —
+     производитель по MAC. У камер и коммутаторов имени обычно нет вовсе,
+     зато производитель известен почти всегда. */
+  function netName(ip){
+    var ns = netOf(ip) || {};
+    return ns.hostName || ns.vendor || "";
+  }
+  /* Тип показываем только когда опрос в нём уверен: неуверенных он не
+     возвращает вовсе — поле остаётся пустым. */
+  function netDevice(ip){
+    var ns = netOf(ip) || {};
+    /* порядок как просил заказчик: имя хоста, а если его нет — производитель,
+       и только потом тип. Тип опрос возвращает лишь когда уверен. */
+    return ns.hostName || ns.vendor || ns.kind || "";
+  }
   function labelTitle(key){
     if(key.indexOf("spec:")===0) return key.slice(5);
     var c = IP_LABELS.find(function(x){ return x.k===key; });
     return c ? c.t : key;
   }
-  function ipLabel(e, key){
-    if(!e) return "";                 /* свободный адрес оставляем пустым — занятые заметнее */
+  function ipLabel(e, key, ip){
+    /* Подписи по данным опроса не зависят от того, заведён адрес в учёте
+       или нет: устройство в сети есть, и сказать о нём есть что. */
+    if(key==="host")   return netName(ip || (e && e.ip)) || (e && e.list.length ? "занят" : "");
+    if(key==="device") return netDevice(ip || (e && e.ip)) || (e && e.list.length ? "занят" : "");
+    if(!e){
+      /* адреса нет в учёте, но опрос его видит — показываем, что нашёл */
+      return netName(ip) || "";
+    }
     if(e.list.length){
       var it = e.list[0].item;
-      if(key==="owner")   return ownerName(it.owner) || "занят";
+      if(key==="owner")   return ownerName(it.owner) || netName(e.ip) || "занят";
       if(key==="inv")     return it.inv || "занят";
       if(key==="type")    return typeName(it.type) || "занят";
       if(key==="regName") return (reg(rid(it))||{}).name || "занят";
@@ -6859,7 +6883,7 @@
       return specValueByName(it, key.slice(5)) || "занят";
     }
     if(e.res) return "резерв" + (e.res.note ? ": "+e.res.note : "");
-    return "";
+    return netName(e.ip) || "";
   }
   function exportPools(scoped){
     if(!scoped) return cfg.ipPools.slice();
@@ -6885,7 +6909,7 @@
           var ip = g[r];
           if(!ip){ line.push("", ""); return; }
           any = true;
-          line.push(ip, ipLabel(idx[ip], labelKey));
+          line.push(ip, ipLabel(idx[ip], labelKey, ip));
         });
         if(any) rows.push(line);
       }
@@ -7039,6 +7063,12 @@
         } else if(e && e.res){
           cls = "res"; lab = e.res.note || "резерв";
           ttl = ip + " — резерв" + (e.res.note ? ": "+e.res.note : "");
+        }
+        /* адреса нет в учёте, но опрос его видит: подписываем именем хоста,
+           а если имени нет — производителем или типом устройства */
+        if(!lab){
+          lab = netDevice(ip);
+          if(lab) ttl = ip + " — " + lab;
         }
         /* опрос сети: точка в углу и подпись в подсказке */
         var ns = netOf(ip), dot = "";
