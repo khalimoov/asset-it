@@ -946,7 +946,7 @@
               <input id="supNote" placeholder="Партия, поставщик, счёт"></div>
           </div>
           <div class="row" style="margin-top:12px"><button class="btn-primary" id="btnAddSup">Оприходовать</button></div>
-          <div class="note">Каждый приход записывается отдельной строкой с датой — их видно на вкладке «История поступлений». Один и тот же материал сходится в одну строку остатков, только когда совпадает всё: название, номенклатурный номер и стоимость. Разошлось хоть что-то — это отдельная строка, свой остаток и своя цена.
+          <div class="note">Каждый приход записывается отдельной строкой с датой — их видно на вкладке «История поступлений». Если материал с таким названием уже есть, количество прибавится к остатку.
           Кнопки «Импорт CSV» и «Экспорт CSV» вверху работают с этой вкладкой: выгружаются материалы
           с остатками, а при загрузке колонка «Поступило» из файла заменяет текущее значение
           (так выгрузка и загрузка не удваивают остаток).</div>
@@ -1033,14 +1033,13 @@
             </table>
           </div>
           <div class="empty" id="whStockEmpty" hidden>Материалы пока не приходовались.</div>
-          <div class="note">Приход общий с «Приходом и остатками», а списания здесь свои: на фактические остатки во «Выдано и установлено» они не влияют, и наоборот.</div>
         </div>
         <div class="card" style="margin-top:14px">
           <div class="pad" style="padding-bottom:0"><h2>Списания</h2></div>
           <div class="tablewrap">
             <table>
-              <colgroup><col style="width:3.2%"><col style="width:8%"><col style="width:16%"><col style="width:9%"><col style="width:9%"><col class="hide-md" style="width:11%"><col class="hide-md" style="width:10%"><col class="hide-sm" style="width:8%"><col style="width:6%"><col style="width:9%"><col class="hide-sm" style="width:7%"><col style="width:3.8%"></colgroup>
-              <thead><tr><th class="num">#</th><th>Дата</th><th>Материал</th><th>Номенклатурный</th><th>Стоимость</th><th class="hide-md">Подразделение</th><th class="hide-md">Отдел</th><th class="hide-sm">Склад</th><th>Кол-во</th><th>Сумма</th><th class="hide-sm">Примечание</th><th></th></tr></thead>
+              <colgroup><col style="width:3.4%"><col style="width:14%"><col style="width:12%"><col style="width:13%"><col style="width:11%"><col style="width:14%"><col class="hide-md" style="width:24%"><col style="width:8.6%"></colgroup>
+              <thead><tr><th class="num">#</th><th>Номер акта</th><th>Дата</th><th>Материалов</th><th>Количество</th><th>Сумма</th><th class="hide-md">Примечание</th><th></th></tr></thead>
               <tbody id="whBody"></tbody>
             </table>
           </div>
@@ -1330,11 +1329,6 @@
             смена пароля в домене ничего здесь не ломает. Кто ещё не заведён, заводится сам
             при первом входе — с ролью и учреждением, указанными ниже; права потом меняете в
             «Пользователях ИТ».
-            <br><b>Кого пускать, решает группа AD.</b> Заведите группу в домене, добавляйте
-            в неё тех, кому нужен доступ, и впишите её ниже — этого достаточно, заводить
-            людей здесь не нужно. Вложенные группы учитываются: если внутри указанной лежит
-            другая, её участники тоже заходят. Пустое поле — пускать всех, у кого есть
-            учётная запись в домене.
           </div>
           <div class="grid2" style="margin-top:14px">
             <div class="field"><label>&nbsp;</label>
@@ -1537,7 +1531,7 @@
           <select id="newDepartmentsDiv" style="min-width:200px"></select>
           <button class="btn-primary" data-add="departments">Добавить</button>
         </div>
-        <div class="note">Справочник общий для всех разделов учёта. Подразделение можно указать сразу или выбрать потом в таблице.</div>
+        <div class="note">Справочник общий для всех разделов учёта.</div>
       </div>
       <div class="card">
         <div class="tablewrap">
@@ -1699,7 +1693,7 @@
       <button class="btn-sm" id="btnDrAdd">+ Строка вручную</button>
     </div>
     <div class="err" id="dr_err"></div>
-    <div class="note">Оборудование заводится по отдельной записи на каждую единицу — у них разные инвентарные номера. Материалы приходуются одной строкой на всё количество. Номенклатурный номер и стоимость переносятся в учёт: у материалов по ним расходятся остатки, у техники они видны в карточке. «Стоимость» — цена за единицу из колонки «Цена в валюте», «Сумма» считается сама. Выбор по номенклатуре запоминается: в следующей накладной подставится сам.</div>
+    <div class="note">Оборудование заводится по отдельной записи на каждую единицу — у них разные инвентарные номера. Материалы приходуются одной строкой на всё количество. Выбор по номенклатуре запоминается: в следующей накладной подставится сам.</div>
   </div>
   <div class="dlg-foot">
     <button id="btnDrDel" class="btn-danger">Удалить накладную</button>
@@ -2017,6 +2011,26 @@
 </dialog>
 
 <!-- ================= ДИАПАЗОНЫ IP ================= -->
+<dialog id="dlgWoCard" class="wide">
+  <div class="dlg-head" id="woCardTitle">Акт списания</div>
+  <div class="dlg-body">
+    <div class="kv" id="woCardHead"></div>
+    <div class="card" style="margin-top:12px">
+      <div class="tablewrap">
+        <table>
+          <colgroup><col style="width:3.4%"><col style="width:22%"><col style="width:11%"><col style="width:11%"><col style="width:14%"><col style="width:13%"><col style="width:9%"><col style="width:6%"><col style="width:10.6%"></colgroup>
+          <thead><tr><th class="num">#</th><th>Материал</th><th>Номенклатурный</th><th>Стоимость</th><th>Подразделение</th><th>Отдел</th><th>Склад</th><th>Кол-во</th><th>Сумма</th></tr></thead>
+          <tbody id="woCardBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+  <div class="dlg-foot">
+    <button id="btnWoCardDel" class="btn-danger">Отменить акт</button>
+    <button id="btnWoCardClose" class="btn-primary">Закрыть</button>
+  </div>
+</dialog>
+
 <dialog id="dlgWhOff" class="wide">
   <div class="dlg-head">Списание по документам</div>
   <div class="dlg-body">
@@ -2037,11 +2051,12 @@
       </div>
       <div class="empty" id="woEmpty">Материалы ещё не добавлены — выберите сверху и нажмите «Добавить в список».</div>
     </div>
-    <div class="note">Нажмите на строку, чтобы указать, куда списывается материал: подразделение, отдел, склад и количество. Мест может быть несколько — материал разойдётся по ним, а «Списывается» покажет сумму по всем местам.</div>
     <div class="grid2" style="margin-top:8px">
       <div class="field"><label for="wo_date">Дата списания</label><input id="wo_date" type="date"></div>
-      <div class="field"><label for="wo_note">Примечание</label>
-        <input id="wo_note" placeholder="Акт, основание"></div>
+      <div class="field"><label for="wo_act">Номер акта</label>
+        <input id="wo_act" placeholder="например: 14/2026"></div>
+      <div class="field" style="grid-column:1/-1"><label for="wo_note">Примечание</label>
+        <input id="wo_note" placeholder="Основание"></div>
     </div>
     <div class="err" id="wo_err"></div>
   </div>
@@ -2069,7 +2084,6 @@
       <button class="btn-sm" id="btnWoDestAdd">+ Добавить место</button>
       <span class="cnt" id="woDestTotal"></span>
     </div>
-    <div class="note">Список отделов сужается по выбранному подразделению — связь берётся из справочника отделов.</div>
     <div class="err" id="woDest_err"></div>
   </div>
   <div class="dlg-foot">
@@ -6034,51 +6048,115 @@
     var se = $("whStockEmpty"); se.hidden = stock.length>0;
     se.textContent = lots().length ? "Ничего не найдено." : "Материалы пока не приходовались.";
 
-    /* внизу — сами списания */
-    var list = (cfg.writeoffs||[]).slice().sort(function(a,b){
-      return (b.date||"").localeCompare(a.date||""); });
-    var shown = list.filter(function(x){
+    /* внизу — списания, собранные по актам: строка на акт, подробности по нажатию */
+    var all = writeoffActs();
+    var shown = all.filter(function(a){
       if(!q) return true;
-      var m = supplyById(x.supplyId) || {};
-      return [fmtDate(x.date), m.name, x.sku, String(x.cost||""), String(x.qty||0), x.note,
-              nameById("divisions", x.divisionId), nameById("departments", x.departmentId),
-              whCode(x.warehouseId)].join(" ").toLowerCase().indexOf(q)!==-1;
+      return a.search.indexOf(q) !== -1;
     });
-    $("whBody").innerHTML = shown.map(function(x, i){
-      var m = supplyById(x.supplyId) || {};
-      var dv = nameById("divisions", x.divisionId) || "—";
-      var dp = nameById("departments", x.departmentId) || "—";
-      var wh = whCode(x.warehouseId) || "—";
-      return '<tr data-w="'+esc(x.id)+'"><td class="num">'+(i+1)+'</td>'+
-        '<td class="mono" title="'+esc(fmtDate(x.date)||"—")+'">'+esc(fmtDate(x.date)||"—")+'</td>'+
-        cellText(m.name||"—")+
-        '<td class="mono">'+esc(x.sku||"—")+'</td>'+
-        '<td class="mono">'+esc(x.cost==null ? "—" : money(x.cost))+'</td>'+
-        '<td class="hide-md" title="'+esc(dv)+'">'+esc(dv)+'</td>'+
-        '<td class="hide-md" title="'+esc(dp)+'">'+esc(dp)+'</td>'+
-        '<td class="mono hide-sm" title="'+esc(wh)+'">'+esc(wh)+'</td>'+
-        '<td>'+(x.qty||0)+'</td>'+
-        '<td class="mono">'+esc(money(lineSum(x.cost, x.qty||0)) || "—")+'</td>'+
-        '<td class="hide-sm" title="'+esc(x.note||"")+'">'+esc(x.note||"")+'</td>'+
+    $("whBody").innerHTML = shown.map(function(a, i){
+      return '<tr class="pick" data-a="'+esc(a.id)+'"><td class="num">'+(i+1)+'</td>'+
+        '<td class="mono">'+esc(a.act || "—")+'</td>'+
+        '<td class="mono">'+esc(fmtDate(a.date)||"—")+'</td>'+
+        '<td>'+a.kinds+'</td>'+
+        '<td>'+a.qty+'</td>'+
+        '<td class="mono">'+esc(money(a.sum) || "—")+'</td>'+
+        '<td class="hide-md" title="'+esc(a.note||"")+'">'+esc(a.note||"")+'</td>'+
         acts(can("supply.issue")
-          ? ['<button class="ic btn-danger js-delwo" title="Отменить списание">✕</button>'] : [])+'</tr>';
+          ? ['<button class="ic btn-danger js-delact" title="Отменить акт">✕</button>'] : [])+'</tr>';
     }).join("");
     var we = $("whEmpty"); we.hidden = shown.length>0;
-    we.textContent = list.length ? "Ничего не найдено." : "Списаний по документам пока не было.";
+    we.textContent = all.length ? "Ничего не найдено." : "Списаний по документам пока не было.";
 
     $("btnWhOff").disabled = !can("supply.issue") ||
       !lots().some(function(l){ return lotDocLeft(l) > 0; });
   }
   $("qWh2").oninput = renderWh;
-  $("whBody").addEventListener("click", function(e){
-    if(!e.target.classList.contains("js-delwo")) return;
-    var id = e.target.closest("tr").dataset.w;
-    var x = (cfg.writeoffs||[]).find(function(y){ return y.id===id; }); if(!x) return;
-    var m = supplyById(x.supplyId) || {};
-    if(!confirm("Отменить документальное списание «"+(m.name||"")+"» × "+(x.qty||0)+
-                " от "+(fmtDate(x.date)||"—")+"?")) return;
-    cfg.writeoffs = cfg.writeoffs.filter(function(y){ return y.id!==x.id; });
+
+  /* Списания собираются в акты: один акт — один поход на склад, в нём несколько
+     материалов и мест. Ключ группировки — actId, а не номер: номер человек может
+     повторить или потом исправить. */
+  function writeoffActs(){
+    var by = {}, order = [];
+    (cfg.writeoffs||[]).forEach(function(x){
+      var id = x.actId || ("one-" + x.id);
+      if(!by[id]){
+        by[id] = {id:id, act:x.act||"", date:x.date||"", note:x.note||"", who:x.who||"",
+                  rows:[], qty:0, sum:0, kinds:0, search:""};
+        order.push(id);
+      }
+      var a = by[id];
+      a.rows.push(x);
+      a.qty += (x.qty||0);
+      a.sum += (lineSum(x.cost, x.qty||0) || 0);
+      if(!a.act && x.act) a.act = x.act;
+      if(!a.note && x.note) a.note = x.note;
+    });
+    return order.map(function(id){
+      var a = by[id], seen = {};
+      a.rows.forEach(function(x){ seen[x.supplyId + "|" + (x.sku||"")] = true; });
+      a.kinds = Object.keys(seen).length;
+      a.search = [a.act, fmtDate(a.date), a.note].concat(a.rows.map(function(x){
+        var m = supplyById(x.supplyId) || {};
+        return [m.name, x.sku, nameById("divisions", x.divisionId),
+                nameById("departments", x.departmentId), whCode(x.warehouseId)].join(" ");
+      })).join(" ").toLowerCase();
+      return a;
+    }).sort(function(a,b){ return (b.date||"").localeCompare(a.date||""); });
+  }
+
+  var woCardId = "";
+  function openWoCard(id){
+    var a = writeoffActs().find(function(x){ return x.id===id; }); if(!a) return;
+    woCardId = id;
+    $("woCardTitle").textContent = "Акт списания" + (a.act ? " № " + a.act : "");
+    $("woCardHead").innerHTML =
+      '<div><span>Дата</span><b>'+esc(fmtDate(a.date)||"—")+'</b></div>'+
+      '<div><span>Материалов</span><b>'+a.kinds+'</b></div>'+
+      '<div><span>Всего количество</span><b>'+a.qty+'</b></div>'+
+      '<div><span>Сумма</span><b>'+esc(money(a.sum)||"—")+'</b></div>'+
+      '<div><span>Кто списал</span><b>'+esc(a.who||"—")+'</b></div>'+
+      '<div><span>Примечание</span><b>'+esc(a.note||"—")+'</b></div>';
+    $("woCardBody").innerHTML = a.rows.map(function(x, i){
+      var m = supplyById(x.supplyId) || {};
+      return '<tr><td class="num">'+(i+1)+'</td>'+
+        cellText(m.name||"—")+
+        '<td class="mono">'+esc(x.sku||"—")+'</td>'+
+        '<td class="mono">'+esc(x.cost==null ? "—" : money(x.cost))+'</td>'+
+        cellText(nameById("divisions", x.divisionId) || "—")+
+        cellText(nameById("departments", x.departmentId) || "—")+
+        '<td class="mono">'+esc(whCode(x.warehouseId) || "—")+'</td>'+
+        '<td>'+(x.qty||0)+'</td>'+
+        '<td class="mono">'+esc(money(lineSum(x.cost, x.qty||0)) || "—")+'</td></tr>';
+    }).join("");
+    hide("btnWoCardDel", can("supply.issue"));
+    $("dlgWoCard").showModal();
+  }
+  $("btnWoCardClose").onclick = function(){ $("dlgWoCard").close(); };
+  $("btnWoCardDel").onclick = function(){
+    var a = writeoffActs().find(function(x){ return x.id===woCardId; }); if(!a) return;
+    if(!confirm("Отменить акт" + (a.act ? " № " + a.act : "") + " от " + (fmtDate(a.date)||"—") +
+                "?\nВ нём строк: " + a.rows.length + " — удалятся все.")) return;
+    var ids = {};
+    a.rows.forEach(function(x){ ids[x.id] = true; });
+    cfg.writeoffs = cfg.writeoffs.filter(function(x){ return !ids[x.id]; });
+    $("dlgWoCard").close();
     saveCfg();
+  };
+  $("whBody").addEventListener("click", function(e){
+    var tr = e.target.closest("tr"); if(!tr) return;
+    var id = tr.dataset.a;
+    if(e.target.classList.contains("js-delact")){
+      var a = writeoffActs().find(function(x){ return x.id===id; }); if(!a) return;
+      if(!confirm("Отменить акт" + (a.act ? " № " + a.act : "") + " от " + (fmtDate(a.date)||"—") +
+                  "?\nВ нём строк: " + a.rows.length + " — удалятся все.")) return;
+      var ids = {};
+      a.rows.forEach(function(x){ ids[x.id] = true; });
+      cfg.writeoffs = cfg.writeoffs.filter(function(x){ return !ids[x.id]; });
+      saveCfg();
+      return;
+    }
+    openWoCard(id);
   });
 
   /* Окно списания. Списание — это один акт на несколько материалов: сверху
@@ -6292,6 +6370,7 @@
     woList = []; woDestIdx = -1;
     renderWoList();
     $("wo_err").textContent = "";
+    $("wo_act").value = "";
     $("wo_note").value = "";
     $("wo_date").value = today();
     woFillSku();
@@ -6307,12 +6386,16 @@
       else if(take > left) bad = bad || ("По «" + (m.name||"\u2014") + "» числится только " + left);
     });
     if(bad){ $("wo_err").textContent = bad; return; }
+    var act = $("wo_act").value.trim();
+    if(!act){ $("wo_err").textContent = "Укажите номер акта"; return; }
     var d = $("wo_date").value || today(), note = $("wo_note").value.trim();
-    var n = 0;
+    var actId = uid("act"), n = 0;
     woList.forEach(function(row){
       row.dest.forEach(function(dst){
-        /* одна строка на материал в одно место: так видно, куда что ушло */
-        cfg.writeoffs.push({id:uid("wo"), supplyId:row.supplyId, sku:row.sku, cost:row.cost,
+        /* одна строка на материал в одно место: так видно, куда что ушло.
+           actId один на весь акт — по нему строки и собираются в списке */
+        cfg.writeoffs.push({id:uid("wo"), actId:actId, act:act,
+                            supplyId:row.supplyId, sku:row.sku, cost:row.cost,
                             qty:dst.qty, divisionId:dst.divisionId, departmentId:dst.departmentId,
                             warehouseId:dst.warehouseId, date:d, note:note,
                             who:(me && me.name) || ""});
@@ -6321,7 +6404,7 @@
     });
     saveCfg();
     $("dlgWhOff").close();
-    toast("Списано по документам: материалов " + woList.length + ", строк " + n);
+    toast("Акт № " + act + ": материалов " + woList.length + ", строк " + n);
   };
 
   function renderSup(){ renderStock(); renderReceipts(); renderIssued(); renderWh(); }

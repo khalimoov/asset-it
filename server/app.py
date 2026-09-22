@@ -618,6 +618,7 @@ def load_state(user, org_id):
                       "cost": js_num(r["cost"]), "qty": r["qty"], "date": js_date(r["d"]),
                       "divisionId": r["division_id"] or "", "departmentId": r["department_id"] or "",
                       "warehouseId": r["warehouse_id"] or "",
+                      "act": r["act"] or "", "actId": r["act_id"] or "",
                       "note": r["note"], "who": r["who"] or "",
                       "at": r["at"].isoformat() if r["at"] else ""}
                      for r in by_org("stock_writeoff", "order by d desc nulls last, at desc")]
@@ -925,6 +926,7 @@ def save_cfg(cfg, user, org_id):
                 "division_id": lambda r: g(r, "divisionId") or None,
                 "department_id": lambda r: g(r, "departmentId") or None,
                 "warehouse_id": lambda r: g(r, "warehouseId") or None,
+                "act": lambda r: g(r, "act"), "act_id": lambda r: g(r, "actId"),
                 "d": lambda r: g(r, "date") or None, "note": lambda r: g(r, "note"),
                 "who": lambda r: g(r, "who"), "org_id": org},
                 cfg["writeoffs"], scope=in_org)
