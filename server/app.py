@@ -545,10 +545,22 @@ def load_state(user, org_id):
                  for r in in_regs("item_type")]
         # фото не тащим в состояние — оно отдаётся отдельным запросом по надобности
         models = [{"id": r["id"], "name": r["name"], "note": r["note"],
-                   "registryId": r["registry_id"], "hasPhoto": bool(r["has_photo"])}
+                   "registryId": r["registry_id"], "hasPhoto": bool(r["has_photo"]),
+                   "scopes": []}
                   for r in (rows("""select id, name, note, registry_id, photo is not null as has_photo
                                       from model where registry_id = any(%s) order by name""", (reg_ids,))
                             if reg_ids else [])]
+        # области применения: модель может годиться нескольким разделам,
+        # категориям и подкатегориям сразу
+        if models:
+            by_model = {m["id"]: m for m in models}
+            for r in rows("""select * from model_scope where model_id = any(%s)""",
+                          ([m["id"] for m in models],)):
+                m = by_model.get(r["model_id"])
+                if m is not None:
+                    m["scopes"].append({"id": r["id"], "registryId": r["registry_id"] or "",
+                                        "categoryId": r["category_id"] or "",
+                                        "subcategoryId": r["subcategory_id"] or ""})
         places = [{"id": r["id"], "name": r["name"], "note": r["note"]}
                   for r in by_org("place", "order by name")]
 
@@ -596,7 +608,8 @@ def load_state(user, org_id):
         reserved = [{"id": r["id"], "ip": r["ip"], "note": r["note"]}
                     for r in by_org("ip_reserved", "order by ip")]
 
-        supplies = [{"id": r["id"], "name": r["name"], "unit": r["unit"], "note": r["note"], "qty": 0}
+        supplies = [{"id": r["id"], "name": r["name"], "unit": r["unit"], "note": r["note"],
+                     "model": r["model_id"] or "", "qty": 0}
                     for r in by_org("supply", "order by name")]
         receipts = [{"id": r["id"], "supplyId": r["supply_id"], "qty": r["qty"],
                      "sku": r["sku"] or "", "cost": js_num(r["cost"]),
@@ -684,6 +697,7 @@ def load_state(user, org_id):
 
         net_status = {
             r["ip"]: {"alive": r["alive"], "method": r["method"],
+                      "hostName": r["host_name"] or "",
                       "lastSeen": r["last_seen"].isoformat() if r["last_seen"] else "",
                       "lastCheck": r["last_check"].isoformat() if r["last_check"] else ""}
             for r in by_org("ip_status")}
@@ -807,6 +821,22 @@ def save_cfg(cfg, user, org_id):
                 "name": lambda r: g(r, "name"), "note": lambda r: g(r, "note"),
                 "registry_id": lambda r: g(r, "registryId") or None},
                 cfg["models"], scope=in_regs)
+            # области переписываем целиком по каждой присланной модели: строк
+            # мало, а сводить их по одной сложнее, чем перезалить
+            for m in cfg["models"]:
+                mid = g(m, "id")
+                if not mid:
+                    continue
+                cur.execute("delete from model_scope where model_id = %s", (mid,))
+                for sc in (m.get("scopes") or []):
+                    reg = g(sc, "registryId") or None
+                    if not reg:
+                        continue
+                    cur.execute("""insert into model_scope (id, model_id, registry_id,
+                                                            category_id, subcategory_id)
+                                   values (%s,%s,%s,%s,%s)""",
+                                (g(sc, "id") or ("ms" + secrets.token_hex(6)), mid, reg,
+                                 g(sc, "categoryId") or None, g(sc, "subcategoryId") or None))
 
         # --- подразделения, отделы и места раньше людей ---
         for name, table in (("divisions", "division"), ("departments", "department"),
@@ -900,7 +930,8 @@ def save_cfg(cfg, user, org_id):
                                          "измерения может добавить только администратор" % un)
             sync_table(cur, "supply", {
                 "name": lambda r: g(r, "name"), "unit": lambda r: g(r, "unit", "\u0448\u0442"),
-                "note": lambda r: g(r, "note"), "org_id": org},
+                "note": lambda r: g(r, "note"), "model_id": lambda r: g(r, "model") or None,
+                "org_id": org},
                 cfg["supplies"], scope=in_org)
         if "receipts" in cfg and can(user, "supply.receive"):
             sync_table(cur, "supply_receipt", {
@@ -1677,6 +1708,35 @@ def api_netscan_save():
         org_setting_set(cur, org_id, "netscan", cfg)
         count = len(netscan.targets(cur, cfg, org_id))
     return jsonify({"ok": True, "config": cfg, "targets": count})
+
+
+@app.get("/api/ip/history")
+@need_auth
+def api_ip_history():
+    """История пингов одного адреса по дням — для календаря в карточке адреса.
+
+    Отдаём сразу полгода: это максимум 183 строки, меньше килобайта, зато
+    перелистывание месяцев идёт без похода на сервер.
+    """
+    ip = (request.args.get("ip") or "").strip()
+    if not ip:
+        return jsonify({"error": "bad_request"}), 400
+    org_id = current_org(request.user)
+    since = datetime.date.today() - datetime.timedelta(days=netscan.HISTORY_DAYS)
+    with db() as conn, conn.cursor() as cur:
+        cur.execute("""select d, alive, seen, checks from ip_day
+                        where org_id = %s and ip = %s and d >= %s order by d""",
+                    (org_id, ip, since))
+        days = [{"d": js_date(r["d"]), "alive": r["alive"],
+                 "seen": r["seen"], "checks": r["checks"]} for r in cur.fetchall()]
+        cur.execute("select * from ip_status where org_id = %s and ip = %s", (org_id, ip))
+        st = cur.fetchone()
+    return jsonify({"ip": ip, "days": days, "keepDays": netscan.HISTORY_DAYS,
+                    "hostName": (st["host_name"] if st else "") or "",
+                    "alive": bool(st["alive"]) if st else False,
+                    "method": (st["method"] if st else "") or "",
+                    "lastSeen": st["last_seen"].isoformat() if st and st["last_seen"] else "",
+                    "lastCheck": st["last_check"].isoformat() if st and st["last_check"] else ""})
 
 
 @app.post("/api/netscan/run")

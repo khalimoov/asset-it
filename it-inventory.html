@@ -421,6 +421,19 @@
   .sec > summary::-webkit-details-marker{display:none}
   .sec > summary::before{content:"\25b8";color:var(--muted);font-size:11px}
   details.sec[open] > summary::before{content:"\25be"}
+  /* календарь пингов: день зелёный, если адрес ответил хотя бы раз за сутки */
+  .cal{display:grid;grid-template-columns:repeat(7,1fr);gap:5px;margin-top:12px}
+  .cal .wd{font-size:11px;color:var(--muted);text-align:center;padding:2px 0;font-weight:600}
+  .cal .day{height:38px;border-radius:9px;border:1px solid var(--border);background:var(--surface-2);
+    display:flex;align-items:center;justify-content:center;font-size:12.5px;color:var(--muted)}
+  .cal .day.up{background:var(--ok-bg);border-color:var(--ok);color:var(--ok);font-weight:650}
+  .cal .day.down{background:var(--danger-bg);border-color:var(--danger);color:var(--danger)}
+  .cal .day.gap{opacity:.4}
+  .cal .day.blank{border:none;background:none}
+  .cal .day.today{box-shadow:0 0 0 2px var(--accent)}
+  .calleg{display:flex;gap:14px;flex-wrap:wrap;margin-top:12px;font-size:12px;color:var(--muted)}
+  .calleg i{display:inline-block;width:12px;height:12px;border-radius:4px;margin-right:6px;
+    vertical-align:-2px;border:1px solid var(--border)}
   .hist ul{margin:6px 0 0;padding-left:18px;max-height:140px;overflow:auto}
   .hist li{font-size:12.5px;color:var(--muted);margin-bottom:3px}
   /* Всплывашка: скрыта не сдвигом за край (у пустого элемента высота меньше сдвига,
@@ -948,7 +961,6 @@
 
     <!-- ================= РАСХОДНЫЕ МАТЕРИАЛЫ ================= -->
     <section id="v-sup" hidden>
-      <div class="stats" id="supStats"></div>
       <nav class="tabs" id="supTabs">
         <button data-st="stock" class="on">Приход и остатки</button>
         <button data-st="receipts">История поступлений</button>
@@ -957,7 +969,10 @@
       </nav>
 
       <section id="s-stock">
-        <div class="card pad" style="margin-bottom:14px">
+        <div class="row" style="margin-bottom:12px">
+          <button class="btn-primary" id="btnShowSup">+ Приход материала</button>
+        </div>
+        <div class="card pad" id="supAddCard" hidden style="margin-bottom:14px">
           <h2>Приход материала</h2>
           <div class="grid2">
             <div class="field"><label for="supName">Материал</label>
@@ -974,6 +989,8 @@
               <input id="supDate" type="date"></div>
             <div class="field"><label for="supUnit">Единица</label>
               <select id="supUnit"></select></div>
+            <div class="field"><label for="supModel">Модель</label>
+              <select id="supModel"></select></div>
             <div class="field"><label for="supNote">Примечание</label>
               <input id="supNote" placeholder="Партия, поставщик, счёт"></div>
           </div>
@@ -1008,9 +1025,13 @@
       </section>
 
       <section id="s-issued" hidden>
-        <div class="card pad" style="margin-bottom:14px">
+        <div class="row" style="margin-bottom:12px">
+          <button class="btn-primary" id="btnShowIssue">+ Выдать или установить</button>
+        </div>
+        <div class="card pad" id="issueAddCard" hidden style="margin-bottom:14px">
           <h2>Выдать / установить</h2>
           <div class="grid2">
+            <div class="field"><label for="isModel">Модель</label><select id="isModel"></select></div>
             <div class="field"><label for="isSup">Материал</label><select id="isSup"></select></div>
             <div class="field"><label for="isQty">Кол-во</label>
               <input id="isQty" type="number" min="1" step="1" value="1"></div>
@@ -1736,6 +1757,20 @@
       <div class="field"><label for="m_name">Модель</label><input id="m_name"></div>
       <div class="field"><label for="m_note">Примечание</label><input id="m_note"></div>
     </div>
+    <div class="sec">
+      <b>Где применяется</b>
+      <div class="tablewrap" style="margin-top:8px">
+        <table class="mini">
+          <colgroup><col style="width:4%"><col style="width:30%"><col style="width:30%"><col style="width:28%"><col style="width:8%"></colgroup>
+          <thead><tr><th class="num">#</th><th>Раздел</th><th>Категория</th><th>Подкатегория</th><th></th></tr></thead>
+          <tbody id="msBody"></tbody>
+        </table>
+      </div>
+      <div class="empty" id="msEmpty" hidden>Область не задана — модель будет видна во всём разделе.</div>
+      <div class="row" style="margin-top:8px">
+        <button class="btn-sm" id="btnMsAdd">+ Добавить область</button>
+      </div>
+    </div>
     <div class="field" style="margin-top:12px"><label for="m_file">Фотография</label>
       <input type="file" id="m_file" accept="image/*"></div>
     <div id="m_photoWrap" style="margin-top:12px" hidden>
@@ -2082,6 +2117,30 @@
   </div>
 </dialog>
 
+<dialog id="dlgIp" class="wide">
+  <div class="dlg-head" id="ipTitle">IP-адрес</div>
+  <div class="dlg-body">
+    <div class="kv" id="ipKv"></div>
+    <div class="row" style="margin-top:14px">
+      <button class="btn-sm" id="btnIpPrev">‹ Раньше</button>
+      <select id="ipMonth" style="max-width:240px"></select>
+      <button class="btn-sm" id="btnIpNext">Позже ›</button>
+      <span class="cnt" id="ipMonthStat"></span>
+    </div>
+    <div class="cal" id="ipCal"></div>
+    <div class="calleg">
+      <span><i style="background:var(--ok-bg);border-color:var(--ok)"></i>отвечал</span>
+      <span><i style="background:var(--danger-bg);border-color:var(--danger)"></i>не отвечал</span>
+      <span><i style="background:var(--surface-2)"></i>не проверяли</span>
+    </div>
+    <div class="err" id="ipErr"></div>
+  </div>
+  <div class="dlg-foot">
+    <button id="btnIpItem" hidden>Карточка оборудования</button>
+    <button id="btnIpClose" class="btn-primary">Закрыть</button>
+  </div>
+</dialog>
+
 <dialog id="dlgPools" class="xwide">
   <div class="dlg-head">Диапазоны (пулы) адресов</div>
   <div class="dlg-body">
@@ -2425,7 +2484,8 @@
   function lotDocLeft(l){ return l.got - l.off; }     /* документально: пришло минус списано */
   function lotLabel(l){
     var m = supplyById(l.supplyId) || {};
-    return (m.name || "—") + (l.sku ? " · " + l.sku : "") +
+    return (m.name || "—") + (m.model ? " · " + (modelName(m.model) || "") : "") +
+           (l.sku ? " · " + l.sku : "") +
            (l.cost === null ? "" : " · " + money(l.cost));
   }
 
@@ -3857,7 +3917,33 @@
   /* ================== модели ==================
      Модель — справочник раздела, как и тип, но отдельный: в карточке она идёт
      перед типом. Фото хранится на сервере и в состояние не попадает. */
-  function regModels(id){ id = id||curReg; return cfg.models.filter(function(m){ return rid(m)===id; }); }
+  /* Область применения модели: «раздел + категория + подкатегория». Областей
+     может быть несколько; у старых моделей их нет — тогда считаем, что модель
+     годится всему своему разделу. Категория и подкатегория необязательны:
+     пустая означает «любая». */
+  function modelScopes(m){
+    var sc = (m.scopes || []).filter(function(x){ return x.registryId; });
+    return sc.length ? sc : [{registryId: rid(m), categoryId:"", subcategoryId:""}];
+  }
+  function modelFits(m, regId, catId, subId){
+    return modelScopes(m).some(function(x){
+      if((x.registryId||"") !== regId) return false;
+      /* сужение учитываем только когда есть с чем сравнивать: пока категория
+         в карточке не выбрана, прятать модель рано */
+      if(x.categoryId && catId && x.categoryId !== catId) return false;
+      if(x.subcategoryId && subId && x.subcategoryId !== subId) return false;
+      return true;
+    });
+  }
+  function regModels(id){
+    id = id || curReg;
+    return cfg.models.filter(function(m){ return modelFits(m, id, "", ""); });
+  }
+  function cardModels(){
+    return cfg.models.filter(function(m){
+      return modelFits(m, curReg, $("f_cat").value || "", $("f_sub").value || "");
+    });
+  }
   function modelName(id){ return nameById("models", id); }
   var editingModel = null;
   function renderModels(){
@@ -3972,8 +4058,69 @@
     openReg(rid(m), "items");
     $("fModel").value = m.id; markFilters(); renderItems();
   };
+  var msDraft = [];
+  function msRender(){
+    /* разделы все, включая расходники: у материала тоже бывает модель */
+    var regs = cfg.registries;
+    $("msBody").innerHTML = msDraft.map(function(x, i){
+      var cats = cfg.categories.filter(function(c){ return (c.registryId||"") === x.registryId; });
+      var subs = cfg.subcategories.filter(function(g){
+        return (g.registryId||"") === x.registryId &&
+               (!x.categoryId || (g.categoryId||"") === x.categoryId); });
+      var pick = function(cls, list, sel, empty){
+        return '<select class="'+cls+'"><option value="">'+esc(empty)+'</option>' +
+          list.map(function(o){
+            return '<option value="'+esc(o.id)+'"'+(o.id===sel?' selected':'')+'>'+esc(o.name)+'</option>';
+          }).join("") + '</select>';
+      };
+      return '<tr data-s="'+i+'"><td class="num">'+(i+1)+'</td>'+
+        '<td>'+pick("js-msreg", regs, x.registryId, "— выберите —")+'</td>'+
+        '<td>'+pick("js-mscat", cats, x.categoryId, "любая")+'</td>'+
+        '<td>'+pick("js-mssub", subs, x.subcategoryId, "любая")+'</td>'+
+        '<td class="act"><button class="ic btn-danger js-msdel" title="Убрать область">✕</button></td></tr>';
+    }).join("");
+    $("msEmpty").hidden = msDraft.length > 0;
+  }
+  function msRead(){
+    var out = [];
+    document.querySelectorAll("#msBody tr").forEach(function(tr){
+      out.push({id: msDraft[parseInt(tr.dataset.s, 10)] && msDraft[parseInt(tr.dataset.s, 10)].id || "",
+                registryId: tr.querySelector(".js-msreg").value,
+                categoryId: tr.querySelector(".js-mscat").value,
+                subcategoryId: tr.querySelector(".js-mssub").value});
+    });
+    return out;
+  }
+  $("btnMsAdd").onclick = function(){
+    msDraft = msRead();
+    msDraft.push({id:"", registryId: rid(byId("models", editingModel) || {}) || curReg,
+                  categoryId:"", subcategoryId:""});
+    msRender();
+  };
+  $("msBody").addEventListener("click", function(e){
+    if(!e.target.classList.contains("js-msdel")) return;
+    var i = parseInt(e.target.closest("tr").dataset.s, 10);
+    msDraft = msRead(); msDraft.splice(i, 1); msRender();
+  });
+  $("msBody").addEventListener("change", function(e){
+    /* сменили раздел или категорию — списки ниже надо пересобрать */
+    var i = parseInt(e.target.closest("tr").dataset.s, 10);
+    msDraft = msRead();
+    if(e.target.classList.contains("js-msreg")){
+      msDraft[i].categoryId = ""; msDraft[i].subcategoryId = "";
+    } else if(e.target.classList.contains("js-mscat")){
+      msDraft[i].subcategoryId = "";
+    }
+    msRender();
+  });
+
   function openModel(m){
     editingModel = m.id;
+    msDraft = modelScopes(m).map(function(x){
+      return {id:x.id||"", registryId:x.registryId||"",
+              categoryId:x.categoryId||"", subcategoryId:x.subcategoryId||""};
+    });
+    msRender();
     $("dlgModelTitle").textContent = "Модель: " + m.name;
     $("m_name").value = m.name; $("m_note").value = m.note||""; $("m_file").value = "";
     $("m_err").textContent = "";
@@ -4002,6 +4149,10 @@
     if(regModels(rid(m)).some(function(x){ return x.id!==m.id && x.name.toLowerCase()===n.toLowerCase(); })){
       $("m_err").textContent = "Такая модель уже есть"; return; }
     m.name = n; m.note = $("m_note").value.trim();
+    m.scopes = msRead().filter(function(x){ return x.registryId; });
+    /* раздел самой модели держим первым из областей: по нему она попадает
+       в выборку состояния, и без него сервер её просто не отдаст */
+    if(m.scopes.length) m.registryId = m.scopes[0].registryId;
     var f = $("m_file").files && $("m_file").files[0];
     var p = saveCfg();
     if(f){
@@ -5795,8 +5946,20 @@
     if(m && m.unit && cfg.units.indexOf(m.unit)!==-1) $("supUnit").value = m.unit;
   });
 
+  /* модели, заведённые для раздела расходников */
+  function supplyModels(){
+    return cfg.models.filter(function(m){ return modelFits(m, curReg, "", ""); })
+      .sort(function(a,b){ return a.name.toLowerCase()<b.name.toLowerCase()?-1:1; });
+  }
+  function fillSupModels(){
+    var list = supplyModels(), keep = $("supModel").value;
+    $("supModel").innerHTML = '<option value="">— не указана —</option>' + list.map(function(m){
+      return '<option value="'+esc(m.id)+'">'+esc(m.name)+'</option>'; }).join("");
+    if(keep) $("supModel").value = keep;
+  }
   function renderStock(){
     fillUnits();
+    fillSupModels();
     $("supNames").innerHTML = cfg.supplies.slice()
       .sort(function(a,b){ return a.name.toLowerCase()<b.name.toLowerCase()?-1:1; })
       .map(function(m){ return '<option value="'+esc(m.name)+'"></option>'; }).join("");
@@ -5821,12 +5984,6 @@
               '<button class="ic btn-danger js-delm" title="Удалить материал">✕</button>'])+'</tr>';
     }).join("");
     $("stockEmpty").hidden = list.length>0;
-    var onStock = list.reduce(function(a,l){ return a + Math.max(0, lotLeft(l)); }, 0);
-    var zero = list.filter(function(l){ return lotLeft(l)<=0; }).length;
-    $("supStats").innerHTML = tile("Позиций в справочнике", cfg.supplies.length) +
-      tile("Строк на складе", list.length) +
-      tile("Единиц на складе", onStock) + tile("Списаний", cfg.issues.length) +
-      tile("Закончилось", zero);
   }
   $("btnAddSup").onclick = function(){
     var nm = $("supName").value.trim();
@@ -5841,6 +5998,9 @@
       m = {id:uid("m"), name:nm, unit:$("supUnit").value.trim()||"шт", qty:0, note:note};
       cfg.supplies.push(m);
     }
+    /* модель — свойство материала, а не отдельного прихода: по ней потом
+       отбирают, что списывать на «Выдано и установлено» */
+    if($("supModel").value) m.model = $("supModel").value;
     var sku = $("supSku").value.trim(), cost = numVal($("supCost").value);
     cfg.receipts.push({id:uid("rc"), supplyId:m.id, qty:qty, sku:sku, cost:cost, date:d, note:note});
     recalcSupply(m);
@@ -5922,7 +6082,25 @@
     /* в списке только то, что реально есть на складе — иначе можно уйти в минус.
        Выбирается не материал вообще, а связка: у одного названия может быть
        несколько номенклатур и цен, и списывать надо из конкретной. */
-    var avail = lots().filter(function(l){ return lotLeft(l) > 0; })
+    /* список моделей — только те, что и правда стоят у материалов с остатком:
+       выбирать из пустого списка незачем */
+    var keepM = $("isModel").value, withLeft = lots().filter(function(l){ return lotLeft(l) > 0; });
+    var mids = {};
+    withLeft.forEach(function(l){
+      var m = supplyById(l.supplyId);
+      if(m && m.model) mids[m.model] = true;
+    });
+    var mlist = supplyModels().filter(function(m){ return mids[m.id]; });
+    $("isModel").innerHTML = '<option value="">— все модели —</option>' + mlist.map(function(m){
+      return '<option value="'+esc(m.id)+'">'+esc(m.name)+'</option>'; }).join("");
+    if(keepM && mlist.some(function(m){ return m.id===keepM; })) $("isModel").value = keepM;
+    var pickM = $("isModel").value;
+
+    var avail = withLeft.filter(function(l){
+        if(!pickM) return true;
+        var m = supplyById(l.supplyId);
+        return m && m.model === pickM;
+      })
       .sort(function(a,b){ return lotLabel(a).toLowerCase()<lotLabel(b).toLowerCase()?-1:1; });
     $("isSup").innerHTML = avail.length
       ? '<option value="">— выберите материал —</option>' + avail.map(function(l){
@@ -5982,6 +6160,7 @@
     ie.textContent = list.length ? "Ничего не найдено." : "Списаний пока не было.";
   }
   $("qIssue").oninput = renderIssued;
+  $("isModel").onchange = renderIssued;
   function syncIssueTarget(){
     var toItem = $("isTo").value === "item";
     $("isUserWrap").hidden = toItem;
@@ -6019,6 +6198,24 @@
     if(!confirm("Отменить списание «"+(m.name||"")+"» на "+(t.name||"")+" от "+fmtDate(x.date)+"?")) return;
     cfg.issues = cfg.issues.filter(function(y){ return y.id!==x.id; }); saveCfg();
   });
+  /* Формы прихода и выдачи открываются кнопкой: на экране обычно смотрят
+     остатки, а не заводят новое, и постоянная форма только занимает место. */
+  function formToggle(btnId, cardId, label){
+    var b = $(btnId);
+    if(!b) return;
+    b.onclick = function(){
+      var card = $(cardId);
+      card.hidden = !card.hidden;
+      b.textContent = card.hidden ? label : "Свернуть";
+      if(!card.hidden){
+        var first = card.querySelector("input,select");
+        if(first) first.focus();
+      }
+    };
+  }
+  formToggle("btnShowSup", "supAddCard", "+ Приход материала");
+  formToggle("btnShowIssue", "issueAddCard", "+ Выдать или установить");
+
   /* ================== таблица склада: документальное списание ================== */
   /* Отдельный учёт: приход общий с фактом, а списания свои. Поэтому здесь
      считается lotDocLeft (пришло минус списано по документам), а не остаток
@@ -6033,6 +6230,9 @@
       if(a.sku !== b.sku) return a.sku < b.sku ? -1 : 1;
       return (a.cost||0) - (b.cost||0);
     }).filter(function(l){
+      /* списали всё — строка уходит из остатков: в документальном учёте держать
+         нули незачем, приход по ней всё равно виден в «Истории поступлений» */
+      if(lotDocLeft(l) <= 0) return false;
       if(!q) return true;
       var m = supplyById(l.supplyId) || {};
       return [m.name, l.sku, String(l.cost||""), m.note].join(" ").toLowerCase().indexOf(q)!==-1;
@@ -6051,7 +6251,8 @@
         '<td class="hide-md" title="'+esc(m.note||"")+'">'+esc(m.note||"")+'</td></tr>';
     }).join("");
     var se = $("whStockEmpty"); se.hidden = stock.length>0;
-    se.textContent = lots().length ? "Ничего не найдено." : "Материалы пока не приходовались.";
+    se.textContent = lots().some(function(l){ return lotDocLeft(l) > 0; })
+      ? "Ничего не найдено." : "На складе по документам ничего не числится.";
 
     /* внизу — списания, собранные по актам: строка на акт, подробности по нажатию */
     var all = writeoffActs();
@@ -6923,10 +7124,115 @@
     curPool = b.dataset.pt; renderIps();
   });
 
+  /* ---- карточка адреса: имя хоста и календарь пингов ---- */
+  var ipCur = "", ipDaysMap = {}, ipItemId = "", ipMonthKey = "";
+  var MONTHS = ["январь","февраль","март","апрель","май","июнь",
+                "июль","август","сентябрь","октябрь","ноябрь","декабрь"];
+
+  function monthKey(d){ return d.getFullYear() + "-" + (d.getMonth()<9?"0":"") + (d.getMonth()+1); }
+  function monthTitle(key){
+    var p = key.split("-");
+    return MONTHS[parseInt(p[1],10)-1] + " " + p[0];
+  }
+  /* месяцы, попадающие в срок хранения: от сегодня назад на keepDays */
+  function ipMonthList(keep){
+    var out = [], d = new Date(), first = new Date();
+    first.setDate(first.getDate() - (keep || 183));
+    d = new Date(d.getFullYear(), d.getMonth(), 1);
+    var stop = new Date(first.getFullYear(), first.getMonth(), 1);
+    while(d >= stop){
+      out.push(monthKey(d));
+      d = new Date(d.getFullYear(), d.getMonth() - 1, 1);
+    }
+    return out;
+  }
+  function renderIpCal(){
+    var p = ipMonthKey.split("-"), y = parseInt(p[0],10), mo = parseInt(p[1],10) - 1;
+    var firstDay = new Date(y, mo, 1), days = new Date(y, mo + 1, 0).getDate();
+    /* неделя начинается с понедельника: у getDay() воскресенье — ноль */
+    var shift = (firstDay.getDay() + 6) % 7;
+    var html = ["Пн","Вт","Ср","Чт","Пт","Сб","Вс"].map(function(w){
+      return '<div class="wd">' + w + '</div>'; }).join("");
+    for(var i = 0; i < shift; i++) html += '<div class="day blank"></div>';
+    var up = 0, down = 0, none = 0, todayKey = today();
+    for(var n = 1; n <= days; n++){
+      var key = y + "-" + (mo<9?"0":"") + (mo+1) + "-" + (n<10?"0":"") + n;
+      var rec = ipDaysMap[key], cls = "day", ttl = "не проверяли";
+      if(!rec){ cls += " gap"; none++; }
+      else if(rec.alive){ cls += " up"; up++;
+        ttl = "отвечал: " + rec.seen + " из " + rec.checks + " проверок"; }
+      else { cls += " down"; down++; ttl = "не отвечал, проверок: " + rec.checks; }
+      if(key === todayKey) cls += " today";
+      html += '<div class="' + cls + '" title="' + esc(key.split("-").reverse().join(".") +
+              " — " + ttl) + '">' + n + '</div>';
+    }
+    $("ipCal").innerHTML = html;
+    $("ipMonthStat").textContent = "отвечал: " + up + ", молчал: " + down +
+      (none ? ", не проверяли: " + none : "");
+  }
+  function ipShift(step){
+    var list = ipMonthList(183), i = list.indexOf(ipMonthKey);
+    if(i === -1) return;
+    var j = i - step;                 /* список идёт от свежего к старому */
+    if(j < 0 || j >= list.length) return;
+    ipMonthKey = list[j];
+    $("ipMonth").value = ipMonthKey;
+    renderIpCal();
+  }
+  $("btnIpPrev").onclick = function(){ ipShift(-1); };
+  $("btnIpNext").onclick = function(){ ipShift(1); };
+  $("ipMonth").onchange = function(){ ipMonthKey = this.value; renderIpCal(); };
+  $("btnIpClose").onclick = function(){ $("dlgIp").close(); };
+  $("btnIpItem").onclick = function(){
+    var it = items.find(function(x){ return x.id === ipItemId; });
+    $("dlgIp").close();
+    if(it){ openReg(rid(it), "items"); openDlg(it); }
+  };
+  function openIpCard(ip){
+    var en = ipIndex()[ip] || {list:[], res:null};
+    var it = en.list.length ? en.list[0].item : null;
+    ipCur = ip; ipItemId = it ? it.id : "";
+    ipDaysMap = {};
+    $("ipTitle").textContent = "Адрес " + ip;
+    $("btnIpItem").hidden = !it;
+    $("ipErr").textContent = "";
+    $("ipCal").innerHTML = "";
+    $("ipMonthStat").textContent = "";
+    var st = (cfg.netStatus || {})[ip] || {};
+    var kv = function(k, v){ return '<div><span>'+esc(k)+'</span><b>'+esc(v||"—")+'</b></div>'; };
+    /* имя хоста: что вернул обход сети, иначе характеристика «PC-name» из карточки */
+    var ipKvFill = function(host){
+      $("ipKv").innerHTML =
+      kv("Имя хоста", host || st.hostName || (it ? specValueByName(it, "PC-name") : "")) +
+      kv("Сейчас", st.lastCheck ? (st.alive ? "отвечает" : "не отвечает") : "не проверялся") +
+      kv("Последний ответ", st.lastSeen ? fmtWhen(st.lastSeen) : "") +
+      kv("Оборудование", it ? ((it.inv || "—") + " · " + (typeName(it.type) || "")) : "не привязано") +
+      kv("Ответственный", it ? ownerName(it.owner) : "") +
+      kv("Резерв", en.res ? (en.res.note || "да") : "");
+    };
+    ipKvFill("");
+    var months = ipMonthList(183);
+    $("ipMonth").innerHTML = months.map(function(k){
+      return '<option value="'+esc(k)+'">'+esc(monthTitle(k))+'</option>'; }).join("");
+    ipMonthKey = months[0];
+    $("ipMonth").value = ipMonthKey;
+    renderIpCal();
+    $("dlgIp").showModal();
+    api("/api/ip/history?ip=" + encodeURIComponent(ip)).then(function(d){
+      (d.days || []).forEach(function(x){ ipDaysMap[x.d] = x; });
+      if(d.hostName) ipKvFill(d.hostName);
+      renderIpCal();
+    }).catch(function(e){
+      $("ipErr").textContent = "История не загрузилась" + apiWhy(e);
+    });
+  }
+
   $("ipGrid").addEventListener("click", function(e){
     var c = e.target.closest("[data-ip]"); if(!c) return;
     var ip = c.dataset.ip, en = ipIndex()[ip];
-    if(en && en.list.length){ var it = en.list[0].item; openReg(rid(it), "items"); openDlg(it); return; }
+    /* занятый адрес открывает не карточку оборудования, а свою — с историей;
+       в неё вынесена и кнопка перехода к оборудованию */
+    if(en && en.list.length){ openIpCard(ip); return; }
     if(en && en.res){
       if(confirm("Снять резерв с "+ip+(en.res.note?" («"+en.res.note+"»)":"")+"?")){
         cfg.ipReserved = cfg.ipReserved.filter(function(x){ return x.id!==en.res.id; }); saveCfg();
@@ -7821,7 +8127,7 @@
     editingId = it ? it.id : null;
     $("f_cat").innerHTML = opts(regCats(), "— все категории —");
     $("f_cat").value = it ? catOfType(it.type) : "";
-    $("f_model").innerHTML = regModels().length ? opts(regModels(), "— не указана —")
+    $("f_model").innerHTML = cardModels().length ? opts(cardModels(), "— не указана —")
                                                 : '<option value="">— моделей ещё нет —</option>';
     $("f_model").value = it ? (it.model||"") : "";
     $("f_holder").value = it ? (it.holder||"person") : "person";

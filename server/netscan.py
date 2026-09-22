@@ -126,28 +126,73 @@ def targets(cur, cfg, org_id):
     return list(dict.fromkeys(ips))
 
 
+HISTORY_DAYS = 183          # полгода: столько держим историю по дням
+
+
+def host_name(ip, timeout_s=1.0):
+    """Имя хоста обратным разрешением.
+
+    Спрашиваем только у тех, кто ответил: у молчащего адреса запрос всё равно
+    упрётся в таймаут резолвера и растянет обход.
+    """
+    old = socket.getdefaulttimeout()
+    try:
+        socket.setdefaulttimeout(timeout_s)
+        return socket.gethostbyaddr(ip)[0]
+    except Exception:
+        return ""
+    finally:
+        socket.setdefaulttimeout(old)
+
+
 def run(cur, cfg, org_id):
     """Один обход. Возвращает сводку."""
     cfg = merge_config(cfg)
     ips = targets(cur, cfg, org_id)
     started = datetime.datetime.now()
     res = sweep(ips, cfg)
+    today = datetime.date.today()
     alive = 0
+
+    # имена узнаём разом и только у ответивших — их немного
+    up = [ip for ip, r in res.items() if r["alive"]]
+    names = {}
+    if up:
+        with ThreadPoolExecutor(max_workers=min(len(up), cfg["workers"])) as ex:
+            for ip, nm in zip(up, ex.map(host_name, up)):
+                if nm:
+                    names[ip] = nm
+
     for ip, r in res.items():
         if r["alive"]:
             alive += 1
             cur.execute("""
-                insert into ip_status (org_id, ip, alive, method, last_check, last_seen)
-                values (%s, %s, true, %s, now(), now())
-                on conflict (org_id, ip) do update set alive = true, method = excluded.method,
-                                                       last_check = now(), last_seen = now()
-            """, (org_id, ip, r["method"]))
+                insert into ip_status (org_id, ip, alive, method, last_check, last_seen, host_name)
+                values (%s, %s, true, %s, now(), now(), %s)
+                on conflict (org_id, ip) do update set
+                  alive = true, method = excluded.method,
+                  last_check = now(), last_seen = now(),
+                  host_name = case when excluded.host_name <> '' then excluded.host_name
+                                   else ip_status.host_name end
+            """, (org_id, ip, r["method"], names.get(ip, "")))
         else:
             cur.execute("""
                 insert into ip_status (org_id, ip, alive, method, last_check)
                 values (%s, %s, false, '', now())
                 on conflict (org_id, ip) do update set alive = false, last_check = now()
             """, (org_id, ip))
+        # день «зелёный», если адрес ответил хотя бы раз за сутки
+        cur.execute("""
+            insert into ip_day (org_id, ip, d, alive, seen, checks)
+            values (%s, %s, %s, %s, %s, 1)
+            on conflict (org_id, ip, d) do update set
+              alive = ip_day.alive or excluded.alive,
+              seen = ip_day.seen + excluded.seen,
+              checks = ip_day.checks + 1
+        """, (org_id, ip, today, bool(r["alive"]), 1 if r["alive"] else 0))
+
+    cur.execute("delete from ip_day where org_id = %s and d < %s",
+                (org_id, today - datetime.timedelta(days=HISTORY_DAYS)))
     return {"at": started.isoformat(timespec="seconds"),
             "checked": len(ips), "alive": alive,
             "seconds": round((datetime.datetime.now() - started).total_seconds(), 1)}
