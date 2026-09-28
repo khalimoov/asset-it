@@ -1,0 +1,24 @@
+<!-- Раздел v-places -->
+    <section id="v-places" hidden>
+      <div class="searchbar">
+        <div class="searchbox"></div>
+        <button class="btn-primary" id="btnShowPlaces">+ Место</button>
+      </div>
+      <div class="card pad" style="margin-bottom:14px" id="addPlaces" hidden>
+        <h2>Новое место</h2>
+        <div class="row">
+          <input id="newPlaces" placeholder="Например: Серверная, Кабинет 214, Пост охраны" style="flex:1;min-width:240px">
+          <button class="btn-primary" data-add="places">Добавить</button>
+        </div>
+      </div>
+      <div class="card">
+        <div class="tablewrap">
+          <table>
+            <colgroup><col style="width:3.4%"><col style="width:61%"><col style="width:16%"><col style="width:18%"></colgroup>
+            <thead><tr><th class="num">#</th><th>Место</th><th>Позиций</th><th></th></tr></thead>
+            <tbody id="placesBody"></tbody>
+          </table>
+        </div>
+        <div class="empty" id="placesEmpty" hidden>Места пока не заведены.</div>
+      </div>
+    </section>

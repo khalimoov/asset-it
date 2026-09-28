@@ -1,0 +1,19 @@
+<!-- Раздел v-transfers -->
+    <section id="v-transfers" hidden>
+      <div class="searchbar">
+        <div class="searchbox"><input id="qXfer" type="search" placeholder="Поиск по номеру, типу, складу, примечанию…"></div>
+      </div>
+      <div class="card">
+        <div class="tablewrap">
+          <table>
+            <colgroup><col style="width:3.4%"><col style="width:11%"><col style="width:11%">
+              <col style="width:16%"><col style="width:12%"><col style="width:12%">
+              <col class="hide-md" style="width:11%"><col style="width:13%"><col style="width:10.6%"></colgroup>
+            <thead><tr><th class="num">#</th><th>Когда</th><th>Инв. номер</th><th>Тип</th>
+              <th>Откуда</th><th>Куда</th><th class="hide-md">Кто</th><th>Примечание</th><th>Файл</th></tr></thead>
+            <tbody id="xferBody"></tbody>
+          </table>
+        </div>
+        <div class="empty" id="xferEmpty" hidden>Накладных по передаче пока нет.</div>
+      </div>
+    </section>

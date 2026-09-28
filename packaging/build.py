@@ -7,8 +7,8 @@
 
 Что складывается:
 
-    it-inventory.html   страница приложения
-    404.html            страница «не найдено»
+    web/                страница приложения: каркас, разделы, окна, стили, скрипты
+                        и страница «не найдено»
     server/             сервер, схема, миграции
     packaging/*.bat     установка, запуск, остановка, копии базы
     packaging/УСТАНОВКА.txt
@@ -124,8 +124,7 @@ def build_docker():
         shutil.rmtree(DOCK)
     srv = DOCK / "server"
     srv.mkdir(parents=True)
-    shutil.copy2(ROOT / "it-inventory.html", DOCK / "it-inventory.html")
-    shutil.copy2(ROOT / "404.html", DOCK / "404.html")
+    shutil.copytree(ROOT / "web", DOCK / "web")
     for f in (ROOT / "server").iterdir():
         if f.name in SERVER_SKIP or f.name.startswith("FIRST_LOGIN") or f.suffix == ".log":
             continue
@@ -151,9 +150,15 @@ def build_docker():
 
 def main():
     OUT.mkdir(parents=True, exist_ok=True)
-    shutil.copy2(ROOT / "it-inventory.html", OUT / "it-inventory.html")
-    shutil.copy2(ROOT / "404.html", OUT / "404.html")
-    print("  it-inventory.html, 404.html — скопированы")
+    # страница теперь папка web/ — прежний единый файл из старой сборки убираем,
+    # иначе он так и ездил бы в архиве
+    for old in ("it-inventory.html", "404.html"):
+        if (OUT / old).exists():
+            (OUT / old).unlink()
+    if (OUT / "web").exists():
+        shutil.rmtree(OUT / "web")
+    shutil.copytree(ROOT / "web", OUT / "web")
+    print("  web/ — скопирована")
     copy_server()
     copy_packaging()
     ensure_wheels()

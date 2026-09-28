@@ -1,0 +1,82 @@
+<!-- Окна: dlgWoCard, dlgWhOff, dlgWoDest -->
+<dialog id="dlgWoCard" class="wide">
+  <div class="dlg-head" id="woCardTitle">Акт списания</div>
+  <div class="dlg-body">
+    <div class="kv" id="woCardHead"></div>
+    <div class="card" style="margin-top:12px">
+      <div class="tablewrap">
+        <table>
+          <colgroup><col style="width:3.4%"><col style="width:22%"><col style="width:11%"><col style="width:11%"><col style="width:14%"><col style="width:13%"><col style="width:9%"><col style="width:6%"><col style="width:10.6%"></colgroup>
+          <thead><tr><th class="num">#</th><th>Материал</th><th>Номенклатурный</th><th>Стоимость</th><th>Подразделение</th><th>Отдел</th><th>Склад</th><th>Кол-во</th><th>Сумма</th></tr></thead>
+          <tbody id="woCardBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+  <div class="dlg-foot">
+    <button id="btnWoCardDel" class="btn-danger">Отменить акт</button>
+    <button id="btnWoCardDoc">Скачать АКТ</button>
+    <button id="btnWoCardClose" class="btn-primary">Закрыть</button>
+  </div>
+</dialog>
+
+<dialog id="dlgWhOff" class="wide">
+  <div class="dlg-head">Списание по документам</div>
+  <div class="dlg-body">
+    <div class="grid2">
+      <div class="field"><label for="wo_sup">Материал</label><select id="wo_sup"></select></div>
+      <div class="field"><label for="wo_sku">Номенклатура</label><select id="wo_sku"></select></div>
+      <div class="field"><label for="wo_cost">Стоимость</label><select id="wo_cost"></select></div>
+      <div class="field"><label>&nbsp;</label>
+        <button class="btn-sm" id="btnWoAdd">+ Добавить в список</button></div>
+    </div>
+    <div class="card" style="margin-top:14px">
+      <div class="tablewrap">
+        <table>
+          <colgroup><col style="width:4%"><col style="width:26%"><col style="width:12%"><col style="width:12%"><col style="width:10%"><col style="width:12%"><col style="width:14%"><col style="width:10%"></colgroup>
+          <thead><tr><th class="num">#</th><th>Материал</th><th>Номенклатура</th><th>Стоимость</th><th>Числится</th><th>Списывается</th><th>Сумма</th><th></th></tr></thead>
+          <tbody id="woBody"></tbody>
+        </table>
+      </div>
+      <div class="empty" id="woEmpty">Материалы ещё не добавлены — выберите сверху и нажмите «Добавить в список».</div>
+    </div>
+    <div class="grid2" style="margin-top:8px">
+      <div class="field"><label for="wo_date">Дата списания</label><input id="wo_date" type="date"></div>
+      <div class="field"><label for="wo_act">Номер акта</label>
+        <input id="wo_act" placeholder="например: 14/2026"></div>
+      <div class="field" style="grid-column:1/-1"><label for="wo_note">Примечание</label>
+        <input id="wo_note" placeholder="Основание"></div>
+    </div>
+    <div class="err" id="wo_err"></div>
+  </div>
+  <div class="dlg-foot">
+    <button id="btnWoCancel">Отмена</button>
+    <button id="btnWoSave" class="btn-primary">Списать</button>
+  </div>
+</dialog>
+
+<dialog id="dlgWoDest" class="wide">
+  <div class="dlg-head" id="woDestTitle">Куда списать</div>
+  <div class="dlg-body">
+    <div class="note" id="woDestSub" style="margin-top:0"></div>
+    <div class="card" style="margin-top:12px">
+      <div class="tablewrap">
+        <table>
+          <colgroup><col style="width:4%"><col style="width:25%"><col style="width:25%"><col style="width:22%"><col style="width:14%"><col style="width:10%"></colgroup>
+          <thead><tr><th class="num">#</th><th>Подразделение</th><th>Отдел</th><th>Склад</th><th>Количество</th><th></th></tr></thead>
+          <tbody id="woDestBody"></tbody>
+        </table>
+      </div>
+      <div class="empty" id="woDestEmpty" hidden>Мест пока нет — добавьте первое.</div>
+    </div>
+    <div class="row" style="margin-top:10px">
+      <button class="btn-sm" id="btnWoDestAdd">+ Добавить место</button>
+      <span class="cnt" id="woDestTotal"></span>
+    </div>
+    <div class="err" id="woDest_err"></div>
+  </div>
+  <div class="dlg-foot">
+    <button id="btnWoDestCancel">Отмена</button>
+    <button id="btnWoDestOk" class="btn-primary">Готово</button>
+  </div>
+</dialog>

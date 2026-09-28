@@ -1,0 +1,48 @@
+<!-- Окна: dlgDoc -->
+<dialog id="dlgDoc" class="xxwide">
+  <div class="dlg-head" id="dlgDocTitle">Накладная</div>
+  <div class="dlg-body">
+    <div class="kv">
+      <div><span>Номер</span><b id="dr_num">—</b><span class="unread" id="dr_numWarn" hidden>Не смог прочитать</span></div>
+      <div><span>Дата</span><b id="dr_date">—</b></div>
+      <div><span>Дата прихода</span>
+        <input id="dr_recv" type="date" style="margin-top:2px">
+        <span class="unread" id="dr_recvWarn" hidden>Не смог прочитать — выберите дату сами</span></div>
+      <div><span>Файл</span><b><a id="dr_file" href="#" target="_blank">открыть</a></b></div>
+      <div><span>Принял</span><b id="dr_who">—</b></div>
+      <div><span>Склад-получатель</span>
+        <input id="dr_wh" list="dr_whList" style="margin-top:2px" placeholder="номер, например 5004">
+        <datalist id="dr_whList"></datalist></div>
+    </div>
+    <div class="note" id="dr_whHint" style="margin-top:6px"></div>
+    <div class="note" id="dr_applied" hidden style="color:var(--warn)"></div>
+    <div class="row" style="margin-top:12px;align-items:center;gap:8px">
+      <span class="note" style="margin:0">Все оставшиеся строки:</span>
+      <select id="dr_bulk" style="max-width:280px"></select>
+      <button class="btn-sm" id="btnDrBulk">Применить</button>
+      <span class="cnt" id="dr_count"></span>
+    </div>
+    <div class="tablewrap" style="margin-top:10px">
+      <table class="doctbl">
+        <colgroup><col class="c-n"><col class="c-sku"><col class="c-name">
+          <col class="c-qty"><col class="c-cost"><col class="c-sum">
+          <col class="c-to"><col class="c-cat"><col class="c-del"></colgroup>
+        <thead><tr><th class="num">#</th><th>Номенклатура</th><th>Наименование</th>
+          <th>Кол-во</th><th>Стоимость</th><th>Сумма</th>
+          <th>Куда</th><th>Категория / материал</th><th></th></tr></thead>
+        <tbody id="drBody"></tbody>
+      </table>
+    </div>
+    <div class="empty" id="drEmpty" hidden>Строк не распознано — впишите их вручную кнопкой ниже.</div>
+    <div class="row" style="margin-top:10px">
+      <button class="btn-sm" id="btnDrAdd">+ Строка вручную</button>
+    </div>
+    <div class="err" id="dr_err"></div>
+  </div>
+  <div class="dlg-foot">
+    <button id="btnDrDel" class="btn-danger">Удалить накладную</button>
+    <button id="btnDrReopen" hidden>Открыть заново</button>
+    <button id="btnDrCancel">Закрыть</button>
+    <button id="btnDrApply" class="btn-primary">Завести записи</button>
+  </div>
+</dialog>

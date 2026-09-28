@@ -1,0 +1,18 @@
+<!-- Окна: dlgWh -->
+<dialog id="dlgWh">
+  <div class="dlg-head" id="dlgWhTitle">Склад</div>
+  <div class="dlg-body">
+    <div class="grid2">
+      <div class="field"><label for="w_code">Номер</label><input id="w_code" placeholder="5004"></div>
+      <div class="field"><label for="w_name">Название</label><input id="w_name" placeholder="Центральный склад Завод-1"></div>
+    </div>
+    <div class="field" style="margin-top:12px"><label for="w_note">Примечание</label><input id="w_note"></div>
+    <div class="field col-adm" style="margin-top:12px" id="wrapWhOrg"><label for="w_org">Учреждение</label><select id="w_org"></select></div>
+    <div class="err" id="w_err"></div>
+  </div>
+  <div class="dlg-foot">
+    <button id="btnWhDel" class="btn-danger" hidden>Удалить</button>
+    <button id="btnWhCancel">Отмена</button>
+    <button id="btnWhSave" class="btn-primary">Сохранить</button>
+  </div>
+</dialog>

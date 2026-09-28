@@ -1,0 +1,59 @@
+<!-- Окна: dlgIssue, dlgSup -->
+<dialog id="dlgIssue" class="wide">
+  <div class="dlg-head" id="isTitle">Выдать / установить</div>
+  <div class="dlg-body">
+    <select id="isSup" hidden></select>
+    <div class="grid2">
+      <div class="field"><label for="isLeft">Остаток</label><input id="isLeft" readonly tabindex="-1"></div>
+      <div class="field"><label for="isQty">Кол-во</label>
+        <input id="isQty" type="number" min="1" step="1" value="1"></div>
+      <div class="field"><label for="isTo">Кому списать</label>
+        <select id="isTo">
+          <option value="user">На сотрудника</option>
+          <option value="item">На оборудование</option>
+        </select></div>
+      <div class="field" id="isUserWrap"><label for="isUser">Сотрудник</label><select id="isUser"></select></div>
+      <div class="field" id="isItemWrap" hidden><label for="isItem">Оборудование</label><select id="isItem"></select></div>
+      <div class="field" id="isSpecWrap" hidden><label for="isSpec">Занимает характеристику</label>
+        <select id="isSpec"></select></div>
+      <div class="field"><label for="isDate">Дата</label><input id="isDate" type="date"></div>
+      <div class="field"><label for="isNote">Примечание</label>
+        <input id="isNote" placeholder="Залили краску в принтер, заменили термопасту"></div>
+    </div>
+    <div class="err" id="isErr"></div>
+  </div>
+  <div class="dlg-foot">
+    <button id="btnIssueCancel">Отмена</button>
+    <button id="btnIssue" class="btn-primary">Списать на сотрудника</button>
+  </div>
+</dialog>
+
+<dialog id="dlgSup" class="wide">
+  <div class="dlg-head" id="spTitle">Материал</div>
+  <div class="dlg-body">
+    <div class="grid2">
+      <div class="field"><label for="sp_name">Материал</label><input id="sp_name"></div>
+      <div class="field"><label for="sp_unit">Единица</label><select id="sp_unit"></select></div>
+      <div class="field"><label for="sp_sku">Номенклатурный</label>
+        <input id="sp_sku" inputmode="numeric" placeholder="как в накладной: 0091220"></div>
+      <div class="field"><label for="sp_cost">Стоимость</label>
+        <input id="sp_cost" inputmode="decimal" placeholder="цена за единицу"></div>
+      <div class="field"><label for="sp_model">Модели</label>
+        <div class="row" style="gap:6px">
+          <select id="sp_model" style="flex:1"></select>
+          <button class="btn-sm" id="btnSpModelAdd" title="Добавить модель к материалу">+</button>
+        </div>
+        <div class="chips" id="spModelList"></div>
+        <label class="chk"><input type="checkbox" id="spNoModel"> Без модели</label></div>
+      <div class="field"><label for="sp_note">Примечание</label>
+        <input id="sp_note" placeholder="Партия, поставщик, счёт"></div>
+    </div>
+    <div class="kv" id="spStats" style="margin-top:14px"></div>
+    <div class="err" id="sp_err"></div>
+  </div>
+  <div class="dlg-foot">
+    <button id="btnSpDel" class="btn-danger">Удалить</button>
+    <button id="btnSpCancel">Отмена</button>
+    <button id="btnSpSave" class="btn-primary">Сохранить</button>
+  </div>
+</dialog>

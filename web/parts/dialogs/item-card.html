@@ -1,0 +1,91 @@
+<!-- Окна: dlg, dlgXfer -->
+<dialog id="dlg" class="xxwide">
+  <div class="dlg-head" id="dlgTitle">Запись</div>
+  <div class="dlg-body">
+    <div class="grid3">
+      <div class="field"><label for="f_inv">Инвентарный номер</label>
+        <input id="f_inv" inputmode="numeric" placeholder="7 цифр — номенклатурный, 10 — инвентарный">
+        <div class="note" id="f_invHint" style="margin:3px 0 0;min-height:14px"></div></div>
+      <div class="field"><label for="f_cost">Стоимость</label>
+        <input id="f_cost" inputmode="decimal" placeholder="цена из накладной"></div>
+      <div class="field"><label for="f_recv">Дата прихода</label>
+        <input id="f_recv" type="date"></div>
+      <div class="field"><label for="f_warr">Гарантия до</label>
+        <input id="f_warr" type="date"></div>
+      <div class="field"><label for="f_cat">Категория</label><select id="f_cat"></select></div>
+      <div class="field col-sub" id="wrapSub"><label for="f_sub">Подкатегория</label><select id="f_sub"></select></div>
+      <div class="field" id="wrapModel"><label for="f_model">Модель</label><select id="f_model"></select></div>
+      <div class="field"><label for="f_type">Тип</label><select id="f_type"></select></div>
+      <div class="field"><label for="f_status">Статус</label><select id="f_status"></select></div>
+      <div class="field" id="wrapHolder"><label for="f_holder">За кем закреплено</label>
+        <select id="f_holder">
+          <option value="person">За сотрудником</option>
+          <option value="place">За местом</option>
+          <option value="item">За оборудованием</option>
+        </select></div>
+      <div class="field" id="wrapOwner"><label for="f_owner">Ответственный сотрудник</label><select id="f_owner"></select></div>
+      <div class="field" id="wrapDiv"><label for="f_div">Подразделение</label><select id="f_div"></select></div>
+      <div class="field" id="wrapDep"><label for="f_dep">Отдел</label><select id="f_dep"></select></div>
+      <div class="field" id="wrapWh"><label for="f_wh">Склад</label><select id="f_wh"></select></div>
+      <div class="field" id="wrapPlace" hidden><label for="f_place">Место</label><select id="f_place"></select></div>
+      <div class="field" id="wrapParent" hidden><label for="f_parent">Прикрепить к оборудованию</label><select id="f_parent"></select></div>
+      <div class="field" id="wrapPSpec" hidden><label for="f_pspec">Занимает характеристику</label>
+        <select id="f_pspec"></select></div>
+      <div class="field" id="wrapHide" hidden><label>&nbsp;</label>
+        <label class="chk" style="margin:0"><input type="checkbox" id="f_hide"> Убрать из списка</label></div>
+    </div>
+    <div id="xferWrap" hidden>
+      <label class="chk" style="margin-top:8px"><input type="checkbox" id="f_xfer"> Передать другому складу</label>
+      <div class="sec" id="xferBox" hidden>
+        <b>Передача между складами</b>
+        <div class="grid2" style="margin-top:10px">
+          <div class="field"><label for="f_xwh">Склад-получатель</label><select id="f_xwh"></select></div>
+          <div class="field"><label for="f_xnote">Примечание к передаче</label>
+            <input id="f_xnote" placeholder="Почему передают"></div>
+          <div class="field"><label for="f_xfile">Загрузить накладную</label>
+            <input type="file" id="f_xfile" accept=".pdf,.png,.jpg,.jpeg,.tif,.tiff,.bmp"></div>
+        </div>
+      </div>
+    </div>
+    <div class="note" id="attLockNote" hidden style="color:var(--warn)"></div>
+    <div class="secrow">
+      <div class="sec" id="attBox" hidden><b>Прикреплённое оборудование</b><div id="attList"></div></div>
+      <div class="sec" id="matBox" hidden><b>Установленные материалы</b><div id="matList"></div></div>
+    </div>
+    <div class="sec" id="statusExtra" hidden>
+      <b id="seTitle">Дополнительно к статусу</b>
+      <div class="grid2" style="margin-top:10px">
+        <div class="field" id="wrapQty" hidden><label for="f_qty">Сколько единиц принять на склад</label>
+          <input id="f_qty" type="number" min="1" step="1" value="1"></div>
+        <div class="field" id="wrapMaster" hidden><label for="f_master">Мастер</label><select id="f_master"></select></div>
+        <div class="field" id="wrapSDate" hidden><label for="f_sdate">Дата</label><input id="f_sdate" type="date"></div>
+        <div class="field" id="wrapSNote" hidden><label for="f_snote">Примечание к статусу</label>
+          <input id="f_snote" placeholder="Причина, номер акта, что именно чинят"></div>
+      </div>
+    </div>
+    <div class="field" style="margin-top:12px"><label for="f_notes">Примечание</label><textarea id="f_notes" rows="2"></textarea></div>
+    <div class="sec" id="specBox"><b>Характеристики</b><div id="specFields"></div></div>
+    <div class="sec" id="repBox" hidden><b>Ремонты</b><div id="repList"></div></div>
+    <details class="sec hist" id="histBox" hidden>
+      <summary><b>История</b> <span class="note" id="lastEdit" style="margin:0"></span></summary>
+      <ul id="hist"></ul>
+    </details>
+  </div>
+  <div class="dlg-foot">
+    <button id="btnDel" class="btn-danger" hidden>Удалить</button>
+    <button id="btnNom" hidden title="Наклейка: инвентарный номер, тип и склад — откроется PDF для печати">Номенк.</button>
+    <button id="btnCancel">Отмена</button>
+    <button id="btnSave" class="btn-primary">Сохранить</button>
+  </div>
+</dialog>
+
+<dialog id="dlgXfer">
+  <div class="dlg-head" id="dlgXferTitle">Передача</div>
+  <div class="dlg-body" id="xf_body"></div>
+  <div class="dlg-foot">
+    <button id="btnXfDel" class="btn-danger" hidden>Удалить</button>
+    <button id="btnXfCard">Карточка оборудования</button>
+    <button id="btnXfClose">Закрыть</button>
+    <button id="btnXfFile" class="btn-primary">Посмотреть документ</button>
+  </div>
+</dialog>

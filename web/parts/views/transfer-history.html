@@ -1,0 +1,20 @@
+<!-- Раздел v-xhist -->
+    <section id="v-xhist" hidden>
+      <div class="stats" id="xhistStats"></div>
+      <div class="searchbar">
+        <div class="searchbox"><input id="qXhist" type="search" placeholder="Поиск по номеру, типу, складу, кто, примечанию…"></div>
+      </div>
+      <div class="card">
+        <div class="tablewrap">
+          <table>
+            <colgroup><col style="width:3.4%"><col style="width:11%"><col style="width:11%">
+              <col style="width:16%"><col style="width:12%"><col style="width:12%">
+              <col class="hide-md" style="width:11%"><col style="width:13%"><col style="width:10.6%"></colgroup>
+            <thead><tr><th class="num">#</th><th>Когда</th><th>Инв. номер</th><th>Тип</th>
+              <th>Откуда</th><th>Куда</th><th class="hide-md">Кто</th><th>Примечание</th><th>Накладная</th></tr></thead>
+            <tbody id="xhistBody"></tbody>
+          </table>
+        </div>
+        <div class="empty" id="xhistEmpty" hidden>Передач между складами пока не было.</div>
+      </div>
+    </section>

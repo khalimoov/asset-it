@@ -1,0 +1,53 @@
+<!-- Окна: photoPop, dlgModelItems, dlgModel -->
+<div id="photoPop" hidden><img id="photoPopImg" alt=""></div>
+
+<dialog id="dlgModelItems" class="xwide">
+  <div class="dlg-head" id="dlgMiTitle">Модель</div>
+  <div class="dlg-body">
+    <img id="mi_photo" alt="" hidden>
+    <div class="kv" id="mi_kv"></div>
+    <div class="sec" style="margin-top:12px"><b>Оборудование этой модели</b> <span class="cnt" id="mi_count"></span>
+      <div id="mi_items" style="margin-top:8px"></div></div>
+  </div>
+  <div class="dlg-foot">
+    <button id="btnMiEdit" class="col-dict">Изменить, фото</button>
+    <button id="btnMiClose">Закрыть</button>
+    <button id="btnMiList" class="btn-primary">Показать в списке</button>
+  </div>
+</dialog>
+
+<dialog id="dlgModel">
+  <div class="dlg-head" id="dlgModelTitle">Модель</div>
+  <div class="dlg-body">
+    <div class="grid2">
+      <div class="field"><label for="m_name">Модель</label><input id="m_name"></div>
+      <div class="field"><label for="m_note">Примечание</label><input id="m_note"></div>
+    </div>
+    <div class="sec">
+      <b>Где применяется</b>
+      <div class="tablewrap" style="margin-top:8px">
+        <table class="mini">
+          <colgroup><col style="width:4%"><col style="width:30%"><col style="width:30%"><col style="width:28%"><col style="width:8%"></colgroup>
+          <thead><tr><th class="num">#</th><th>Раздел</th><th>Категория</th><th>Подкатегория</th><th></th></tr></thead>
+          <tbody id="msBody"></tbody>
+        </table>
+      </div>
+      <div class="empty" id="msEmpty" hidden>Область не задана — модель будет видна во всём разделе.</div>
+      <div class="row" style="margin-top:8px">
+        <button class="btn-sm" id="btnMsAdd">+ Добавить область</button>
+      </div>
+    </div>
+    <div class="field" style="margin-top:12px"><label for="m_file">Фотография</label>
+      <input type="file" id="m_file" accept="image/*"></div>
+    <div id="m_photoWrap" style="margin-top:12px" hidden>
+      <img id="m_preview" alt="">
+      <div class="row" style="margin-top:8px"><button class="btn-sm btn-danger" id="btnModelPhotoDel">Убрать фото</button></div>
+    </div>
+    <div class="err" id="m_err"></div>
+  </div>
+  <div class="dlg-foot">
+    <button id="btnModelDel" class="btn-danger" hidden>Удалить</button>
+    <button id="btnModelCancel">Отмена</button>
+    <button id="btnModelSave" class="btn-primary">Сохранить</button>
+  </div>
+</dialog>

@@ -1,0 +1,29 @@
+<!-- Экран входа и первого запуска -->
+<div id="loginScreen" hidden>
+  <form id="loginForm" autocomplete="on">
+    <h1>Учёт ИТ-отдела</h1>
+    <div class="sub" id="lg_sub">Вход в систему</div>
+    <div class="field"><label for="lg_login">Логин</label>
+      <input id="lg_login" name="username" autocomplete="username" autofocus></div>
+    <div class="field"><label for="lg_pass">Пароль</label>
+      <input id="lg_pass" name="password" type="password" autocomplete="current-password"></div>
+    <div class="err" id="lg_err"></div>
+    <button class="btn-primary" type="submit">Войти</button>
+  </form>
+  <!-- первый запуск: учётных записей ещё нет, администратор заводит себя сам -->
+  <form id="setupForm" autocomplete="off" hidden>
+    <h1>Учёт ИТ-отдела</h1>
+    <div class="sub">Первый запуск — задайте логин и пароль администратора.</div>
+    <div class="field"><label for="su_name">Ваше имя</label>
+      <input id="su_name" placeholder="Фамилия Имя" autocomplete="off"></div>
+    <div class="field"><label for="su_login">Логин</label>
+      <input id="su_login" placeholder="admin" autocomplete="off"></div>
+    <div class="field"><label for="su_pass">Пароль</label>
+      <input id="su_pass" type="password" autocomplete="new-password"></div>
+    <div class="field"><label for="su_pass2">Пароль ещё раз</label>
+      <input id="su_pass2" type="password" autocomplete="new-password"></div>
+    <div class="err" id="su_err"></div>
+    <button class="btn-primary" type="submit" id="btnSetup">Создать администратора и войти</button>
+  </form>
+  <div class="copy" title="Developed by @Khalimoov">Copyright © 2026 Axborot texnologiyalar guruhi</div>
+</div>

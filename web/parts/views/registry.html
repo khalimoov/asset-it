@@ -1,0 +1,293 @@
+<!-- Раздел v-reg -->
+    <section id="v-reg" hidden>
+      <nav class="tabs" id="regTabs">
+        <button data-rt="dash">Дашборд</button>
+        <button data-rt="items" class="on">Записи</button>
+        <button data-rt="categories">Категории</button>
+        <button data-rt="subcategories">Подкатегории</button>
+        <button data-rt="types">Типы</button>
+        <button data-rt="specs">Характеристики</button>
+        <button data-rt="presets">Наборы</button>
+      </nav>
+
+      <!-- ---- дашборд раздела ---- -->
+      <section id="r-dash" hidden>
+        <div class="stats" id="regStats"></div>
+        <div class="cols2">
+          <div class="card">
+            <div class="pad" style="padding-bottom:0"><h2>По категориям</h2></div>
+            <div class="tablewrap">
+              <table>
+                <colgroup><col style="width:46%"><col style="width:18%"><col style="width:36%"></colgroup>
+                <thead><tr><th>Категория</th><th>Позиций</th><th>Доля</th></tr></thead>
+                <tbody id="regByCat"></tbody>
+              </table>
+            </div>
+            <div class="empty" id="regByCatEmpty" hidden>Нет данных.</div>
+          </div>
+          <div class="card">
+            <div class="pad" style="padding-bottom:0"><h2>По подразделениям</h2></div>
+            <div class="tablewrap">
+              <table>
+                <colgroup><col style="width:46%"><col style="width:18%"><col style="width:36%"></colgroup>
+                <thead><tr><th>Подразделение</th><th>Позиций</th><th>Доля</th></tr></thead>
+                <tbody id="regByDiv"></tbody>
+              </table>
+            </div>
+            <div class="empty" id="regByDivEmpty" hidden>Нет данных.</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ---- записи ---- -->
+      <section id="r-items" hidden>
+        <div class="searchbar">
+          <div class="searchbox">
+            <select id="qField" title="Где искать">
+              <option value="">Везде</option>
+              <option value="inv">Инвентарный номер</option>
+              <option value="catName">Категория</option>
+              <option value="subName">Подкатегория</option>
+              <option value="typeName">Тип</option>
+              <option value="status">Статус</option>
+              <option value="ownerName">Ответственный</option>
+              <option value="divName">Подразделение</option>
+              <option value="depName">Отдел</option>
+            </select>
+            <input id="q" type="search" placeholder="Введите запрос…">
+          </div>
+          <button class="btn-primary" id="btnAdd">+ Добавить запись</button>
+        </div>
+
+        <div class="filters">
+          <select id="fCat" title="Категория"></select>
+          <select id="fSub" class="col-sub" title="Подкатегория"></select>
+          <select id="fType" title="Тип"></select>
+          <select id="fModel" title="Модель"></select>
+          <select id="fStatus" title="Статус"></select>
+          <select id="fDiv" title="Подразделение"></select>
+          <select id="fDep" title="Отдел"></select>
+          <select id="fAttach" title="Прикрепление к другому оборудованию">
+            <option value="">— прикрепление: любое —</option>
+            <option value="all">Показывать и скрытые</option>
+            <option value="att">Только прикреплённые</option>
+            <option value="hid">Только скрытые из списка</option>
+            <option value="own">Только самостоятельные</option>
+          </select>
+          <button id="btnXferOnly" class="btn-sm" hidden title="Показать только переданное оборудование">⇢ Переданные</button>
+          <button id="btnReset" hidden>Сбросить</button>
+          <span class="cnt" id="itemsCount"></span>
+        </div>
+        <div class="card">
+          <div class="tablewrap">
+            <table id="tbl">
+              <colgroup>
+                <col style="width:3.4%"><col style="width:9%"><col class="hide-sm" style="width:9%">
+                <col style="width:11%"><col class="hide-md col-sub" style="width:10%">
+                <col style="width:15%"><col style="width:11%"><col style="width:11%">
+                <col style="width:6.6%"><col class="hide-md" style="width:7%"><col class="hide-sm" style="width:7%">
+              </colgroup>
+              <thead><tr>
+                <th class="num">#</th>
+                <th data-s="inv">Инв. номер<span class="arr"></span></th>
+                <th data-s="cost" class="hide-sm">Стоимость<span class="arr"></span></th>
+                <th data-s="catName">Категория<span class="arr"></span></th>
+                <th data-s="subName" class="hide-md col-sub">Подкатегория<span class="arr"></span></th>
+                <th data-s="typeName">Тип<span class="arr"></span></th>
+                <th data-s="status">Статус<span class="arr"></span></th>
+                <th data-s="ownerName">Ответственный<span class="arr"></span></th>
+                <th data-s="whName">Склад<span class="arr"></span></th>
+                <th data-s="divName" class="hide-md">Подразделение<span class="arr"></span></th>
+                <th data-s="depName" class="hide-sm">Отдел<span class="arr"></span></th>
+              </tr></thead>
+              <tbody id="tbody"></tbody>
+            </table>
+          </div>
+          <div class="empty" id="itemsEmpty" hidden></div>
+        </div>
+      </section>
+
+      <!-- ---- категории ---- -->
+      <section id="r-categories" hidden>
+        <div class="card pad" style="margin-bottom:14px">
+          <h2>Новая категория</h2>
+          <div class="row">
+            <input id="newCategories" placeholder="Например: Компьютеры" style="flex:1;min-width:240px">
+            <button class="btn-primary" data-add="categories">Добавить</button>
+          </div>
+        </div>
+        <div class="card">
+          <div class="tablewrap">
+            <table>
+              <colgroup><col style="width:3.4%"><col style="width:39%"><col style="width:14%"><col style="width:14%"><col style="width:14%"><col style="width:14%"></colgroup>
+              <thead><tr><th class="num">#</th><th>Категория</th><th>Подкатегорий</th><th>Типов</th><th>Позиций</th><th></th></tr></thead>
+              <tbody id="categoriesBody"></tbody>
+            </table>
+          </div>
+          <div class="empty" id="categoriesEmpty" hidden>Категории пока не заведены.</div>
+        </div>
+      </section>
+
+      <!-- ---- подкатегории ---- -->
+      <section id="r-subcategories" hidden>
+        <div class="card pad" style="margin-bottom:14px">
+          <h2>Новая подкатегория</h2>
+          <div class="grid2">
+            <div class="field"><label for="newSubCat">Категория</label><select id="newSubCat"></select></div>
+            <div class="field"><label for="newSubcategories">Подкатегория</label>
+              <input id="newSubcategories" placeholder="Например: Системные блоки"></div>
+          </div>
+          <div class="row" style="margin-top:12px"><button class="btn-primary" id="btnAddSub">Добавить подкатегорию</button></div>
+        </div>
+        <div class="card">
+          <div class="tablewrap">
+            <table>
+              <colgroup><col style="width:3.4%"><col style="width:25%"><col style="width:18%"><col style="width:13%"><col style="width:10%"><col style="width:10%"><col style="width:19%"></colgroup>
+              <thead><tr><th class="num">#</th><th>Подкатегория</th><th>Категория</th><th>Станд. характеристик</th><th>Типов</th><th>Позиций</th><th></th></tr></thead>
+              <tbody id="subcategoriesBody"></tbody>
+            </table>
+          </div>
+          <div class="empty" id="subcategoriesEmpty" hidden>Подкатегории пока не заведены.</div>
+        </div>
+      </section>
+
+      <!-- ---- типы ---- -->
+      <section id="r-types" hidden>
+        <div class="card pad" style="margin-bottom:14px">
+          <h2>Новый тип</h2>
+          <div class="grid2">
+            <div class="field"><label for="newTypeCat">Категория</label><select id="newTypeCat"></select></div>
+            <div class="field col-sub"><label for="newTypeSub">Подкатегория</label><select id="newTypeSub"></select></div>
+            <div class="field" style="grid-column:1/-1"><label for="newType">Тип (модель, комплектация)</label>
+              <input id="newType" placeholder="Например: Компьютер в комплекте Core i5 / 16GB / SSD 512"></div>
+          </div>
+          <div class="row" style="margin-top:12px"><button class="btn-primary" id="btnAddType">Добавить тип</button></div>
+        </div>
+        <div class="card">
+          <div class="tablewrap">
+            <table>
+              <colgroup><col style="width:3.4%"><col style="width:31%"><col style="width:15%"><col style="width:15%"><col style="width:11%"><col style="width:9%"><col style="width:14%"></colgroup>
+              <thead><tr><th class="num">#</th><th>Тип</th><th>Категория</th><th>Подкатегория</th><th>Характеристик</th><th>Позиций</th><th></th></tr></thead>
+              <tbody id="typesBody"></tbody>
+            </table>
+          </div>
+          <div class="empty" id="typesEmpty" hidden>Типы пока не заведены.</div>
+        </div>
+      </section>
+
+      <!-- ---- характеристики ---- -->
+      <section id="r-specs" hidden>
+        <div class="card pad" style="margin-bottom:14px">
+          <h2>Характеристики</h2>
+          <div class="field" style="max-width:470px">
+            <label for="specScope">Где задаём характеристики</label><select id="specScope"></select>
+          </div>
+          <div class="note" id="specHint" style="margin:6px 0 14px"></div>
+          <div class="grid2">
+            <div class="field"><label for="newSpecName">Название характеристики</label>
+              <input id="newSpecName" placeholder="Например: Оперативная память"></div>
+            <div class="field"><label for="newSpecKind">Вид значения</label>
+              <select id="newSpecKind">
+                <option value="text">Текст</option><option value="number">Число</option>
+                <option value="date">Дата</option><option value="list">Список вариантов</option>
+                <option value="ip">IP-адрес</option><option value="mac">MAC-адрес</option>
+              </select></div>
+            <div class="field"><label for="newSpecUnit">Единица измерения (необязательно)</label>
+              <input id="newSpecUnit" placeholder="ГБ, ГГц, дюйм"></div>
+            <div class="field" id="optWrap" hidden><label for="newSpecOpts">Варианты через запятую</label>
+              <input id="newSpecOpts" placeholder="DDR3, DDR4, DDR5"></div>
+            <div class="field" id="poolWrap" hidden><label for="newSpecPool">Пул IP-адресов</label>
+              <select id="newSpecPool"></select></div>
+            <div class="field"><label for="newSpecGroup">Группа в карточке (необязательно)</label>
+              <input id="newSpecGroup" placeholder="Например: AD и сеть"></div>
+          </div>
+          <div class="field" style="margin-top:10px"><label>Правила заполнения</label>
+            <label class="chk"><input type="checkbox" id="newSpecReq"> Обязательная</label>
+            <label class="chk"><input type="checkbox" id="newSpecUniq"> Уникальная — значение не должно повторяться</label>
+            <label class="chk"><input type="checkbox" id="newSpecOpt"> Разрешить «нет значения» (галочка в карточке)</label>
+            <label class="chk"><input type="checkbox" id="newSpecMulti"> Может быть несколько (второй диск, третья планка)</label>
+          </div>
+          <div class="field" id="reqStWrap" hidden style="margin-top:10px">
+            <label>Обязательна при статусах</label>
+            <div class="stlist" id="newSpecReqSts"></div>
+          </div>
+          <div class="row" style="margin-top:12px"><button class="btn-primary" id="btnAddSpec">Добавить характеристику</button></div>
+          <div class="sec" id="presetRow" hidden>
+            <b>Применить готовый набор</b>
+            <div class="row" style="margin-top:10px;align-items:center">
+              <select id="applyPreset" style="min-width:230px"></select>
+              <button class="btn-sm" id="btnApplyPreset">Применить сюда</button>
+              <button class="btn-sm" id="btnTagPreset" title="Проставить группу уже заведённым характеристикам с такими же названиями">Отметить группой набора</button>
+              <span class="note" style="margin:0" id="applyHint"></span>
+            </div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="tablewrap">
+            <table>
+              <colgroup><col style="width:3.4%"><col style="width:16%"><col style="width:10%"><col style="width:29%"><col style="width:12%"><col style="width:11%"><col style="width:9%"><col style="width:9.6%"></colgroup>
+              <thead><tr><th class="num">#</th><th>Характеристика</th><th>Уровень</th><th>Правила</th><th>Вид значения</th><th>Единица / пул</th><th>Варианты</th><th></th></tr></thead>
+              <tbody id="specsBody"></tbody>
+            </table>
+          </div>
+          <div class="empty" id="specsEmpty" hidden></div>
+        </div>
+      </section>
+
+      <!-- ---- наборы ---- -->
+      <section id="r-presets" hidden>
+        <div class="card pad" style="margin-bottom:14px">
+          <h2>Новый набор характеристик</h2>
+          <div class="row">
+            <input id="newPresets" placeholder="Например: Компьютер" style="flex:1;min-width:240px">
+            <button class="btn-primary" data-add="presets">Создать набор</button>
+          </div>
+        </div>
+        <div class="card pad" style="margin-bottom:14px">
+          <div class="field" style="max-width:470px">
+            <label for="presetSel">Набор</label><select id="presetSel"></select>
+          </div>
+          <div class="row" style="margin-top:10px">
+            <button class="btn-sm" id="btnRenPreset">Переименовать</button>
+            <button class="btn-sm btn-danger" id="btnDelPreset">Удалить набор</button>
+            <button class="btn-sm" id="btnPresetHere" hidden>Закрепить за этим разделом</button>
+          </div>
+          <div class="sec">
+            <b>Добавить характеристику в набор</b>
+            <div class="grid2" style="margin-top:10px">
+              <div class="field"><label for="pName">Название характеристики</label>
+                <input id="pName" placeholder="Например: IP-адрес"></div>
+              <div class="field"><label for="pKind">Вид значения</label>
+                <select id="pKind">
+                  <option value="text">Текст</option><option value="number">Число</option>
+                  <option value="date">Дата</option><option value="list">Список вариантов</option>
+                  <option value="ip">IP-адрес</option><option value="mac">MAC-адрес</option>
+                </select></div>
+              <div class="field"><label for="pUnit">Единица измерения (необязательно)</label>
+                <input id="pUnit" placeholder="ГБ, ГГц, дюйм"></div>
+              <div class="field" id="pOptWrap" hidden><label for="pOpts">Варианты через запятую</label>
+                <input id="pOpts" placeholder="DDR3, DDR4, DDR5"></div>
+              <div class="field" id="pPoolWrap" hidden><label for="pPool">Пул IP-адресов</label>
+                <select id="pPool"></select></div>
+            </div>
+            <div class="field" style="margin-top:10px"><label>Правила заполнения</label>
+              <label class="chk"><input type="checkbox" id="pReq"> Обязательная</label>
+              <label class="chk"><input type="checkbox" id="pUniq"> Уникальная</label>
+              <label class="chk"><input type="checkbox" id="pOpt"> Разрешить «нет значения»</label>
+              <label class="chk"><input type="checkbox" id="pMulti"> Может быть несколько</label>
+            </div>
+            <div class="row" style="margin-top:12px"><button class="btn-primary" id="btnAddPresetSpec">Добавить в набор</button></div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="tablewrap">
+            <table>
+              <colgroup><col style="width:3.4%"><col style="width:19%"><col style="width:33%"><col style="width:12%"><col style="width:12%"><col style="width:12%"><col style="width:8.6%"></colgroup>
+              <thead><tr><th class="num">#</th><th>Характеристика</th><th>Правила</th><th>Вид значения</th><th>Единица / пул</th><th>Варианты</th><th></th></tr></thead>
+              <tbody id="presetSpecsBody"></tbody>
+            </table>
+          </div>
+          <div class="empty" id="presetsEmpty" hidden></div>
+        </div>
+      </section>
+    </section>

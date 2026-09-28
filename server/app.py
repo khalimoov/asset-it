@@ -32,15 +32,17 @@ for _s in (sys.stdout, sys.stderr):
 import psycopg
 from psycopg.rows import dict_row
 from flask import Flask, request, jsonify, make_response, send_file, send_from_directory
+from werkzeug.exceptions import NotFound
 
 import actdoc
 import adsync
+import webpage
 import netscan
 import docscan
 
-# Версия сборки. Должна совпадать с UI_BUILD в it-inventory.html: если файлы
+# Версия сборки. Должна совпадать с UI_BUILD в web/static/js/core.js: если файлы
 # обновили, а сервер не перезапустили, приложение об этом само скажет.
-APP_BUILD = "2026-09-28.2"
+APP_BUILD = "2026-09-28.4"
 
 BASE = Path(__file__).resolve().parent
 ROOT = BASE.parent
@@ -1724,8 +1726,8 @@ def on_error(e):
     # голый JSON. Запросы к /api/ по-прежнему получают JSON: их разбирает страница.
     if code == 404 and not request.path.startswith("/api/") \
             and "text/html" in request.headers.get("Accept", "") \
-            and (ROOT / "404.html").is_file():
-        resp = make_response(send_from_directory(ROOT, "404.html"))
+            and (webpage.WEB / "404.html").is_file():
+        resp = make_response(send_from_directory(webpage.WEB, "404.html"))
         resp.status_code = 404
         return resp
     if isinstance(code, int):           # 404, 405 и прочие штатные ответы Flask
@@ -3093,18 +3095,13 @@ def api_roles_delete():
 DOCX_MIME = "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
 
 
-@app.post("/api/items/nomenclature")
-@need_auth
-def api_items_nom():
-    """Наклейки «Номенк.»: инвентарный номер, тип, склад — по выбранным записям.
+def _nom_rows(ids):
+    """Данные наклеек «Номенк.» из базы — в том порядке, в каком пришли номера.
 
     Список приходит номерами записей, а содержимое берётся из базы: так в
     документ попадает то, что в учёте, а не то, что успело устареть на странице.
+    Чужие учреждения отсекаются по registry.org_id.
     """
-    ids = (request.get_json(silent=True) or {}).get("ids") or []
-    ids = [str(x) for x in ids][:2000]
-    if not ids:
-        return jsonify({"error": "empty", "message": "Нечего печатать"}), 400
     org_id = current_org(request.user)
     with db() as conn, conn.cursor() as cur:
         cur.execute("""select i.id, i.inv, i.warehouse_id, t.name as type_name,
@@ -3115,9 +3112,6 @@ def api_items_nom():
                          left join warehouse w on w.id = i.warehouse_id
                         where i.id = any(%s) and r.org_id = %s""", (ids, org_id))
         by_id = {r["id"]: r for r in cur.fetchall()}
-    if not by_id:
-        return jsonify({"error": "not_found", "message": "Записи не найдены"}), 404
-    # порядок сохраняем тот, что был на экране
     rows = []
     for i in ids:
         r = by_id.get(i)
@@ -3125,14 +3119,67 @@ def api_items_nom():
             continue
         wh = " ".join(x for x in ((r["wh_code"] or "").strip(), (r["wh_name"] or "").strip()) if x)
         rows.append({"inv": r["inv"] or "", "type": r["type_name"] or "", "warehouse": wh})
+    return rows
+
+
+def _nom_name(rows, ext):
+    """Из карточки печатают одну запись — пусть и файл зовётся по её номеру."""
+    if len(rows) == 1 and rows[0]["inv"]:
+        return "Номенклатура %s.%s" % (re.sub(r"[\/:*?\"<>|]", "-", rows[0]["inv"]), ext)
+    return "Номенклатура %s.%s" % (datetime.date.today().strftime("%d.%m.%Y"), ext)
+
+
+@app.post("/api/items/nomenclature")
+@need_auth
+def api_items_nom():
+    """Наклейки «Номенк.» в Word — по выбранным записям."""
+    ids = (request.get_json(silent=True) or {}).get("ids") or []
+    ids = [str(x) for x in ids][:2000]
+    if not ids:
+        return jsonify({"error": "empty", "message": "Нечего печатать"}), 400
+    rows = _nom_rows(ids)
+    if not rows:
+        return jsonify({"error": "not_found", "message": "Записи не найдены"}), 404
     try:
         data = actdoc.build_nom(rows)
     except ValueError as e:
         return jsonify({"error": "no_template", "message": str(e)}), 500
-    # из карточки печатают одну запись — пусть и файл зовётся по её номеру
-    name = ("Номенклатура %s.docx" % re.sub(r"[\/:*?\"<>|]", "-", rows[0]["inv"]))         if len(rows) == 1 and rows[0]["inv"]         else ("Номенклатура %s.docx" % datetime.date.today().strftime("%d.%m.%Y"))
     return send_file(io.BytesIO(data), as_attachment=True, mimetype=DOCX_MIME,
-                     download_name=name)
+                     download_name=_nom_name(rows, "docx"))
+
+
+def _nom_page_error(text, code):
+    """Ошибка для вкладки браузера: там открыт адрес, а не страница приложения,
+    и голый JSON человеку ничего бы не сказал."""
+    html = ('<!doctype html><meta charset="utf-8"><title>Номенклатура</title>'
+            '<body style="font:16px system-ui,sans-serif;padding:40px">'
+            '<h2>Наклейку не получилось открыть</h2><p>%s</p></body>'
+            % text.replace("&", "&amp;").replace("<", "&lt;"))
+    return make_response(html, code, {"Content-Type": "text/html; charset=utf-8"})
+
+
+@app.get("/api/items/nomenclature.pdf")
+@need_auth
+def api_items_nom_pdf():
+    """Наклейки «Номенк.» в PDF — открываются во вкладке браузера и печатаются оттуда.
+
+    Отдаём «на просмотр» (inline) и запрещаем кеш: файл не скачивается и нигде
+    не остаётся — закрыли вкладку, и его нет.
+    """
+    ids = [x for x in (request.args.get("ids") or "").split(",") if x][:2000]
+    if not ids:
+        return _nom_page_error("Нечего печатать — не выбрана ни одна запись.", 400)
+    rows = _nom_rows(ids)
+    if not rows:
+        return _nom_page_error("Записи не найдены — возможно, их уже удалили.", 404)
+    try:
+        data = actdoc.build_nom_pdf(rows)
+    except ValueError as e:
+        return _nom_page_error(str(e), 500)
+    resp = send_file(io.BytesIO(data), mimetype="application/pdf", as_attachment=False,
+                     download_name=_nom_name(rows, "pdf"))
+    resp.headers["Cache-Control"] = "no-store"
+    return resp
 
 
 # ------------------------------------------------- шаблоны акта на списание
@@ -3316,19 +3363,49 @@ def api_writeoff_act(act):
 
 # ------------------------------------------------------------------ статика
 
+# Страница одна, но у каждого раздела свой адрес: /ips, /reg/equipment/types,
+# /reg/supplies/fact… На любой из них сервер отдаёт ту же страницу, а какой
+# раздел открыть, она решает сама по адресу. Список первых частей адреса — тот
+# же, что ROUTES в web/static/js/nav.js; чего в нём нет, получает страницу 404.
+SPA_ROUTES = {"overview", "orgs", "notices", "repairs", "deletions", "transfer-history", "ips",
+              "invoices", "transfers", "employees", "warehouses", "ad", "it-staff", "roles",
+              "divisions", "departments", "places", "models", "act-templates"}
+
+
+def _page():
+    """Страница, собранная из web/. Кешировать не даём: после обновления
+    сервера браузер должен сразу взять новую сборку."""
+    resp = make_response(webpage.render(APP_BUILD))
+    resp.headers["Content-Type"] = "text/html; charset=utf-8"
+    resp.headers["Cache-Control"] = "no-cache"
+    return resp
+
+
 @app.get("/")
 def index():
-    return send_from_directory(ROOT, "it-inventory.html")
+    return _page()
+
+
+@app.get("/reg/<reg_id>")
+@app.get("/reg/<reg_id>/<tab>")
+def page_registry(reg_id, tab=""):
+    return _page()
+
+
+@app.get("/<route>")
+def page_route(route):
+    if route not in SPA_ROUTES:
+        return on_error(NotFound())
+    return _page()
 
 
 # Из корня проекта раздавалась любая запрошенная дорожка — а рядом со страницей
 # лежат `server/.env` с паролем базы, дампы в `backup/` и сами исходники, и всё
-# это отдавалось кому угодно в сети, даже без входа. Теперь из корня уходит
-# только сама страница, а файлы, которые понадобятся ей потом (стили, картинки,
-# скрипты), кладутся в `static/` — оттуда и берутся.
+# это отдавалось кому угодно в сети, даже без входа. Наружу уходит только то,
+# что лежит в web/static: стили и скрипты страницы.
 @app.get("/static/<path:filename>")
 def static_files(filename):
-    return send_from_directory(ROOT / "static", filename)
+    return send_from_directory(webpage.WEB / "static", filename)
 
 
 if __name__ == "__main__":

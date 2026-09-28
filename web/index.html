@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Учёт ИТ-отдела</title>
+<link rel="stylesheet" href="/static/app.css">
+<script>
+  /* тема применяется до отрисовки, чтобы не было вспышки */
+  try{ var __t = localStorage.getItem("it_inv_theme");
+       if(__t && __t!=="auto") document.documentElement.setAttribute("data-theme", __t); }catch(e){}
+</script>
+</head>
+<body>
+
+<!-- include: parts/login.html -->
+
+<div class="app" id="appRoot" hidden>
+<!-- include: parts/sidebar.html -->
+
+  <main>
+    <div id="buildWarn" class="buildwarn" hidden></div>
+    <header class="top">
+      <div style="min-width:0">
+        <h1 id="ttl">Общий дашборд</h1>
+        <div class="sub" id="subttl"></div>
+      </div>
+      <select id="scopeOrg" class="scopepick" hidden title="Показывать данные учреждения"></select>
+      <div class="row" id="topActions" hidden>
+        <button id="btnImport">Импорт CSV</button>
+        <button id="btnExport">Экспорт CSV</button>
+        <button id="btnExcel">Экспорт Excel</button>
+      </div>
+    </header>
+<!-- include: parts/views/dash.html -->
+<!-- include: parts/views/registry.html -->
+<!-- include: parts/views/repairs.html -->
+<!-- include: parts/views/transfer-history.html -->
+<!-- include: parts/views/deletions.html -->
+<!-- include: parts/views/notices.html -->
+<!-- include: parts/views/supplies.html -->
+<!-- include: parts/views/ips.html -->
+<!-- include: parts/views/employees.html -->
+<!-- include: parts/views/invoices.html -->
+<!-- include: parts/views/transfers.html -->
+<!-- include: parts/views/overview.html -->
+<!-- include: parts/views/orgs.html -->
+<!-- include: parts/views/ad.html -->
+<!-- include: parts/views/warehouses.html -->
+<!-- include: parts/views/act-templates.html -->
+<!-- include: parts/views/it-staff.html -->
+<!-- include: parts/views/roles.html -->
+<!-- include: parts/views/divisions.html -->
+<!-- include: parts/views/models.html -->
+<!-- include: parts/views/places.html -->
+<!-- include: parts/views/departments.html -->
+  </main>
+</div>
+
+<!-- include: parts/dialogs/item-card.html -->
+<!-- include: parts/dialogs/roles.html -->
+<!-- include: parts/dialogs/invoices.html -->
+<!-- include: parts/dialogs/models.html -->
+<!-- include: parts/dialogs/act-templates.html -->
+<!-- include: parts/dialogs/ad.html -->
+<!-- include: parts/dialogs/warehouses.html -->
+<!-- include: parts/dialogs/orgs.html -->
+<!-- include: parts/dialogs/deletions.html -->
+<!-- include: parts/dialogs/repairs.html -->
+<!-- include: parts/dialogs/dash.html -->
+<!-- include: parts/dialogs/it-staff.html -->
+<!-- include: parts/dialogs/ips.html -->
+<!-- include: parts/dialogs/registry.html -->
+<!-- include: parts/dialogs/stock-doc.html -->
+<!-- include: parts/dialogs/supplies.html -->
+<!-- include: parts/dialogs/employees.html -->
+
+<div id="toast"></div>
+
+<script src="/static/js/core.js"></script>
+<script src="/static/js/nav.js"></script>
+<script src="/static/js/dash.js"></script>
+<script src="/static/js/registry.js"></script>
+<script src="/static/js/items.js"></script>
+<script src="/static/js/reg-dicts.js"></script>
+<script src="/static/js/repairs.js"></script>
+<script src="/static/js/deletions.js"></script>
+<script src="/static/js/warehouses.js"></script>
+<script src="/static/js/act-templates.js"></script>
+<script src="/static/js/invoices.js"></script>
+<script src="/static/js/orgs.js"></script>
+<script src="/static/js/netscan-ad.js"></script>
+<script src="/static/js/notices.js"></script>
+<script src="/static/js/pick.js"></script>
+<script src="/static/js/supplies.js"></script>
+<script src="/static/js/stock-doc.js"></script>
+<script src="/static/js/ips.js"></script>
+<script src="/static/js/employees.js"></script>
+<script src="/static/js/it-staff.js"></script>
+<script src="/static/js/roles.js"></script>
+<script src="/static/js/divisions.js"></script>
+<script src="/static/js/item-card.js"></script>
+<script src="/static/js/tables.js"></script>
+<script src="/static/js/export.js"></script>
+<script src="/static/js/main.js"></script>
+</body>
+</html>

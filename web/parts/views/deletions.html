@@ -1,0 +1,33 @@
+<!-- Раздел v-dels -->
+    <section id="v-dels" hidden>
+      <div class="stats" id="delStats"></div>
+      <div class="searchbar">
+        <div class="searchbox">
+          <input id="qDel" type="search" placeholder="Поиск по инв. номеру, типу, сотруднику, причине…">
+        </div>
+      </div>
+      <div class="filters">
+        <select id="fDelWho" title="Кто удалил"></select>
+        <select id="fDelReg" title="Раздел"></select>
+        <button id="btnDelReset" hidden>Сбросить</button>
+        <span class="cnt" id="delCount"></span>
+      </div>
+      <div class="card">
+        <div class="tablewrap">
+          <table>
+            <colgroup>
+              <col style="width:3.4%"><col style="width:11%"><col style="width:12%">
+              <col style="width:10%"><col style="width:9%"><col class="hide-md" style="width:14%">
+              <col style="width:9%"><col class="hide-md" style="width:12%"><col style="width:13.6%"><col style="width:6%">
+            </colgroup>
+            <thead><tr>
+              <th class="num">#</th><th>Когда</th><th>Кто удалил</th><th id="delColOrg">Раздел</th>
+              <th>Инв. номер</th><th class="hide-md">Тип</th><th>Статус</th>
+              <th class="hide-md">Был у сотрудника</th><th>Причина</th><th></th>
+            </tr></thead>
+            <tbody id="delsBody"></tbody>
+          </table>
+        </div>
+        <div class="empty" id="delsEmpty" hidden>Удалений пока не было.</div>
+      </div>
+    </section>

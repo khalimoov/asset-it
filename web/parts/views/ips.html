@@ -1,0 +1,67 @@
+<!-- Раздел v-ips -->
+    <section id="v-ips" hidden>
+      <div class="stats" id="ipStats"></div>
+
+      <div class="row" style="margin-bottom:12px;justify-content:space-between;align-items:center;gap:10px">
+        <div class="row" id="poolTabs"></div>
+        <div class="row">
+          <button class="btn-sm" id="btnPing">◉ Опрос сети</button>
+          <button class="btn-sm" id="btnPools">⚙ Диапазоны (пулы) адресов</button>
+        </div>
+      </div>
+
+      <div class="card pad" id="gridCard" style="margin-bottom:16px" hidden>
+        <div class="row" style="justify-content:space-between;align-items:center;margin-bottom:12px">
+          <h2 style="margin:0" id="gridTitle"></h2>
+          <div>
+            <span class="lg"><i class="busy"></i>занят</span>
+            <span class="lg"><i class="res"></i>резерв</span>
+            <span class="lg"><i class="bad"></i>конфликт</span>
+            <span class="lg"><i></i>свободен</span>
+            <span class="lg" style="margin-left:18px"><i class="dot on"></i>в сети</span>
+            <span class="lg"><i class="dot off"></i>не отвечает</span>
+            <span class="lg"><i class="dot odd"></i>отвечает, но не в учёте</span>
+          </div>
+        </div>
+        <div class="ipgrid" id="ipGrid"></div>
+      </div>
+
+      <div class="card pad" id="pingCard" style="margin-bottom:16px" hidden>
+        <div class="row" style="justify-content:space-between;align-items:center">
+          <h2 style="margin:0">Опрос сети</h2>
+          <span class="note" id="pingLast" style="margin:0"></span>
+        </div>
+        <div class="grid2" style="margin-top:12px">
+          <div class="field"><label for="pg_every">Опрашивать каждые, минут</label>
+            <input id="pg_every" type="number" min="1" max="1440" placeholder="15"></div>
+          <div class="field"><label for="pg_tmo">Ждать ответа, мс</label>
+            <input id="pg_tmo" type="number" min="200" max="5000" placeholder="800"></div>
+          <div class="field"><label>&nbsp;</label>
+            <label class="chk"><input type="checkbox" id="pg_on"> Опрашивать по расписанию</label>
+            <label class="chk"><input type="checkbox" id="pg_whole"> Весь диапазон пулов, а не только занятые</label>
+          </div>
+          <div class="field"><label>&nbsp;</label>
+            <div class="row">
+              <button id="btnPingSave">Сохранить</button>
+              <button id="btnPingRun" class="btn-primary">Опросить сейчас</button>
+            </div>
+          </div>
+        </div>
+        <div class="err" id="pg_err"></div>
+        <div class="note" id="pingTargets"></div>
+      </div>
+
+      <div class="searchbar">
+        <div class="searchbox"><input id="qIp" type="search" placeholder="Поиск по адресу, записи, ответственному…"></div>
+      </div>
+      <div class="card">
+        <div class="tablewrap">
+          <table>
+            <colgroup><col style="width:3.4%"><col style="width:11%"><col style="width:14%"><col style="width:9%"><col style="width:10%"><col style="width:17%"><col style="width:11%"><col class="hide-md" style="width:14%"><col style="width:10%"></colgroup>
+            <thead><tr><th class="num">#</th><th>IP-адрес</th><th>В сети</th><th>Пул</th><th>Раздел</th><th>Сотрудник</th><th>Инв. номер</th><th class="hide-md">Тип</th><th></th></tr></thead>
+            <tbody id="ipsBody"></tbody>
+          </table>
+        </div>
+        <div class="empty" id="ipsEmpty" hidden>Занятых адресов пока нет.</div>
+      </div>
+    </section>

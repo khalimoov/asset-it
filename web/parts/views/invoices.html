@@ -1,0 +1,50 @@
+<!-- Раздел v-docs -->
+    <section id="v-docs" hidden>
+      <div class="card pad">
+        <div class="row" style="justify-content:space-between;align-items:center">
+          <h2 style="margin:0">Приём накладной</h2>
+          <button class="btn-sm" id="btnDocCfg">⚙ Куда сохранять</button>
+        </div>
+        <div class="dropzone" id="docDrop">
+          <b>Перетащите сюда скан накладной</b>
+          <span>PDF или изображение, до 40 МБ. Или <a href="#" id="docPick">выберите файл</a></span>
+          <input type="file" id="docFile" accept=".pdf,.png,.jpg,.jpeg,.tif,.tiff,.bmp" hidden>
+          <div class="docwait" id="docWait">
+            <div class="spin"></div>
+            <b id="dwTitle">Загружаем файл…</b>
+            <span id="dwSub"></span>
+            <span id="dwJoke"></span>
+            <div class="pbar" id="dwBar"><i></i></div>
+          </div>
+        </div>
+        <div class="note" id="docOcr"></div>
+        <div class="err" id="docErr"></div>
+      </div>
+
+      <div class="card pad" id="docCfgCard" style="margin-top:14px" hidden>
+        <div class="grid2">
+          <div class="field"><label for="dc_path">Папка архива</label>
+            <input id="dc_path" placeholder="\\192.168.1.20\archives\documents"></div>
+          <div class="field"><label for="dc_lang">Языки распознавания</label>
+            <input id="dc_lang" placeholder="rus+eng"></div>
+          <div class="field"><label for="dc_dpi">Качество распознавания, dpi</label>
+            <input id="dc_dpi" type="number" min="120" max="600" placeholder="300"></div>
+          <div class="field"><label>&nbsp;</label>
+            <button id="btnDocCfgSave">Сохранить</button></div>
+        </div>
+      </div>
+
+      <div class="card" style="margin-top:14px">
+        <div class="tablewrap">
+          <table>
+            <colgroup><col style="width:3.4%"><col style="width:12%"><col style="width:10%">
+              <col style="width:26%"><col style="width:9%"><col style="width:13%">
+              <col class="hide-md" style="width:15%"><col style="width:11%"></colgroup>
+            <thead><tr><th class="num">#</th><th>Когда</th><th>Номер</th><th>Файл</th>
+              <th>Строк</th><th>Состояние</th><th class="hide-md">Принял</th><th></th></tr></thead>
+            <tbody id="docsBody"></tbody>
+          </table>
+        </div>
+        <div class="empty" id="docsEmpty" hidden>Приходные накладные пока не загружались.</div>
+      </div>
+    </section>

@@ -1,0 +1,25 @@
+<!-- Раздел v-departments -->
+    <section id="v-departments" hidden>
+      <div class="searchbar">
+        <div class="searchbox"></div>
+        <button class="btn-primary" id="btnShowDepartments">+ Отдел</button>
+      </div>
+      <div class="card pad" style="margin-bottom:14px" id="addDepartments" hidden>
+        <h2>Новый отдел</h2>
+        <div class="row">
+          <input id="newDepartments" placeholder="Например: Бухгалтерия" style="flex:1;min-width:240px">
+          <select id="newDepartmentsDiv" style="min-width:200px"></select>
+          <button class="btn-primary" data-add="departments">Добавить</button>
+        </div>
+      </div>
+      <div class="card">
+        <div class="tablewrap">
+          <table>
+            <colgroup><col style="width:3.4%"><col style="width:29%"><col style="width:26%"><col style="width:13%"><col style="width:13%"><col style="width:15.6%"></colgroup>
+            <thead><tr><th class="num">#</th><th>Отдел</th><th>Подразделение</th><th>Сотрудников</th><th>Позиций</th><th></th></tr></thead>
+            <tbody id="departmentsBody"></tbody>
+          </table>
+        </div>
+        <div class="empty" id="departmentsEmpty" hidden>Отделы пока не заведены.</div>
+      </div>
+    </section>

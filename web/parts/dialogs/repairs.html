@@ -1,0 +1,30 @@
+<!-- Окна: dlgRepair -->
+<dialog id="dlgRepair" class="wide">
+  <div class="dlg-head" id="rpTitle">Ремонт</div>
+  <div class="dlg-body">
+    <div class="kv">
+      <div><span>Раздел</span><b id="rp_reg">—</b></div>
+      <div><span>Инвентарный номер</span><b id="rp_inv">—</b></div>
+      <div><span>Мастер</span><b id="rp_master">—</b></div>
+      <div style="grid-column:1/-1"><span>Тип</span><b id="rp_type">—</b></div>
+    </div>
+    <div class="kv" style="margin-top:12px">
+      <div><span>Поступил в ремонт</span><b id="rp_from">—</b></div>
+      <div><span>Вернули</span><b id="rp_to">—</b></div>
+      <div><span>Дней в ремонте</span><b id="rp_days">—</b></div>
+      <div><span>Итог</span><b id="rp_result">—</b></div>
+    </div>
+    <div class="sec">
+      <b>Причина — с чем поступило</b>
+      <div class="longtext" id="rp_note"></div>
+    </div>
+    <div class="sec">
+      <b>Что сделали</b>
+      <div class="longtext" id="rp_done"></div>
+    </div>
+  </div>
+  <div class="dlg-foot">
+    <button id="btnRpItem">Открыть карточку оборудования</button>
+    <button id="btnRpClose" class="btn-primary">Закрыть</button>
+  </div>
+</dialog>

@@ -1,0 +1,124 @@
+<!-- Окна: dlgIpExp, dlgIp, dlgPools -->
+<dialog id="dlgIpExp" class="wide">
+  <div class="dlg-head">Экспорт IP-адресов</div>
+  <div class="dlg-body">
+    <div>
+      <b style="font-size:12.5px">Что выгружаем</b>
+      <div style="margin-top:8px">
+        <label class="chk"><input type="radio" name="ipmode" value="list" checked> Список — строка на адрес</label>
+        <label class="chk"><input type="radio" name="ipmode" value="map"> Карта пула — колонками по N адресов</label>
+      </div>
+    </div>
+    <label class="chk" style="margin-top:10px"><input type="checkbox" id="ipExpScope" checked>
+      Только выбранный пул<span id="ipScopeQ"> и текущий поиск</span></label>
+
+    <div class="sec" id="ipModeMap" hidden>
+      <b>Настройка карты</b>
+      <div class="grid2" style="margin-top:10px">
+        <div class="field"><label for="ipMapLabel">Подпись рядом с адресом</label>
+          <select id="ipMapLabel"></select></div>
+        <div class="field"><label for="ipMapPer">Адресов в одной колонке</label>
+          <input id="ipMapPer" type="number" min="5" max="255" value="50"></div>
+      </div>
+    </div>
+
+    <div class="sec" id="ipModeList">
+      <label class="chk"><input type="checkbox" id="ipExpFree"> Включая свободные адреса пула</label>
+    </div>
+
+    <div class="sec" id="ipColsSec">
+      <b>Основные колонки</b>
+      <div class="stlist" id="ipExpBase" style="margin-top:8px"></div>
+    </div>
+    <div class="sec" id="ipSpecsSec">
+      <b>Характеристики оборудования</b>
+      <div class="stlist" id="ipExpSpecs" style="margin-top:8px"></div>
+      <div class="note" id="ipExpNoSpecs" hidden>Характеристики ещё не заведены.</div>
+    </div>
+  </div>
+  <div class="dlg-foot">
+    <button id="btnIpExpCancel">Отмена</button>
+    <button id="btnIpExpGo" class="btn-primary">Выгрузить</button>
+  </div>
+</dialog>
+
+<dialog id="dlgIp" class="wide">
+  <div class="dlg-head" id="ipTitle">IP-адрес</div>
+  <div class="dlg-body">
+    <div class="kv" id="ipKv"></div>
+    <div class="sec" id="ipManBox" hidden>
+      <b>Резерв — данные вручную</b>
+      <div class="grid2" style="margin-top:10px">
+        <div class="field"><label for="ipm_name">Имя / название</label>
+          <input id="ipm_name" placeholder="VM-1C-01"></div>
+        <div class="field"><label for="ipm_kind">Тип устройства</label>
+          <input id="ipm_kind" list="ipmKinds" autocomplete="off" placeholder="Виртуальный сервер">
+          <datalist id="ipmKinds"></datalist></div>
+        <div class="field"><label for="ipm_os">Операционная система</label>
+          <input id="ipm_os" placeholder="Windows Server 2022"></div>
+        <div class="field"><label for="ipm_host">Где работает</label>
+          <input id="ipm_host" placeholder="Хост ESXi-01, стойка 2"></div>
+        <div class="field"><label for="ipm_owner">Ответственный</label><select id="ipm_owner"></select></div>
+        <div class="field"><label for="ipm_mac">MAC-адрес</label>
+          <input id="ipm_mac" placeholder="00:50:56:AB:CD:EF"></div>
+        <div class="field"><label for="ipm_div">Подразделение</label><select id="ipm_div"></select></div>
+        <div class="field"><label for="ipm_dep">Отдел</label><select id="ipm_dep"></select></div>
+      </div>
+      <div class="field" style="margin-top:12px"><label for="ipm_note">Примечание</label>
+        <input id="ipm_note" placeholder="Для чего адрес, за кем закреплён"></div>
+    </div>
+    <div class="row" style="margin-top:14px">
+      <button class="btn-sm" id="btnIpPrev">‹ Раньше</button>
+      <select id="ipMonth" style="max-width:240px"></select>
+      <button class="btn-sm" id="btnIpNext">Позже ›</button>
+    </div>
+    <div class="cal" id="ipCal"></div>
+    <div class="calleg">
+      <span><i style="background:var(--ok-bg);border-color:var(--ok)"></i>отвечал</span>
+      <span><i style="background:var(--danger-bg);border-color:var(--danger)"></i>не отвечал</span>
+      <span><i style="background:var(--surface-2)"></i>не проверяли</span>
+    </div>
+    <div class="err" id="ipErr"></div>
+  </div>
+  <div class="dlg-foot">
+    <button id="btnIpUnres" class="btn-danger" hidden>Снять резерв</button>
+    <button id="btnIpItem" hidden>Карточка оборудования</button>
+    <button id="btnIpClose">Закрыть</button>
+    <button id="btnIpSave" class="btn-primary" hidden>Зарезервировать</button>
+  </div>
+</dialog>
+
+<dialog id="dlgPools" class="xwide">
+  <div class="dlg-head">Диапазоны (пулы) адресов</div>
+  <div class="dlg-body">
+    <div style="margin-bottom:16px">
+      <div class="grid2">
+        <div class="field"><label for="poolName">Название пула</label>
+          <input id="poolName" placeholder="Оборудование"></div>
+        <div class="field"><label for="poolPrefix">Подсеть — первые три октета</label>
+          <input id="poolPrefix" placeholder="192.168.203"></div>
+        <div class="field"><label for="poolFrom">Хосты от</label>
+          <input id="poolFrom" type="number" min="0" max="255" value="1"></div>
+        <div class="field"><label for="poolTo">Хосты до</label>
+          <input id="poolTo" type="number" min="0" max="255" value="254"></div>
+        <div class="field"><label for="poolReg">Для раздела</label><select id="poolReg"></select></div>
+        <div class="field"><label for="poolCat">Для категории</label><select id="poolCat"></select></div>
+        <div class="field" style="grid-column:1/-1"><label for="poolNote">Примечание</label>
+          <input id="poolNote" placeholder="Компьютеры, мониторы, принтеры"></div>
+      </div>
+      <div class="row" style="margin-top:12px"><button class="btn-primary" id="btnAddPool">Создать пул</button></div>
+    </div>
+
+    <div class="card">
+      <div class="tablewrap">
+        <table>
+          <colgroup><col style="width:3.4%"><col style="width:15%"><col style="width:13%"><col style="width:7%"><col style="width:12%"><col style="width:11%"><col style="width:8.5%"><col style="width:8.5%"><col style="width:9%"><col style="width:12.6%"></colgroup>
+          <thead><tr><th class="num">#</th><th>Пул</th><th>Подсеть</th><th>Хосты</th><th>Раздел</th><th>Категория</th><th>Занято</th><th>Резерв</th><th>Свободно</th><th></th></tr></thead>
+          <tbody id="poolsBody"></tbody>
+        </table>
+      </div>
+      <div class="empty" id="poolsEmpty" hidden>Пулы ещё не созданы — заведите первый диапазон выше.</div>
+    </div>
+  </div>
+  <div class="dlg-foot"><button id="btnPoolsClose" class="btn-primary">Готово</button></div>
+</dialog>

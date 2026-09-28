@@ -1,0 +1,31 @@
+<!-- Окна: dlgActTpl, dlgActPick -->
+<dialog id="dlgActTpl">
+  <div class="dlg-head" id="dlgActTplTitle">Шаблон акта</div>
+  <div class="dlg-body">
+    <div class="field"><label for="at_name">Название</label>
+      <input id="at_name" placeholder="Акт ОИТ, четыре подписи"></div>
+    <div class="field" style="margin-top:12px"><label for="at_note">Примечание</label>
+      <input id="at_note" placeholder="когда применяется"></div>
+    <div class="field" style="margin-top:12px"><label for="at_file">Файл Word (.docx)</label>
+      <input id="at_file" type="file" accept=".docx"></div>
+    <div class="note" id="at_hint" style="margin-top:8px"></div>
+    <div class="err" id="at_err"></div>
+  </div>
+  <div class="dlg-foot">
+    <button id="btnActTplDel" class="btn-danger" hidden>Удалить</button>
+    <button id="btnActTplCancel">Отмена</button>
+    <button id="btnActTplSave" class="btn-primary">Сохранить</button>
+  </div>
+</dialog>
+
+<dialog id="dlgActPick">
+  <div class="dlg-head">По какому шаблону оформить</div>
+  <div class="dlg-body">
+    <div class="field"><label for="ap_tpl">Шаблон</label><select id="ap_tpl"></select></div>
+    <div class="note" style="margin-top:8px">Шаблоны заводятся в справочнике «Шаблоны актов».</div>
+  </div>
+  <div class="dlg-foot">
+    <button id="btnActPickCancel">Отмена</button>
+    <button id="btnActPickOk" class="btn-primary">Скачать</button>
+  </div>
+</dialog>

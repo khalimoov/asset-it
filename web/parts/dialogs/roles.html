@@ -1,0 +1,33 @@
+<!-- Окна: dlgRole -->
+<dialog id="dlgRole" class="wide">
+  <div class="dlg-head" id="dlgRoleTitle">Роль</div>
+  <div class="dlg-body">
+    <div class="grid2">
+      <div class="field"><label for="rl_name">Название роли</label>
+        <input id="rl_name" placeholder="Например: Кладовщик"></div>
+      <div class="field"><label for="rl_descr">Описание</label>
+        <input id="rl_descr" placeholder="Кому и для чего выдаётся"></div>
+    </div>
+
+    <div class="sec">
+      <b>Что разрешено делать</b>
+      <div id="rl_perms" style="margin-top:10px"></div>
+    </div>
+
+    <div class="sec">
+      <b>Доступ к разделам учёта</b>
+      <div class="tablewrap" style="margin-top:10px">
+        <table>
+          <colgroup><col style="width:55%"><col style="width:45%"></colgroup>
+          <thead><tr><th>Раздел</th><th>Доступ</th></tr></thead>
+          <tbody id="rl_regs"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+  <div class="dlg-foot">
+    <button id="btnRoleDel" class="btn-danger" hidden>Удалить роль</button>
+    <button id="btnRoleCancel">Отмена</button>
+    <button id="btnRoleSave" class="btn-primary">Сохранить</button>
+  </div>
+</dialog>

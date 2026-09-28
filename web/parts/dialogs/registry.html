@@ -1,0 +1,58 @@
+<!-- Окна: dlgReg, dlgReq -->
+<dialog id="dlgReg">
+  <div class="dlg-head" id="dlgRegTitle">Настройки раздела</div>
+  <div class="dlg-body">
+    <div class="grid2">
+      <div class="field"><label for="rg_name">Название</label><input id="rg_name" placeholder="Например: Принтеры"></div>
+      <div class="field"><label for="rg_icon">Значок</label><input id="rg_icon" maxlength="2" placeholder="▣"></div>
+    </div>
+    <div class="note" id="rg_lock" hidden>Это заводской раздел: удалить его нельзя, а название и значок — можно.</div>
+
+    <div class="sec" id="rg_kindSec">
+      <b>Что будет внутри раздела</b>
+      <div style="margin-top:10px">
+        <label class="chk"><input type="radio" name="rgkind" value="assets" checked> Учёт техники</label>
+        <label class="chk"><input type="radio" name="rgkind" value="supplies"> Склад расходных материалов</label>
+      </div>
+      <div class="note" id="rg_kindHint" style="margin-top:6px"></div>
+      <div id="rg_parts" style="margin-top:10px">
+        <label class="chk"><input type="checkbox" id="rg_subs" checked> Подкатегории</label>
+        <label class="chk"><input type="checkbox" id="rg_specs" checked> Характеристики</label>
+        <label class="chk"><input type="checkbox" id="rg_presets" checked> Наборы</label>
+        <label class="chk"><input type="checkbox" id="rg_dash" checked> Дашборд раздела</label>
+      </div>
+    </div>
+
+    <div class="sec" id="rg_stSec">
+      <b>Статусы раздела</b>
+      <div id="rg_stList" style="margin-top:10px"></div>
+      <div class="row" style="margin-top:8px">
+        <input id="rg_stNew" placeholder="Например: В резерве" style="flex:1;min-width:190px">
+        <button class="btn-sm" id="btnAddRegStatus">Добавить статус</button>
+      </div>
+    </div>
+  </div>
+  <div class="dlg-foot">
+    <button id="btnRegDel" class="btn-danger" hidden>Удалить раздел</button>
+    <button id="btnRegCancel">Отмена</button>
+    <button id="btnRegSave" class="btn-primary">Сохранить</button>
+  </div>
+</dialog>
+
+<dialog id="dlgReq">
+  <div class="dlg-head" id="reqTitle">Правила заполнения</div>
+  <div class="dlg-body">
+    <div class="field"><label for="req_group">Группа в карточке</label>
+      <input id="req_group" placeholder="Например: AD и сеть"></div>
+    <div class="sec">
+      <b>Обязательна при статусах</b>
+      <div class="stlist" id="req_sts" style="margin-top:10px"></div>
+      <label class="chk" id="reqAllWrap" hidden style="margin-top:10px">
+        <input type="checkbox" id="req_all" checked> Применить ко всем характеристикам этой группы</label>
+    </div>
+  </div>
+  <div class="dlg-foot">
+    <button id="btnReqCancel">Отмена</button>
+    <button id="btnReqSave" class="btn-primary">Сохранить</button>
+  </div>
+</dialog>

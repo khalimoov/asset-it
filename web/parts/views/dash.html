@@ -1,0 +1,31 @@
+<!-- Раздел v-dash -->
+    <section id="v-dash" hidden>
+      <div class="stats" id="dashStats"></div>
+      <div class="cols2">
+        <div class="card">
+          <div class="pad" style="padding-bottom:0"><h2 id="dashRegsTitle">Разделы учёта</h2></div>
+          <div class="tablewrap">
+            <table>
+              <colgroup><col style="width:44%"><col style="width:15%"><col style="width:27%"><col class="col-adm" style="width:14%"></colgroup>
+              <thead><tr><th>Раздел</th><th>Позиций</th><th>Доля</th><th class="col-adm"></th></tr></thead>
+              <tbody id="dashRegs"></tbody>
+            </table>
+          </div>
+          <div class="pad col-adm" style="padding-top:12px">
+            <button class="btn-sm" id="btnAddReg">+ Новый раздел учёта</button>
+          </div>
+        </div>
+        <div class="card">
+          <div class="pad" style="padding-bottom:0"><h2>По подразделениям</h2></div>
+          <div class="tablewrap">
+            <table>
+              <colgroup><col style="width:46%"><col style="width:18%"><col style="width:36%"></colgroup>
+              <thead><tr><th>Подразделение</th><th>Позиций</th><th>Доля</th></tr></thead>
+              <tbody id="dashDivs"></tbody>
+            </table>
+          </div>
+          <div class="empty" id="dashDivsEmpty" hidden>Подразделения пока не заведены.</div>
+        </div>
+      </div>
+      <div class="copy dash-copy" title="Developed by @Khalimoov">Copyright © 2026 Axborot texnologiyalar guruhi</div>
+    </section>

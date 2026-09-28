@@ -1,0 +1,113 @@
+<!-- Раздел v-sup -->
+    <section id="v-sup" hidden>
+      <nav class="tabs" id="supTabs">
+        <button data-st="stock" class="on">Таблица факт</button>
+        <button data-st="wh">Таблица склада</button>
+        <button data-st="receipts">История поступлений</button>
+      </nav>
+
+      <section id="s-stock">
+        <div class="searchbar">
+          <div class="searchbox"><input id="qStock" type="search" placeholder="Поиск по материалу, номенклатуре, сотруднику, оборудованию…"></div>
+          <button class="btn-primary" id="btnShowSup">+ Приход материала</button>
+        </div>
+        <div class="card pad" id="supAddCard" hidden style="margin-bottom:14px">
+          <h2>Приход материала</h2>
+          <div class="grid2">
+            <div class="field"><label for="supName">Материал</label>
+              <input id="supName" list="supNames" autocomplete="off"
+                     placeholder="Например: Чернила Epson 664 чёрные">
+              <datalist id="supNames"></datalist></div>
+            <div class="field"><label for="supQty">Количество</label>
+              <input id="supQty" type="number" min="1" step="1" value="1"></div>
+            <div class="field"><label for="supSku">Номенклатурный</label>
+              <input id="supSku" inputmode="numeric" placeholder="как в накладной: 0091220"></div>
+            <div class="field"><label for="supCost">Стоимость</label>
+              <input id="supCost" inputmode="decimal" placeholder="цена за единицу"></div>
+            <div class="field"><label for="supDate">Дата поступления</label>
+              <input id="supDate" type="date"></div>
+            <div class="field"><label for="supUnit">Единица</label>
+              <select id="supUnit"></select></div>
+            <div class="field"><label for="supModel">Модели</label>
+              <div class="row" style="gap:6px">
+                <select id="supModel" style="flex:1"></select>
+                <button class="btn-sm" id="btnSupModelAdd" title="Добавить модель к материалу">+</button>
+              </div>
+              <div class="chips" id="supModelList"></div>
+              <label class="chk"><input type="checkbox" id="supNoModel"> Без модели</label></div>
+            <div class="field"><label for="supNote">Примечание</label>
+              <input id="supNote" placeholder="Партия, поставщик, счёт"></div>
+          </div>
+          <div class="row" style="margin-top:12px"><button class="btn-primary" id="btnAddSup">Оприходовать</button></div>
+        </div>
+        <div class="card">
+          <div class="pad" style="padding-bottom:0"><h2>Остатки</h2></div>
+          <div class="tablewrap">
+            <table>
+              <colgroup><col style="width:3.4%"><col style="width:20%"><col style="width:11%"><col style="width:10%"><col style="width:6%"><col style="width:8%"><col style="width:7%"><col style="width:8%"><col class="hide-md" style="width:11%"><col style="width:15.6%"></colgroup>
+              <thead><tr><th class="num">#</th><th>Материал</th><th>Номенклатурный</th><th>Стоимость</th><th>Единица</th><th>Поступило</th><th>Выдано</th><th>Остаток</th><th class="hide-md">Примечание</th><th></th></tr></thead>
+              <tbody id="stockBody"></tbody>
+            </table>
+          </div>
+          <div class="empty" id="stockEmpty" hidden>Материалы пока не заведены.</div>
+        </div>
+        <div class="card" style="margin-top:14px">
+          <div class="pad" style="padding-bottom:0"><h2>Выдано и установлено</h2></div>
+          <div class="tablewrap">
+            <table>
+              <colgroup><col style="width:3.4%"><col style="width:9%"><col style="width:21%"><col style="width:7%"><col style="width:16%"><col style="width:12%"><col class="hide-md" style="width:11%"><col style="width:13%"><col style="width:6%"></colgroup>
+              <thead><tr><th class="num">#</th><th>Дата</th><th>Материал</th><th>Кол-во</th><th>Кому</th><th>Подразделение</th><th class="hide-md">Отдел</th><th>Примечание</th><th></th></tr></thead>
+              <tbody id="issuedBody"></tbody>
+            </table>
+          </div>
+          <div class="empty" id="issuedEmpty" hidden>Выдач пока не было.</div>
+        </div>
+      </section>
+
+      <section id="s-receipts" hidden>
+        <div class="searchbar">
+          <div class="searchbox"><input id="qRec" type="search" placeholder="Поиск по материалу, дате, примечанию…"></div>
+        </div>
+        <div class="card">
+          <div class="tablewrap">
+            <table>
+              <colgroup><col style="width:3.4%"><col style="width:10%"><col style="width:24%"><col style="width:11%"><col style="width:11%"><col style="width:7%"><col style="width:11%"><col class="hide-md" style="width:14%"><col style="width:8.6%"></colgroup>
+              <thead><tr><th class="num">#</th><th>Дата</th><th>Материал</th><th>Номенклатурный</th><th>Стоимость</th><th>Кол-во</th><th>Сумма</th><th class="hide-md">Примечание</th><th></th></tr></thead>
+              <tbody id="receiptsBody"></tbody>
+            </table>
+          </div>
+          <div class="empty" id="receiptsEmpty" hidden>Поступлений пока не было.</div>
+        </div>
+      </section>
+
+      <!-- Документальный склад: списания «по бумагам». Приход общий с фактом,
+           а списания свои — на выдачи «Таблицы факт» они не влияют. -->
+      <section id="s-wh" hidden>
+        <div class="searchbar">
+          <div class="searchbox"><input id="qWh2" type="search" placeholder="Поиск по материалу, номенклатуре, дате…"></div>
+          <button class="btn-primary" id="btnWhOff">Списание</button>
+        </div>
+        <div class="card">
+          <div class="pad" style="padding-bottom:0"><h2>Остатки по документам</h2></div>
+          <div class="tablewrap">
+            <table>
+              <colgroup><col style="width:3.4%"><col style="width:23%"><col style="width:11%"><col style="width:11%"><col style="width:6%"><col style="width:9%"><col style="width:8%"><col style="width:9%"><col style="width:12%"><col class="hide-md" style="width:7.6%"></colgroup>
+              <thead><tr><th class="num">#</th><th>Материал</th><th>Номенклатурный</th><th>Стоимость</th><th>Единица</th><th>Поступило</th><th>Списано</th><th>Числится</th><th>Сумма</th><th class="hide-md">Примечание</th></tr></thead>
+              <tbody id="whStockBody"></tbody>
+            </table>
+          </div>
+          <div class="empty" id="whStockEmpty" hidden>Материалы пока не приходовались.</div>
+        </div>
+        <div class="card" style="margin-top:14px">
+          <div class="pad" style="padding-bottom:0"><h2>Списания</h2></div>
+          <div class="tablewrap">
+            <table>
+              <colgroup><col style="width:3.4%"><col style="width:14%"><col style="width:12%"><col style="width:13%"><col style="width:11%"><col style="width:14%"><col class="hide-md" style="width:24%"><col style="width:8.6%"></colgroup>
+              <thead><tr><th class="num">#</th><th>Номер акта</th><th>Дата</th><th>Материалов</th><th>Количество</th><th>Сумма</th><th class="hide-md">Примечание</th><th></th></tr></thead>
+              <tbody id="whBody"></tbody>
+            </table>
+          </div>
+          <div class="empty" id="whEmpty" hidden>Списаний по документам пока не было.</div>
+        </div>
+      </section>
+    </section>

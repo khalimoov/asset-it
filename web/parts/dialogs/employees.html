@@ -1,0 +1,36 @@
+<!-- Окна: dlgUserInfo, dlgUser -->
+<dialog id="dlgUserInfo">
+  <div class="dlg-head" id="uiTitle">Сотрудник</div>
+  <div class="dlg-body">
+    <div class="kv">
+      <div><span>Должность</span><b id="ui_pos">—</b></div>
+      <div><span>Подразделение</span><b id="ui_div">—</b></div>
+      <div><span>Отдел</span><b id="ui_dep">—</b></div>
+    </div>
+    <div class="sec"><b>Закреплённое оборудование</b><div id="ui_items"></div></div>
+    <div class="sec"><b>Расходные материалы</b><div id="ui_sup"></div></div>
+  </div>
+  <div class="dlg-foot">
+    <button id="btnUiEdit">Изменить данные</button>
+    <button id="btnUiClose" class="btn-primary">Закрыть</button>
+  </div>
+</dialog>
+
+<dialog id="dlgUser">
+  <div class="dlg-head" id="dlgUserTitle">Сотрудник</div>
+  <div class="dlg-body">
+    <div class="grid2">
+      <div class="field"><label for="u_name">ФИО</label><input id="u_name" placeholder="Иванов Иван Иванович"></div>
+      <div class="field"><label for="u_pos">Должность</label><input id="u_pos" placeholder="Бухгалтер"></div>
+      <div class="field"><label for="u_div">Подразделение</label><select id="u_div"></select></div>
+      <div class="field"><label for="u_dep">Отдел</label><select id="u_dep"></select></div>
+      <div class="field"><label for="u_phone">Номер телефона</label><input id="u_phone" placeholder="1234"></div>
+      <div class="field"><label for="u_mail">Эл. почта</label><input id="u_mail" placeholder="i.ivanov@company.local"></div>
+    </div>
+  </div>
+  <div class="dlg-foot">
+    <button id="btnUserDel" class="btn-danger" hidden>Удалить</button>
+    <button id="btnUserCancel">Отмена</button>
+    <button id="btnUserSave" class="btn-primary">Сохранить</button>
+  </div>
+</dialog>

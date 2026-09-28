@@ -1,0 +1,19 @@
+<!-- Окна: dlgOrg -->
+<dialog id="dlgOrg">
+  <div class="dlg-head" id="dlgOrgTitle">Учреждение</div>
+  <div class="dlg-body">
+    <div class="field"><label for="o_name">Название</label>
+      <input id="o_name" placeholder="Завод-2"></div>
+    <div class="field" style="margin-top:12px"><label for="o_note">Примечание</label>
+      <input id="o_note" placeholder="Золотоизвлекательный завод №1"></div>
+    <div class="field" style="margin-top:12px"><label for="o_sort">Порядок в списке</label>
+      <input id="o_sort" type="number" placeholder="0"></div>
+    <div class="err" id="o_err"></div>
+    <div class="note" id="o_hint"></div>
+  </div>
+  <div class="dlg-foot">
+    <button id="btnOrgDel" class="btn-danger" hidden>Удалить</button>
+    <button id="btnOrgCancel">Отмена</button>
+    <button id="btnOrgSave" class="btn-primary">Сохранить</button>
+  </div>
+</dialog>

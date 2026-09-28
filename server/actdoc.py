@@ -358,6 +358,127 @@ def build_nom(rows, template=None):
     return buf.getvalue()
 
 
+# ------------------------------------------------- «Номенк.» сразу в PDF
+#
+# Из карточки наклейку не скачивают, а открывают во вкладке браузера и печатают
+# оттуда — как обычный PDF. Word для этого не нужен, на диске ничего не остаётся.
+# Раскладка та же, что у шаблона Word: берём из него лист, поля, ширину блока и
+# кегли, строки режем теми же fit_text, так что PDF и .docx совпадают строка в
+# строку. Рисует pypdfium2 — он уже стоит ради чтения накладных, новой библиотеки
+# в офлайн-пакет не добавляется.
+
+def _font_path(bold):
+    for path in (FONTS_BOLD if bold else FONTS):
+        if os.path.exists(path):
+            return path
+    return None
+
+
+def _nom_geometry(template=None):
+    """Лист, поля и кегли наклейки — из шаблона Word, в пунктах."""
+    if template is None:
+        with open(NOM, "rb") as f:
+            template = f.read()
+    doc = zipfile.ZipFile(io.BytesIO(template)).read("word/document.xml").decode("utf-8")
+    s_inv, e_inv = _para_with(doc, "{{ИНВ}}")
+    s_typ, e_typ = _para_with(doc, "{{ТИП}}")
+    s_wh, e_wh = _para_with(doc, "{{СКЛАД}}")
+    tw = lambda v: v / 20.0
+    return {
+        "page_w": tw(_int(doc, r'<w:pgSz[^>]*w:w="(\d+)"', 11906)),
+        "page_h": tw(_int(doc, r'<w:pgSz[^>]*w:h="(\d+)"', 16838)),
+        "left": tw(_int(doc, r'<w:pgMar[^>]*w:left="(\d+)"', 1134)),
+        "top": tw(_int(doc, r'<w:pgMar[^>]*w:top="(\d+)"', 1134)),
+        "bottom": tw(_int(doc, r'<w:pgMar[^>]*w:bottom="(\d+)"', 1134)),
+        "width_tw": line_width(doc),
+        "inv_pt": _int(doc[s_inv:e_inv], r'<w:sz w:val="(\d+)"', 22) / 2.0,
+        "typ_pt": _int(doc[s_typ:e_typ], r'<w:sz w:val="(\d+)"', 18) / 2.0,
+        "wh_pt": _int(doc[s_wh:e_wh], r'<w:sz w:val="(\d+)"', 22) / 2.0,
+    }
+
+
+def _line_h(pt, bold=False):
+    """Высота строки при одинарном интервале — по метрикам шрифта, как у Word."""
+    f = _font(pt, bold)
+    if f is not None:
+        asc, desc = f.getmetrics()
+        return (asc + desc) / 4.0, asc / 4.0
+    return pt * 1.15, pt * 0.9
+
+
+def build_nom_pdf(rows, template=None):
+    """Наклейки «Номенк.» одним PDF: номер, тип в две строки, склад — как в Word."""
+    import ctypes
+    import pypdfium2 as pdfium
+    import pypdfium2.raw as R
+
+    g = _nom_geometry(template)
+    width = g["width_tw"]
+    paths = {False: _font_path(False), True: _font_path(True)}
+    if not paths[False] or not paths[True]:
+        raise ValueError("Не найден шрифт Times New Roman (или Liberation Serif) — "
+                         "без него наклейку не нарисовать")
+
+    pdf = pdfium.PdfDocument.new()
+    keep = []                               # буферы шрифтов живут, пока жив документ
+    fonts = {}
+    for bold, path in paths.items():
+        with open(path, "rb") as f:
+            data = f.read()
+        buf = (ctypes.c_uint8 * len(data)).from_buffer_copy(data)
+        keep.append(buf)
+        fonts[bold] = R.FPDFText_LoadFont(pdf.raw, buf, len(data), R.FPDF_FONT_TRUETYPE, 1)
+        if not fonts[bold]:
+            raise ValueError("Шрифт не загрузился: " + path)
+
+    state = {"page": None, "y": 0.0}
+
+    def new_page():
+        if state["page"] is not None:
+            R.FPDFPage_GenerateContent(state["page"].raw)
+        state["page"] = pdf.new_page(g["page_w"], g["page_h"])
+        state["y"] = g["top"]
+
+    def put(text, pt, bold, center):
+        h, asc = _line_h(pt, bold)
+        if text:
+            obj = R.FPDFPageObj_CreateTextObj(pdf.raw, fonts[bold], float(pt))
+            ws = ctypes.create_string_buffer((text + "\x00").encode("utf-16-le"))
+            R.FPDFText_SetText(obj, ctypes.cast(ws, ctypes.POINTER(R.FPDF_WCHAR)))
+            x = g["left"]
+            if center:
+                x += max(0.0, (width - text_twips(text, pt, bold)) / 20.0 / 2.0)
+            # у PDF ноль внизу листа, у нас отсчёт сверху — переворачиваем
+            R.FPDFPageObj_Transform(obj, 1, 0, 0, 1, x, g["page_h"] - state["y"] - asc)
+            R.FPDFPage_InsertObject(state["page"].raw, obj)
+        state["y"] += h
+
+    new_page()
+    for r in rows:
+        inv, inv_pt = fit_text(r.get("inv") or "", width, g["inv_pt"], lines=1,
+                               min_pt=NOM_MIN_PT, bold=True)
+        typ, typ_pt = fit_text(r.get("type") or "", width, g["typ_pt"], min_pt=NOM_MIN_PT)
+        wh, wh_pt = fit_text(r.get("warehouse") or "", width, g["wh_pt"], lines=1,
+                             min_pt=NOM_MIN_PT, bold=True)
+        need = (_line_h(inv_pt, True)[0] + len(typ) * _line_h(typ_pt)[0] +
+                _line_h(wh_pt, True)[0])
+        # наклейка целиком на одном листе: не влезает — на следующий
+        if state["y"] + need > g["page_h"] - g["bottom"] and state["y"] > g["top"]:
+            new_page()
+        put(inv[0], inv_pt, True, True)
+        for ln in typ:
+            put(ln, typ_pt, False, False)
+        put(wh[0], wh_pt, True, True)
+        state["y"] += _line_h(g["typ_pt"])[0]     # пустая строка между наклейками, как в шаблоне
+    R.FPDFPage_GenerateContent(state["page"].raw)
+
+    out = io.BytesIO()
+    pdf.save(out)
+    pdf.close()
+    del keep
+    return out.getvalue()
+
+
 def file_name(number, date):
     """Имя файла для скачивания; косую черту в номере (45/2026) браузер не примет."""
     num = re.sub(r"[\\/:*?\"<>|]", "-", str(number or "")).strip()

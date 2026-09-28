@@ -1,0 +1,19 @@
+<!-- Раздел v-warehouses -->
+    <section id="v-warehouses" hidden>
+      <div class="searchbar">
+        <div class="searchbox"><input id="qWh" type="search" placeholder="Поиск по номеру или названию…"></div>
+        <button class="btn-primary" id="btnAddWh">+ Склад</button>
+      </div>
+      <div class="card">
+        <div class="tablewrap">
+          <table>
+            <colgroup><col style="width:3.4%"><col style="width:12%"><col style="width:30%">
+              <col style="width:30%"><col style="width:12%"><col style="width:10%"></colgroup>
+            <thead><tr><th class="num">#</th><th>Номер</th><th>Название</th>
+              <th>Примечание</th><th>Позиций</th><th></th></tr></thead>
+            <tbody id="whsBody"></tbody>
+          </table>
+        </div>
+        <div class="empty" id="whsEmpty" hidden>Склады пока не заведены.</div>
+      </div>
+    </section>

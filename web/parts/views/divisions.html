@@ -1,0 +1,24 @@
+<!-- Раздел v-divisions -->
+    <section id="v-divisions" hidden>
+      <div class="searchbar">
+        <div class="searchbox"></div>
+        <button class="btn-primary" id="btnShowDivisions">+ Подразделение</button>
+      </div>
+      <div class="card pad" style="margin-bottom:14px" id="addDivisions" hidden>
+        <h2>Новое подразделение</h2>
+        <div class="row">
+          <input id="newDivisions" placeholder="Например: Управление" style="flex:1;min-width:240px">
+          <button class="btn-primary" data-add="divisions">Добавить</button>
+        </div>
+      </div>
+      <div class="card">
+        <div class="tablewrap">
+          <table>
+            <colgroup><col style="width:3.4%"><col style="width:45%"><col style="width:16%"><col style="width:16%"><col style="width:18%"></colgroup>
+            <thead><tr><th class="num">#</th><th>Подразделение</th><th>Сотрудников</th><th>Позиций</th><th></th></tr></thead>
+            <tbody id="divisionsBody"></tbody>
+          </table>
+        </div>
+        <div class="empty" id="divisionsEmpty" hidden>Подразделения пока не заведены.</div>
+      </div>
+    </section>

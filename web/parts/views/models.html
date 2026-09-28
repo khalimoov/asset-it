@@ -1,0 +1,28 @@
+<!-- Раздел v-models -->
+      <section id="v-models" hidden>
+        <div class="searchbar">
+          <div class="searchbox"></div>
+          <button class="btn-primary" id="btnShowModel">+ Модель</button>
+        </div>
+        <div class="card pad" style="margin-bottom:14px" id="addModel" hidden>
+          <h2>Новая модель</h2>
+          <div class="grid2">
+            <div class="field"><label for="newModelReg">Раздел учёта</label><select id="newModelReg"></select></div>
+            <div class="field"><label for="newModel">Модель</label>
+              <input id="newModel" placeholder="Например: HP ProBook 450 G9"></div>
+            <div class="field" style="grid-column:1/-1"><label for="newModelNote">Примечание</label>
+              <input id="newModelNote" placeholder="Необязательно"></div>
+          </div>
+          <div class="row" style="margin-top:12px"><button class="btn-primary" id="btnAddModel">Добавить модель</button></div>
+        </div>
+        <div class="card">
+          <div class="tablewrap">
+            <table>
+              <colgroup><col style="width:3.4%"><col style="width:7%"><col style="width:27%"><col style="width:17%"><col style="width:23%"><col style="width:10%"><col style="width:12.6%"></colgroup>
+              <thead><tr><th class="num">#</th><th>Фото</th><th>Модель</th><th>Раздел</th><th>Примечание</th><th>Оборудования</th><th></th></tr></thead>
+              <tbody id="modelsBody"></tbody>
+            </table>
+          </div>
+          <div class="empty" id="modelsEmpty" hidden>Модели пока не заведены.</div>
+        </div>
+      </section>

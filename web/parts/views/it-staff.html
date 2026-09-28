@@ -1,0 +1,17 @@
+<!-- Раздел v-staff -->
+    <section id="v-staff" hidden>
+      <div class="searchbar">
+        <div class="searchbox"><input id="qStaff" type="search" placeholder="Поиск по ФИО, должности, логину…"></div>
+        <button class="btn-primary" id="btnAddStaff">+ Пользователь ИТ</button>
+      </div>
+      <div class="card">
+        <div class="tablewrap">
+          <table>
+            <colgroup><col style="width:3.4%"><col style="width:22%"><col style="width:16%"><col style="width:13%"><col style="width:12%"><col style="width:12%"><col class="hide-md" style="width:12%"><col style="width:11%"></colgroup>
+            <thead><tr><th class="num">#</th><th>ФИО</th><th>Должность</th><th>Мастер по ремонту</th><th>На ремонте</th><th>Логин</th><th class="hide-md">Роль</th><th></th></tr></thead>
+            <tbody id="staffBody"></tbody>
+          </table>
+        </div>
+        <div class="empty" id="staffEmpty" hidden>Пользователи ИТ пока не заведены.</div>
+      </div>
+    </section>

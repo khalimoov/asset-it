@@ -10,8 +10,11 @@ IP-адреса, пользователи. Работает в локально�
 
 | Что | Где |
 |---|---|
-| Весь интерфейс — одна страница | `it-inventory.html` |
-| Страница «не найдено» | `404.html` |
+| Каркас страницы | `web/index.html` |
+| Разметка разделов и окон | `web/parts/views/`, `web/parts/dialogs/` |
+| Стили и скрипты по разделам | `web/static/app.css`, `web/static/js/` |
+| Сборка страницы из частей, адреса разделов | `server/webpage.py`, `SPA_ROUTES` в `server/app.py` |
+| Страница «не найдено» | `web/404.html` |
 | Сервер, права, работа с базой | `server/app.py` |
 | Загрузка людей из Active Directory | `server/adsync.py` |
 | Опрос адресов в сети | `server/netscan.py` |

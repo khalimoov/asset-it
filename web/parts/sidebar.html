@@ -1,0 +1,45 @@
+<!-- Боковое меню -->
+  <aside class="side">
+    <div class="brand">
+      <div>Учёт ИТ-отдела<small>Единая база</small></div>
+      <button type="button" class="tsw" id="themeSw" role="switch" aria-checked="false" title="Тёмная тема"><span class="knob"></span></button>
+    </div>
+    <select id="orgPick" class="orgpick" title="Учреждение"></select>
+
+    <div class="side-nav">
+    <div class="grp">Обзор</div>
+    <button data-nav="dash"><span class="ico">▦</span><span class="nm">Общий дашборд</span></button>
+    <button data-nav="all" id="navAll"><span class="ico">⌂</span><span class="nm">Все учреждения</span><span class="cnt" id="cntAll"></span></button>
+    <button data-nav="notices"><span class="ico">◔</span><span class="nm">Уведомления</span><span class="cnt" id="cntNotices"></span></button>
+    <button data-nav="repairs"><span class="ico">⚒</span><span class="nm">Ремонты</span><span class="cnt" id="cntRepairs"></span></button>
+    <button data-nav="dels" id="navDels"><span class="ico">✕</span><span class="nm">История удалений</span><span class="cnt" id="cntDels"></span></button>
+    <button data-nav="xhist" id="navXhist"><span class="ico">⇢</span><span class="nm">История передач</span><span class="cnt" id="cntXhist"></span></button>
+
+    <div class="grp">Учёт</div>
+    <div id="regNav"></div>
+    <button data-nav="ips"><span class="ico">⌗</span><span class="nm">IP-адреса</span><span class="cnt" id="cntIps"></span></button>
+    <button data-nav="docs" id="navDocs"><span class="ico">⎙</span><span class="nm">Приходные накладные</span><span class="cnt" id="cntDocs"></span></button>
+    <button data-nav="transfers" id="navXfer"><span class="ico">⇢</span><span class="nm">Накладные по передаче</span><span class="cnt" id="cntXfer"></span></button>
+
+    <div class="grp">Справочники</div>
+    <button data-nav="users"><span class="ico">☺</span><span class="nm">Сотрудники</span><span class="cnt" id="cntUsers"></span></button>
+    <button data-nav="orgs" id="navOrgs"><span class="ico">⚑</span><span class="nm">Учреждения</span><span class="cnt" id="cntOrgs"></span></button>
+    <button data-nav="ad" id="navAd"><span class="ico">⇄</span><span class="nm">Active Directory</span><span class="cnt" id="cntAd"></span></button>
+    <button data-nav="warehouses" id="navWh"><span class="ico">▤</span><span class="nm">Склады</span><span class="cnt" id="cntWh"></span></button>
+    <button data-nav="staff" id="navStaff"><span class="ico">⚒</span><span class="nm">Пользователи ИТ</span><span class="cnt" id="cntStaff"></span></button>
+    <button data-nav="roles" id="navRoles"><span class="ico">⚿</span><span class="nm">Роли и доступ</span><span class="cnt" id="cntRoles"></span></button>
+    <button data-nav="divisions"><span class="ico">▤</span><span class="nm">Подразделения</span><span class="cnt" id="cntDivs"></span></button>
+    <button data-nav="departments"><span class="ico">▥</span><span class="nm">Отделы</span><span class="cnt" id="cntDeps"></span></button>
+    <button data-nav="places"><span class="ico">⌖</span><span class="nm">Место</span><span class="cnt" id="cntPlaces"></span></button>
+    <button data-nav="models"><span class="ico">▣</span><span class="nm">Модели</span><span class="cnt" id="cntModels"></span></button>
+    <button data-nav="acttpl"><span class="ico">▧</span><span class="nm">Шаблоны актов</span><span class="cnt" id="cntActTpl"></span></button>
+
+    </div><!-- /side-nav -->
+
+    <div class="side-foot">
+      <div class="whoami">
+        <div class="who"><b id="meName">—</b><span id="meRole">—</span></div>
+        <button id="btnLogout" title="Выйти из системы">Выйти</button>
+      </div>
+    </div>
+  </aside>

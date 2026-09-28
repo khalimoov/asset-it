@@ -1,0 +1,31 @@
+<!-- Раздел v-orgs -->
+    <section id="v-orgs" hidden>
+      <div class="searchbar">
+        <div class="searchbox"><input id="qOrg" type="search" placeholder="Поиск по названию…"></div>
+        <button class="btn-primary" id="btnAddOrg">+ Учреждение</button>
+      </div>
+      <div class="card">
+        <div class="tablewrap">
+          <table>
+            <colgroup><col style="width:3.4%"><col style="width:26%"><col style="width:30%">
+              <col style="width:12%"><col style="width:18%"><col style="width:10%"></colgroup>
+            <thead><tr><th class="num">#</th><th>Название</th><th>Примечание</th>
+              <th>Записей</th><th>Пользователей ИТ</th><th></th></tr></thead>
+            <tbody id="orgsBody"></tbody>
+          </table>
+        </div>
+        <div class="empty" id="orgsEmpty" hidden>Учреждений пока нет.</div>
+      </div>
+
+      <div class="card" style="margin-top:16px">
+        <div class="pad" style="padding-bottom:0"><h2>Кто где работает</h2>
+        </div>
+        <div class="tablewrap">
+          <table>
+            <colgroup><col style="width:3.4%"><col style="width:34%"><col style="width:26%"><col style="width:36%"></colgroup>
+            <thead><tr><th class="num">#</th><th>Пользователь ИТ</th><th>Роль</th><th>Учреждение</th></tr></thead>
+            <tbody id="accBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>

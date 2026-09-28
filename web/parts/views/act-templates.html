@@ -1,0 +1,28 @@
+<!-- Раздел v-acttpl -->
+    <section id="v-acttpl" hidden>
+      <div class="searchbar">
+        <div class="searchbox"><input id="qActTpl" type="search" placeholder="Поиск по названию или примечанию…"></div>
+        <button class="btn-sm" id="btnActTplSample">Скачать образец</button>
+        <button class="btn-primary" id="btnAddActTpl">+ Шаблон</button>
+      </div>
+      <div class="card">
+        <div class="note" style="margin:0 0 10px">
+          Шаблон — обычный файл Word с вашей шапкой, должностями и подписями. Места, куда
+          подставляются данные, отмечаются в нём метками:
+          <b>{{НОМЕР}}</b> — номер акта, <b>{{ДАТА}}</b> — дата списания,
+          <b>{{МЕСЯЦ}}</b> и <b>{{ГОД}}</b> — в шапку, <b>{{СТРОКА}}</b> — абзац списка
+          материалов (он размножится по числу материалов). Без <b>{{СТРОКА}}</b> файл не примется.
+          Проще всего нажать «Скачать образец», поправить его в Word и загрузить сюда.
+        </div>
+        <div class="tablewrap">
+          <table>
+            <colgroup><col style="width:3.4%"><col style="width:26%"><col style="width:28%">
+              <col class="hide-md" style="width:16%"><col class="hide-md" style="width:13%"><col style="width:13.6%"></colgroup>
+            <thead><tr><th class="num">#</th><th>Название</th><th>Примечание</th>
+              <th class="hide-md">Файл</th><th class="hide-md">Добавлен</th><th></th></tr></thead>
+            <tbody id="actTplBody"></tbody>
+          </table>
+        </div>
+        <div class="empty" id="actTplEmpty" hidden>Шаблоны не заведены — акт оформляется по встроенному образцу.</div>
+      </div>
+    </section>

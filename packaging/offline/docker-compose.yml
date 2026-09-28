@@ -24,7 +24,8 @@ services:
     pull_policy: never
     restart: unless-stopped
     ports:
-      - "${PORT:-8000}:8000"
+      # снаружи — порт из .env (по умолчанию 8020), внутри приложение слушает 8020
+      - "${PORT:-8020}:8020"
     environment:
       PGHOST: db
       PGPORT: "5432"

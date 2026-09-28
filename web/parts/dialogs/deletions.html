@@ -1,0 +1,57 @@
+<!-- Окна: dlgDelAsk, dlgDelInfo -->
+<dialog id="dlgDelAsk">
+  <div class="dlg-head">Удаление записи</div>
+  <div class="dlg-body">
+    <div class="kv"><div style="grid-column:1/-1"><span>Что удаляем</span><b id="da_what">—</b></div></div>
+    <div class="field" style="margin-top:14px">
+      <label for="da_reason">Зачем удаляете</label>
+      <textarea id="da_reason" rows="3"
+        placeholder="Например: заведено по ошибке, дубль записи, техника передана другому предприятию"></textarea>
+    </div>
+    <div class="err" id="da_err"></div>
+  </div>
+  <div class="dlg-foot">
+    <button id="btnDaCancel">Отмена</button>
+    <button id="btnDaOk" class="btn-primary" disabled>Удалить</button>
+  </div>
+</dialog>
+
+<dialog id="dlgDelInfo" class="wide">
+  <div class="dlg-head" id="diTitle">Удалённая запись</div>
+  <div class="dlg-body">
+    <div class="kv">
+      <div><span>Удалил</span><b id="di_who">—</b></div>
+      <div><span>Когда</span><b id="di_at">—</b></div>
+      <div><span>Раздел</span><b id="di_reg">—</b></div>
+      <div><span>Инвентарный номер</span><b id="di_inv">—</b></div>
+    </div>
+    <div class="sec">
+      <b>Причина удаления</b>
+      <div class="longtext" id="di_reason"></div>
+    </div>
+    <div class="kv" style="margin-top:14px">
+      <div><span>Категория</span><b id="di_cat">—</b></div>
+      <div><span>Подкатегория</span><b id="di_sub">—</b></div>
+      <div><span>Тип</span><b id="di_type">—</b></div>
+      <div><span>Статус</span><b id="di_status">—</b></div>
+      <div><span>Ответственный сотрудник</span><b id="di_owner">—</b></div>
+      <div><span>Подразделение</span><b id="di_div">—</b></div>
+      <div><span>Отдел</span><b id="di_dep">—</b></div>
+    </div>
+    <div class="sec">
+      <b>Характеристики на момент удаления</b>
+      <div class="kv" id="di_specs" style="margin-top:8px"></div>
+    </div>
+    <div class="sec">
+      <b>Примечание</b>
+      <div class="longtext" id="di_notes"></div>
+    </div>
+    <div class="sec hist">
+      <b>История записи</b>
+      <ul id="di_hist"></ul>
+    </div>
+  </div>
+  <div class="dlg-foot">
+    <button id="btnDiClose" class="btn-primary">Закрыть</button>
+  </div>
+</dialog>

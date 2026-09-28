@@ -1,0 +1,17 @@
+<!-- Окна: dlgAaTest -->
+<dialog id="dlgAaTest">
+  <div class="dlg-head">Проверить вход через домен</div>
+  <div class="dlg-body">
+    <div class="field"><label for="aat_login">Доменный логин</label>
+      <input id="aat_login" placeholder="i.ivanov" autocomplete="username"></div>
+    <div class="field" style="margin-top:12px"><label for="aat_pass">Пароль</label>
+      <input id="aat_pass" type="password" autocomplete="current-password"></div>
+    <div class="note" style="margin-top:8px">Пароль нигде не сохраняется — он нужен только
+      для одной проверки: домен сам скажет, принял он его или нет.</div>
+    <div class="err" id="aat_err"></div>
+  </div>
+  <div class="dlg-foot">
+    <button id="btnAaTestCancel">Отмена</button>
+    <button id="btnAaTestGo" class="btn-primary">Проверить</button>
+  </div>
+</dialog>

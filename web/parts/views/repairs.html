@@ -1,0 +1,35 @@
+<!-- Раздел v-repairs -->
+    <section id="v-repairs" hidden>
+      <div class="stats" id="repStats"></div>
+      <div class="searchbar">
+        <div class="searchbox">
+          <input id="qRep" type="search" placeholder="Поиск по инв. номеру, типу, мастеру, причине, что сделали…">
+        </div>
+      </div>
+      <div class="filters">
+        <select id="fRepState" title="Состояние"></select>
+        <select id="fRepMaster" title="Мастер"></select>
+        <select id="fRepReg" title="Раздел"></select>
+        <button id="btnRepReset" hidden>Сбросить</button>
+        <span class="cnt" id="repCount"></span>
+      </div>
+      <div class="card">
+        <div class="tablewrap">
+          <table>
+            <colgroup>
+              <col style="width:3.4%"><col style="width:9%"><col style="width:8%">
+              <col class="hide-md" style="width:9%"><col style="width:11%"><col style="width:8.5%">
+              <col style="width:12%"><col style="width:8.5%"><col style="width:12%">
+              <col style="width:4.6%"><col style="width:14%">
+            </colgroup>
+            <thead><tr>
+              <th class="num">#</th><th id="repColOrg">Раздел</th><th>Инв. номер</th><th class="hide-md">Тип</th>
+              <th>Мастер</th><th>Поступил</th><th>Причина</th>
+              <th>Вернули</th><th>Что сделали</th><th>Дней</th><th>Итог</th>
+            </tr></thead>
+            <tbody id="repairsBody"></tbody>
+          </table>
+        </div>
+        <div class="empty" id="repairsEmpty" hidden>Ремонтов пока не было.</div>
+      </div>
+    </section>

@@ -1,0 +1,18 @@
+<!-- Раздел v-roles -->
+    <section id="v-roles" hidden>
+      <div class="searchbar">
+        <div class="searchbox"><input id="qRole" type="search" placeholder="Поиск по названию роли…"></div>
+        <button class="btn-primary" id="btnAddRole">+ Роль</button>
+      </div>
+      <div class="card">
+        <div class="tablewrap">
+          <table>
+            <colgroup><col style="width:3.4%"><col style="width:18%"><col style="width:22%"><col style="width:26%"><col class="hide-md" style="width:20%"><col style="width:10.6%"></colgroup>
+            <thead><tr><th class="num">#</th><th>Роль</th><th>Описание</th><th>Что разрешено</th>
+              <th class="hide-md">Разделы</th><th></th></tr></thead>
+            <tbody id="rolesBody"></tbody>
+          </table>
+        </div>
+        <div class="empty" id="rolesEmpty" hidden>Роли не заведены.</div>
+      </div>
+    </section>
