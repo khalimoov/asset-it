@@ -240,7 +240,7 @@ def run(cur, cfg, org_id):
               checks = ip_day.checks + 1
         """, (org_id, ip, today, bool(r["alive"]), 1 if r["alive"] else 0))
 
-    deep = deep_pass(cur, org_id, up, names)
+    deep = deep_pass(cur, org_id, up)
 
     cur.execute("delete from ip_day where org_id = %s and d < %s",
                 (org_id, today - datetime.timedelta(days=HISTORY_DAYS)))
@@ -249,13 +249,14 @@ def run(cur, cfg, org_id):
             "seconds": round((datetime.datetime.now() - started).total_seconds(), 1)}
 
 
-def deep_pass(cur, org_id, up, names):
-    """Подробности об устройствах: MAC, производитель, порты, баннер, тип.
+def deep_pass(cur, org_id, up):
+    """MAC ответивших адресов и производитель по нему.
 
-    Тяжелее обычного пинга — полтора десятка соединений на адрес плюс запрос
-    к веб-интерфейсу, — поэтому не на каждый обход: берём тех, о ком ещё
-    ничего не знаем или знаем сутками старше, и не больше DEEP_PER_RUN за раз.
-    Расписание обхода от этого не разъезжается.
+    Раньше сюда входил и опрос портов с веб-интерфейсом — ради догадки о типе
+    устройства. Догадка врала, её убрали, и разбор стал совсем лёгким: таблица
+    ARP читается один раз, дальше только поиск по справочнику OUI. Ограничение
+    DEEP_PER_RUN и раз в DEEP_EVERY_H оставлены: MAC меняется редко, а лишний
+    раз дёргать ARP незачем.
     """
     if not up:
         return 0
@@ -270,32 +271,20 @@ def deep_pass(cur, org_id, up, names):
         return 0
 
     arp = netinfo.arp_table()
-    def one(ip):
-        try:
-            return ip, netinfo.collect(ip, arp.get(ip, ""), names.get(ip, ""))
-        except Exception:
-            return ip, None
-
-    with ThreadPoolExecutor(max_workers=min(10, len(todo))) as ex:
-        got = list(ex.map(one, todo))
-
     done = 0
-    for ip, info in got:
-        if not info:
+    for ip in todo:
+        try:
+            info = netinfo.collect(ip, arp.get(ip, ""))
+        except Exception:
             continue
         done += 1
-        # пустым не затираем: MAC виден только пока адрес в одной сети с нами,
-        # а веб-интерфейс мог просто не ответить в этот раз
+        # пустым не затираем: MAC виден, только пока адрес в одной сети с нами —
+        # через маршрутизатор ARP его не показывает
         cur.execute("""
             update ip_status set
               mac    = case when %s <> '' then %s else mac end,
               vendor = case when %s <> '' then %s else vendor end,
-              ports  = case when %s <> '' then %s else ports end,
-              banner = case when %s <> '' then %s else banner end,
-              kind   = case when %s <> '' then %s else kind end,
               probed_at = now()
              where org_id = %s and ip = %s
-        """, (info["mac"], info["mac"], info["vendor"], info["vendor"],
-              info["ports"], info["ports"], info["banner"], info["banner"],
-              info["kind"], info["kind"], org_id, ip))
+        """, (info["mac"], info["mac"], info["vendor"], info["vendor"], org_id, ip))
     return done

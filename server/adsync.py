@@ -321,6 +321,15 @@ def merge_auth(saved):
 IN_CHAIN = "1.2.840.113556.1.4.1941"
 
 
+def domain_root(dn):
+    """Корень домена из DN — только части DC=.
+
+    «OU=Завод-1,OU=Площадка Северная,DC=company,DC=local» → «DC=company,DC=local».
+    """
+    dcs = [x.strip() for x in (dn or "").split(",") if x.strip().lower().startswith("dc=")]
+    return ",".join(dcs)
+
+
 def group_name(want):
     r"""Название группы из того, что написал администратор: COMPANY\Asset-IT -> Asset-IT."""
     want = (want or "").strip()
@@ -408,13 +417,88 @@ def check_group(cfg, want):
         dn = resolve_group(conn, cfg, want)
         if not dn:
             return {"dn": "", "members": 0}
-        conn.search(search_base=(cfg.get("baseDn") or "").strip(),
+        # считаем по всему домену: раньше счёт шёл от baseDn, и администратор видел
+        # «в группе 7 чел.», когда на деле их больше — просто часть лежит в других
+        # подразделениях. Входить они при этом вправе: доступ раздаёт группа.
+        base = (cfg.get("baseDn") or "").strip()
+        conn.search(search_base=domain_root(base) or base,
                     search_filter="(&(objectCategory=person)(objectClass=user)(memberOf:%s:=%s))"
                                   % (IN_CHAIN, escape_filter(dn)),
                     search_scope=SUBTREE, attributes=["sAMAccountName"], paged_size=500)
         names = [_one(e.get("attributes") or {}, "sAMAccountName")
                  for e in (conn.response or []) if e.get("type") == "searchResEntry"]
         return {"dn": dn, "members": len(names), "sample": [n for n in names if n][:10]}
+    finally:
+        try:
+            conn.unbind()
+        except Exception:
+            pass
+
+
+def _members(conn, base, group_dn):
+    """Сколько человек в группе видно из указанного корня (с вложенными группами)."""
+    if not base or not group_dn:
+        return 0
+    conn.search(search_base=base,
+                search_filter="(&(objectCategory=person)(objectClass=user)(memberOf:%s:=%s))"
+                              % (IN_CHAIN, escape_filter(group_dn)),
+                search_scope=SUBTREE, attributes=["sAMAccountName"], paged_size=500)
+    return len([e for e in (conn.response or []) if e.get("type") == "searchResEntry"])
+
+
+def probe_login(cfg, auth, login):
+    """Почему человек не может войти — проверка одной учётной записи.
+
+    Пароль не нужен: смотрим служебной учёткой, есть ли такой в домене, где он
+    лежит, включён ли и состоит ли в группе доступа. Ищем **от корня домена**, а
+    не от корня поиска из настроек загрузки: иначе человека, который лежит в
+    другом подразделении, просто не видно — а это и есть частая причина отказа.
+    """
+    login = (login or "").strip()
+    if not login:
+        return {"found": False, "login": ""}
+    sam = login.split("@")[0].split("\\")[-1]
+    upn = login if "@" in login else (login + "@" + (auth.get("suffix") or "").strip().lstrip("@")
+                                      if (auth.get("suffix") or "").strip() else login)
+    base = (cfg.get("baseDn") or "").strip()
+    root = domain_root(base) or base
+    conn = connect(cfg)
+    try:
+        conn.search(search_base=root,
+                    search_filter="(&(objectClass=user)(|(sAMAccountName=%s)(userPrincipalName=%s)))"
+                                  % (escape_filter(sam), escape_filter(upn)),
+                    search_scope=SUBTREE, size_limit=2,
+                    attributes=ATTRS + ["memberOf", "userAccountControl", "userPrincipalName"])
+        entry = entry_dn = None
+        for e in conn.response or []:
+            if e.get("type") == "searchResEntry":
+                entry, entry_dn = (e.get("attributes") or {}), (e.get("dn") or "")
+                break
+        out = {"found": entry is not None, "login": login, "sam": sam,
+               "base": base, "root": root, "group": "", "groupWant": (auth.get("group") or "").strip()}
+        if entry is None:
+            return out
+        try:
+            uac = int(_one(entry, "userAccountControl") or 0)
+        except ValueError:
+            uac = 0
+        groups = entry.get("memberOf") or []
+        if isinstance(groups, (str, bytes)):
+            groups = [groups]
+        low = (entry_dn or "").lower()
+        out.update({"dn": entry_dn, "name": full_name(entry),
+                    "upn": _one(entry, "userPrincipalName") or "",
+                    "enabled": not (uac & ACCOUNT_DISABLED),
+                    "inBase": (not base) or low.endswith(base.lower()),
+                    "groups": len(groups)})
+        want = out["groupWant"]
+        if want:
+            group_dn = resolve_group(conn, cfg, want)
+            out["group"] = group_dn or ""
+            out["inGroup"] = bool(group_dn) and in_group_deep(conn, entry_dn, group_dn, groups, want)
+            out["membersInBase"] = _members(conn, base, group_dn)
+            out["membersInRoot"] = _members(conn, root, group_dn)
+        return out
     finally:
         try:
             conn.unbind()
@@ -452,11 +536,14 @@ def authenticate(cfg, auth, login, password, server=None, strategy=None):
             conn.search(search_base=login, search_filter="(objectClass=*)", search_scope=BASE,
                         attributes=ATTRS + ["memberOf"], size_limit=1)
         else:
-            # ищем по всему домену, а не внутри подразделения из настроек загрузки:
-            # то подразделение решает, кого переносить в справочник сотрудников,
-            # а кому можно входить — решает группа AD ниже. Заодно пробуем и UPN:
-            # он не всегда совпадает с sAMAccountName.
-            base = (cfg.get("baseDn") or "").strip() or search_base(cfg)
+            # Ищем по всему домену. Раньше здесь стоял baseDn из настроек загрузки
+            # сотрудников, и человек, лежащий в другом подразделении, просто не
+            # находился: вход ему закрывался, хотя в группе доступа он состоял, а
+            # выглядело это как «домен не принял пароль». Кого переносить в
+            # справочник — дело baseDn и OU, кому входить — дело группы AD ниже.
+            # Заодно пробуем и UPN: он не всегда совпадает с sAMAccountName.
+            base = domain_root((cfg.get("baseDn") or "").strip()) or \
+                (cfg.get("baseDn") or "").strip() or search_base(cfg)
             conn.search(search_base=base,
                         search_filter="(&(objectClass=user)(|(sAMAccountName=%s)(userPrincipalName=%s)))"
                                       % (escape_filter(sam), escape_filter(upn)),

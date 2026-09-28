@@ -11,9 +11,11 @@ IP-адреса, пользователи. Работает в локально�
 | Что | Где |
 |---|---|
 | Весь интерфейс — одна страница | `it-inventory.html` |
+| Страница «не найдено» | `404.html` |
 | Сервер, права, работа с базой | `server/app.py` |
 | Загрузка людей из Active Directory | `server/adsync.py` |
 | Опрос адресов в сети | `server/netscan.py` |
+| Акт на списание в Word | `server/actdoc.py`, `server/act_template.docx` |
 | Схема базы и обновления | `server/schema.sql`, `server/migrations/` |
 | Установка на сервер | `packaging/` |
 | Как всё устроено и почему | `NOTES.md`, `server/README.md` |

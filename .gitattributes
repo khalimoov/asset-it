@@ -16,3 +16,6 @@ docker-compose.yml text eol=lf
 .dockerignore text eol=lf
 .env.example text eol=lf
 *.sh text eol=lf
+
+# шаблон акта — это zip, переводы строк в нём трогать нельзя
+*.docx binary

@@ -8,6 +8,7 @@
 Что складывается:
 
     it-inventory.html   страница приложения
+    404.html            страница «не найдено»
     server/             сервер, схема, миграции
     packaging/*.bat     установка, запуск, остановка, копии базы
     packaging/УСТАНОВКА.txt
@@ -124,6 +125,7 @@ def build_docker():
     srv = DOCK / "server"
     srv.mkdir(parents=True)
     shutil.copy2(ROOT / "it-inventory.html", DOCK / "it-inventory.html")
+    shutil.copy2(ROOT / "404.html", DOCK / "404.html")
     for f in (ROOT / "server").iterdir():
         if f.name in SERVER_SKIP or f.name.startswith("FIRST_LOGIN") or f.suffix == ".log":
             continue
@@ -150,7 +152,8 @@ def build_docker():
 def main():
     OUT.mkdir(parents=True, exist_ok=True)
     shutil.copy2(ROOT / "it-inventory.html", OUT / "it-inventory.html")
-    print("  it-inventory.html — скопирован")
+    shutil.copy2(ROOT / "404.html", OUT / "404.html")
+    print("  it-inventory.html, 404.html — скопированы")
     copy_server()
     copy_packaging()
     ensure_wheels()

@@ -168,7 +168,8 @@ create table if not exists ip_pool (
 create table if not exists ip_reserved (
   id   text primary key,
   ip   text not null unique,
-  note text not null default ''
+  note text not null default '',
+  data jsonb not null default '{}'::jsonb   -- ручные данные: имя, тип, ОС, ответственный…
 );
 
 create table if not exists ip_status (

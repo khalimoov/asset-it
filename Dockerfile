@@ -20,7 +20,7 @@ WORKDIR /app
 COPY server/requirements.txt server/requirements.txt
 RUN pip install -r server/requirements.txt
 
-COPY it-inventory.html ./
+COPY it-inventory.html 404.html ./
 COPY server/ server/
 
 # архив накладных: сюда монтируется папка сервера /opt/asset-it/documents

@@ -6,6 +6,7 @@
 Настройки берутся из файла .env рядом со скриптом.
 """
 
+import io
 import os
 import sys
 import json
@@ -30,15 +31,16 @@ for _s in (sys.stdout, sys.stderr):
 
 import psycopg
 from psycopg.rows import dict_row
-from flask import Flask, request, jsonify, make_response, send_from_directory
+from flask import Flask, request, jsonify, make_response, send_file, send_from_directory
 
+import actdoc
 import adsync
 import netscan
 import docscan
 
 # Версия сборки. Должна совпадать с UI_BUILD в it-inventory.html: если файлы
 # обновили, а сервер не перезапустили, приложение об этом само скажет.
-APP_BUILD = "2026-09-21.1"
+APP_BUILD = "2026-09-28.2"
 
 BASE = Path(__file__).resolve().parent
 ROOT = BASE.parent
@@ -419,6 +421,10 @@ def need_perm(code):
 
 # ------------------------------------------------------------------ первичное заполнение
 
+# ручные данные резервного IP-адреса (миграция 031, колонка ip_reserved.data)
+RES_FIELDS = ("name", "kind", "os", "host", "owner", "divisionId", "departmentId", "mac")
+
+
 def apply_migrations():
     """Доводит схему до текущей при каждом запуске.
 
@@ -541,7 +547,8 @@ def load_state(user, org_id):
         subcategories = [{"id": r["id"], "name": r["name"], "categoryId": r["category_id"] or "",
                           "registryId": r["registry_id"]} for r in in_regs("subcategory")]
         types = [{"id": r["id"], "name": r["name"], "categoryId": r["category_id"] or "",
-                  "subcategoryId": r["subcategory_id"] or "", "registryId": r["registry_id"]}
+                  "subcategoryId": r["subcategory_id"] or "", "registryId": r["registry_id"],
+                  "hiddenSpecs": r["hidden_specs"] or []}
                  for r in in_regs("item_type")]
         # фото не тащим в состояние — оно отдаётся отдельным запросом по надобности
         models = [{"id": r["id"], "name": r["name"], "note": r["note"],
@@ -575,7 +582,8 @@ def load_state(user, org_id):
                                   where coalesce(g.registry_id, t.registry_id) = any(%s)""",
                               (reg_ids or [""],))]
 
-        presets = [{"id": r["id"], "name": r["name"], "specs": r["specs"]}
+        presets = [{"id": r["id"], "name": r["name"], "specs": r["specs"],
+                    "registryId": r["registry_id"] or ""}
                    for r in by_org("preset", "order by name")]
 
         persons = [{"id": r["id"], "name": r["name"], "position": r["position"],
@@ -606,10 +614,16 @@ def load_state(user, org_id):
         pools = [{"id": r["id"], "name": r["name"], "prefix": r["prefix"], "from": r["host_from"],
                   "to": r["host_to"], "note": r["note"], "registryId": r["registry_id"] or "",
                   "categoryId": r["category_id"] or ""} for r in by_org("ip_pool", "order by prefix")]
-        reserved = [{"id": r["id"], "ip": r["ip"], "note": r["note"]}
+        # у резерва могут быть данные, заведённые вручную (виртуальные серверы
+        # и прочее, чего нет в учёте оборудования) — они лежат в data
+        reserved = [dict({k: (r["data"] or {}).get(k, "") for k in RES_FIELDS},
+                         id=r["id"], ip=r["ip"], note=r["note"])
                     for r in by_org("ip_reserved", "order by ip")]
 
+        # моделей у материала может быть несколько; `model` оставлен первой из
+        # списка — на него смотрит всё, что писалось до этой правки
         supplies = [{"id": r["id"], "name": r["name"], "unit": r["unit"], "note": r["note"],
+                     "models": (r["model_ids"] or ([r["model_id"]] if r["model_id"] else [])),
                      "model": r["model_id"] or "", "qty": 0}
                     for r in by_org("supply", "order by name")]
         receipts = [{"id": r["id"], "supplyId": r["supply_id"], "qty": r["qty"],
@@ -699,7 +713,7 @@ def load_state(user, org_id):
 
         net_status = {
             r["ip"]: {"alive": r["alive"], "method": r["method"],
-                      "hostName": r["host_name"] or "", "kind": r["kind"] or "",
+                      "hostName": r["host_name"] or "",
                       "vendor": r["vendor"] or "", "mac": r["mac"] or "",
                       "lastSeen": r["last_seen"].isoformat() if r["last_seen"] else "",
                       "lastCheck": r["last_check"].isoformat() if r["last_check"] else ""}
@@ -876,6 +890,7 @@ def save_cfg(cfg, user, org_id):
                     "name": lambda r: g(r, "name"),
                     "category_id": lambda r: g(r, "categoryId") or None,
                     "subcategory_id": lambda r: g(r, "subcategoryId") or None,
+                    "hidden_specs": lambda r: json.dumps(g(r, "hiddenSpecs", [])),
                     "registry_id": lambda r: g(r, "registryId") or None}),
 
                 ("specs", "spec", {
@@ -890,6 +905,7 @@ def save_cfg(cfg, user, org_id):
                     "type_id": lambda r: g(r, "typeId") or None}),
                 ("presets", "preset", {
                     "name": lambda r: g(r, "name"), "org_id": org,
+                    "registry_id": lambda r: g(r, "registryId") or None,
                     "specs": lambda r: json.dumps(g(r, "specs", []))}),
             ):
                 if name in cfg:
@@ -919,6 +935,8 @@ def save_cfg(cfg, user, org_id):
         if "ipReserved" in cfg and can(user, "ip.manage"):
             sync_table(cur, "ip_reserved", {
                 "ip": lambda r: g(r, "ip"), "note": lambda r: g(r, "note"),
+                "data": lambda r: json.dumps({k: str(g(r, k) or "") for k in RES_FIELDS},
+                                             ensure_ascii=False),
                 "org_id": org}, cfg["ipReserved"], scope=in_org)
 
         # --- расходные материалы: справочник, приходы, выдачи ---
@@ -934,7 +952,11 @@ def save_cfg(cfg, user, org_id):
                                          "измерения может добавить только администратор" % un)
             sync_table(cur, "supply", {
                 "name": lambda r: g(r, "name"), "unit": lambda r: g(r, "unit", "\u0448\u0442"),
-                "note": lambda r: g(r, "note"), "model_id": lambda r: g(r, "model") or None,
+                "note": lambda r: g(r, "note"),
+                "model_ids": lambda r: json.dumps([x for x in g(r, "models", []) if x]),
+                # первая модель дублируется в model_id: так прежние запросы,
+                # которые читают одну модель материала, продолжают работать
+                "model_id": lambda r: ([x for x in g(r, "models", []) if x] or [None])[0],
                 "org_id": org},
                 cfg["supplies"], scope=in_org)
         if "receipts" in cfg and can(user, "supply.receive"):
@@ -1035,6 +1057,46 @@ def _follow_parent(cur, parent_id, user, depth=0):
                          "Вслед за инв. %s: %s" % (p["inv"] or "—", ", ".join(changes)),
                          user["id"], user["name"]))
         _follow_parent(cur, c["id"], user, depth + 1)
+
+
+def _detach_children(cur, parent, to_label, user):
+    """Открепляет технику от передаваемой единицы и возвращает её подписи.
+
+    Прикреплённая запись не хранит ответственного, подразделение и отдел — они
+    берутся от основного. Когда основное уезжает, брать их неоткуда, поэтому
+    прикреплённое становится самостоятельным: остаётся на своём складе со
+    статусом «На складе», снова показывается в общем списке (пометка «скрыто
+    в списке» снимается) и получает строку в историю — так же, как при передаче.
+    Цепочка ниже не разбирается: у открепления свой корень, дальше за ним
+    идёт _follow_parent.
+    """
+    cur.execute("""select i.*, t.name as type_name from item i
+                     left join item_type t on t.id = i.type_id
+                    where i.parent_id = %s and i.holder = 'item'""", (parent["id"],))
+    kids = cur.fetchall()
+    today = datetime.date.today().strftime("%d.%m.%Y")
+    out = []
+    for c in kids:
+        cur.execute("""update item set parent_id = null, holder = 'person', place_id = null,
+                                       hide_attached = false, status = 'На складе',
+                                       owner_id = null, division_id = null, department_id = null,
+                                       status_date = null, status_note = '',
+                                       updated_by = %s, updated_by_name = %s, updated_at = now()
+                        where id = %s""", (user["id"], user["name"], c["id"]))
+        cur.execute("""insert into item_history (item_id, d, t, staff_id, who)
+                       values (%s,%s,%s,%s,%s)""",
+                    (c["id"], today,
+                     "Откреплено от инв. %s — основное передано на склад %s. "
+                     "Осталось на складе %s, статус: %s → На складе"
+                     % (parent["inv"] or "—", to_label or "—",
+                        _wh_label(cur, c["warehouse_id"]) or "—", c["status"] or "—"),
+                     user["id"], user["name"]))
+        _follow_parent(cur, c["id"], user)
+        out.append({"id": c["id"], "inv": c["inv"] or "", "typeName": c["type_name"] or "",
+                    "registryId": c["registry_id"] or "",
+                    "label": (("инв. " + c["inv"]) if c["inv"] else "без инвентарного номера") +
+                             (" · " + c["type_name"] if c["type_name"] else "")})
+    return out
 
 
 def save_items(items, user, org_id):
@@ -1658,6 +1720,14 @@ def on_error(e):
     короткая причина — на экран; это внутренний инструмент отдела, не публичный сайт.
     """
     code = getattr(e, "code", None)
+    # Браузер зашёл по несуществующему адресу — показываем страницу 404, а не
+    # голый JSON. Запросы к /api/ по-прежнему получают JSON: их разбирает страница.
+    if code == 404 and not request.path.startswith("/api/") \
+            and "text/html" in request.headers.get("Accept", "") \
+            and (ROOT / "404.html").is_file():
+        resp = make_response(send_from_directory(ROOT, "404.html"))
+        resp.status_code = 404
+        return resp
     if isinstance(code, int):           # 404, 405 и прочие штатные ответы Flask
         return jsonify({"error": "http", "message": getattr(e, "description", "")}), code
     traceback.print_exc()
@@ -1740,7 +1810,6 @@ def api_ip_history():
     g = lambda k: ((st[k] if st else "") or "")
     return jsonify({"ip": ip, "days": days, "keepDays": netscan.HISTORY_DAYS,
                     "hostName": g("host_name"), "mac": g("mac"), "vendor": g("vendor"),
-                    "ports": g("ports"), "banner": g("banner"), "kind": g("kind"),
                     "alive": bool(st["alive"]) if st else False,
                     "method": g("method"),
                     "probedAt": st["probed_at"].isoformat() if st and st["probed_at"] else "",
@@ -2339,10 +2408,15 @@ def _move_item_to_org(cur, it, to_org):
 
     Разделы у каждого учреждения свои (`<учреждение>_<раздел>`), поэтому ищем
     одноимённый по исходному имени, а если его нет — по названию. Тип, категорию и
-    подкатегорию заводим там по названиям, если таких ещё нет. Характеристики
-    переносим по названиям в пределах найденного типа/подкатегории; чему пары не
-    нашлось — дописываем в примечание, чтобы значения не пропали.
-    Возвращает (registry_id, type_id, specs, specs_none, notes, model_id).
+    подкатегорию заводим там по названиям, если таких ещё нет.
+
+    Характеристики переезжают все. Одноимённая у типа-получателя или его
+    подкатегории уже есть — берём её и ничего не заводим (у получателя такое
+    оборудование уже описано, менять ему справочник незачем). Нет — заводим
+    такую же **у самого типа**: это его собственная характеристика, подкатегория
+    и остальные типы получателя не меняются, а дальше её правят как любую другую.
+    Возвращает (registry_id, type_id, specs, specs_none, spec_slots, notes,
+    model_id, названия заведённых характеристик).
     """
     src_reg = it["registry_id"]
     base = src_reg.split("_", 1)[1] if "_" in src_reg else src_reg
@@ -2359,7 +2433,9 @@ def _move_item_to_org(cur, it, to_org):
             raise ValueError("В учреждении-получателе нет раздела «%s» — заведите его там" % nm)
     dst_reg = reg["id"]
 
-    type_id, specs, specs_none, notes = None, dict(it["specs"] or {}), dict(it["specs_none"] or {}), it["notes"] or ""
+    type_id, notes, made = None, it["notes"] or "", []
+    specs, specs_none = dict(it["specs"] or {}), dict(it["specs_none"] or {})
+    slots = dict(it["spec_slots"] or {})
     if it["type_id"]:
         cur.execute("""select t.name, c.name as cat, sc.name as sub from item_type t
                          left join category c on c.id = t.category_id
@@ -2379,30 +2455,67 @@ def _move_item_to_org(cur, it, to_org):
                                     {"id": "typ" + secrets.token_hex(5), "name": t["name"],
                                      "category_id": cat_id, "subcategory_id": sub_id,
                                      "registry_id": dst_reg})
-        # характеристики: по названию среди тех, что привязаны к найденному типу или подкатегории
+        # характеристики: по названию среди тех, что привязаны к найденному типу
+        # или его подкатегории; чего там нет — заводим у типа (см. описание выше)
         cur.execute("select id, name from spec where type_id = %s or subcategory_id = %s",
                     (type_id, sub_id or "-"))
         dst = {sp["name"].strip().lower(): sp["id"] for sp in cur.fetchall()}
-        keys = list(specs.keys()) + list(specs_none.keys())
-        cur.execute("select id, name from spec where id = any(%s)", (keys or [""],))
-        src_names = {sp["id"]: sp["name"] for sp in cur.fetchall()}
-        new_specs, new_none, lost = {}, {}, []
-        for k, v in specs.items():
-            nm = src_names.get(k, k)
-            d = dst.get(nm.strip().lower())
-            if d:
-                new_specs[d] = v
-            else:
-                lost.append("%s=%s" % (nm, v))
-        for k in specs_none:
-            d = dst.get(src_names.get(k, k).strip().lower())
-            if d:
-                new_none[d] = True
-        specs, specs_none = new_specs, new_none
+        # у характеристики, которой может быть несколько, ключ второй строки — «s1#2»
+        keys = list(specs.keys()) + list(specs_none.keys()) + list(slots.keys())
+        ids = sorted(set(k.split("#", 1)[0] for k in keys))
+        cur.execute("select * from spec where id = any(%s)", (ids or [""],))
+        src = {sp["id"]: sp for sp in cur.fetchall()}
+        pair = {}                       # id характеристики у нас -> id у получателя
+        for sid in ids:
+            sp = src.get(sid)
+            if not sp:                  # характеристику успели удалить — значение и так нигде не видно
+                continue
+            nm = sp["name"].strip().lower()
+            if nm in dst:
+                pair[sid] = dst[nm]
+                continue
+            if not type_id:             # тип у получателя не завёлся — вешать не на что
+                continue
+            new_id = "spc" + secrets.token_hex(5)
+            # правила переезжают как есть, кроме двух вещей: обязательность
+            # получателю не навязываем (она требовала бы значения от его прежних
+            # записей этого типа), а пул адресов у него свой — привязку снимаем
+            cur.execute("""insert into spec (id, name, kind, unit, options, req, uniq, opt,
+                                             req_statuses, grp, multi, pool_id, type_id)
+                           values (%s,%s,%s,%s,%s,false,%s,%s,'[]'::jsonb,%s,%s,null,%s)""",
+                        (new_id, sp["name"], sp["kind"], sp["unit"], json.dumps(sp["options"]),
+                         sp["uniq"], sp["opt"], sp["grp"], sp["multi"], type_id))
+            dst[nm] = pair[sid] = new_id
+            made.append(sp["name"])
+
+        def remap(d):
+            """Ключи значений — на характеристики получателя, номер строки сохраняем."""
+            out = {}
+            for k, v in d.items():
+                base, sep, num = k.partition("#")
+                if base in pair:
+                    out[pair[base] + sep + num] = v
+            return out
+        # чему пары так и не нашлось (характеристика удалена, тип не завёлся) —
+        # по-прежнему уходит в примечание, чтобы значение не пропало совсем
+        lost = ["%s=%s" % ((src[k.split("#", 1)[0]]["name"] if k.split("#", 1)[0] in src
+                            else k.split("#", 1)[0]), v)
+                for k, v in specs.items() if k.split("#", 1)[0] not in pair]
+        specs, specs_none, slots = remap(specs), remap(specs_none), remap(slots)
         if lost:
             notes = (notes + "\n" if notes else "") + "Характеристики при передаче: " + "; ".join(lost)
+
+        # у типа-получателя характеристика может быть отключённой (027): значение
+        # приехало бы, а в карточке его не видно — возвращаем такие в показ
+        cur.execute("select hidden_specs from item_type where id = %s", (type_id,))
+        hid = cur.fetchone()["hidden_specs"] or []
+        used = set(k.split("#", 1)[0] for k in list(specs) + list(specs_none))
+        keep = [h for h in hid if h not in used]
+        if len(keep) != len(hid):
+            cur.execute("update item_type set hidden_specs = %s where id = %s",
+                        (json.dumps(keep), type_id))
     else:
-        specs, specs_none = {}, {}
+        specs, specs_none, slots = {}, {}, {}
     model_id = None
     if it.get("model_id"):
         cur.execute("select name, note from model where id = %s", (it["model_id"],))
@@ -2411,7 +2524,7 @@ def _move_item_to_org(cur, it, to_org):
             model_id = _find_or_make(cur, "model", ["registry_id"], [dst_reg],
                                      {"id": "mdl" + secrets.token_hex(5), "name": m["name"],
                                       "note": m["note"] or "", "registry_id": dst_reg})
-    return dst_reg, type_id, specs, specs_none, notes, model_id
+    return dst_reg, type_id, specs, specs_none, slots, notes, model_id, made
 
 
 @app.post("/api/transfer")
@@ -2474,7 +2587,8 @@ def api_transfer():
             from_label = (from_label or "—") + " (" + src_org_name + ")"
             to_label = (to_label or "—") + " (" + (dst["org_name"] or to_org) + ")"
             try:
-                dst_reg, dst_type, specs, specs_none, notes, dst_model = _move_item_to_org(cur, it, to_org)
+                (dst_reg, dst_type, specs, specs_none, slots,
+                 notes, dst_model, made_specs) = _move_item_to_org(cur, it, to_org)
             except ValueError as e:
                 return jsonify({"error": "no_registry", "message": str(e)}), 400
         tid = "trf" + secrets.token_hex(6)
@@ -2496,29 +2610,22 @@ def api_transfer():
                                        transferred_at = now(),
                                        updated_by = %s, updated_by_name = %s, updated_at = now()
                         where id = %s""", (to_wh, request.user["id"], request.user["name"], item_id))
+        detached = []
         if cross:
             cur.execute("""update item set registry_id = %s, type_id = %s, specs = %s,
-                                           specs_none = %s, notes = %s, model_id = %s where id = %s""",
-                        (dst_reg, dst_type, json.dumps(specs), json.dumps(specs_none), notes,
-                         dst_model, item_id))
-            # прикреплённое переезжает в то же учреждение вслед за основным
-            stack, seen = [item_id], set()
-            while stack:
-                pid = stack.pop()
-                cur.execute("select * from item where parent_id = %s and holder = 'item'", (pid,))
-                for c in cur.fetchall():
-                    if c["id"] in seen:
-                        continue
-                    seen.add(c["id"]); stack.append(c["id"])
-                    try:
-                        c_reg, c_type, c_specs, c_none, c_notes, c_model = _move_item_to_org(cur, c, to_org)
-                    except ValueError:
-                        continue
-                    cur.execute("""update item set registry_id = %s, type_id = %s, specs = %s,
-                                                   specs_none = %s, notes = %s, model_id = %s where id = %s""",
-                                (c_reg, c_type, json.dumps(c_specs), json.dumps(c_none), c_notes,
-                                 c_model, c["id"]))
-        _follow_parent(cur, item_id, request.user)
+                                           specs_none = %s, spec_slots = %s, notes = %s,
+                                           model_id = %s where id = %s""",
+                        (dst_reg, dst_type, json.dumps(specs), json.dumps(specs_none),
+                         json.dumps(slots), notes, dst_model, item_id))
+            # Прикреплённая техника за основной в другое учреждение не уезжает: это
+            # отдельные записи на балансе нашего учреждения, и списать их с учёта
+            # передачей одного системного блока нельзя. Поэтому открепляем: остаются
+            # на своём складе, «На складе» и без ответственного — ответственного они
+            # брали от основного, а его больше нет. Установленные материалы наоборот
+            # остаются с техникой: они уже списаны и отдельной записи не имеют.
+            detached = _detach_children(cur, it, to_label, request.user)
+        else:
+            _follow_parent(cur, item_id, request.user)
 
         today = datetime.date.today().strftime("%d.%m.%Y")
         who = (request.user["id"], request.user["name"])
@@ -2546,8 +2653,21 @@ def api_transfer():
         cur.execute("""insert into item_history (item_id, d, t, staff_id, who, transfer_id)
                        values (%s,%s,%s,%s,%s,%s)""",
                     (item_id, today, text) + who + (tid,))
+        if cross and made_specs:
+            # получателю этой характеристики не хватало — чтобы значение не пропало,
+            # она заведена у его типа; в истории видно, что именно добавилось
+            cur.execute("""insert into item_history (item_id, d, t, staff_id, who)
+                           values (%s,%s,%s,%s,%s)""",
+                        (item_id, today, "Характеристики заведены у типа получателя: " +
+                         ", ".join(made_specs)) + who)
+        if detached:
+            cur.execute("""insert into item_history (item_id, d, t, staff_id, who)
+                           values (%s,%s,%s,%s,%s)""",
+                        (item_id, today, "Откреплено при передаче: " +
+                         ", ".join(x["label"] for x in detached)) + who)
         cur.execute("select * from transfer where id = %s", (tid,))
-        return jsonify({"ok": True, "transfer": _transfer_row(cur.fetchone())})
+        return jsonify({"ok": True, "transfer": _transfer_row(cur.fetchone()),
+                        "detached": detached})
 
 
 @app.get("/api/transfers")
@@ -2735,6 +2855,78 @@ def api_adauth_test():
                     "enabled": bool(auth.get("enabled")), "clash": clash})
 
 
+@app.post("/api/adauth/probe")
+@need_perm("admin")
+def api_adauth_probe():
+    """Почему этот человек не заходит. Пароль его не нужен.
+
+    Проверка идёт служебной учёткой и отвечает по шагам: есть ли такой в домене,
+    попадает ли он под корень поиска из настроек загрузки сотрудников, включён ли,
+    состоит ли в группе доступа и не заведена ли у нас учётка с таким же логином,
+    но с нашим паролем.
+    """
+    d = request.get_json(silent=True) or {}
+    login = (d.get("login") or "").strip()
+    if not login:
+        return jsonify({"error": "bad_value", "message": "Укажите доменный логин"}), 400
+    with db() as conn, conn.cursor() as cur:
+        auth = adsync.merge_auth(d.get("config") or _adauth_cfg(cur))
+        ldap_cfg = _ldap_cfg(cur, auth.get("orgId") or "")
+    try:
+        r = adsync.probe_login(ldap_cfg, auth, login)
+    except Exception as e:
+        return jsonify({"error": "ldap", "message": str(e)}), 400
+
+    with db() as conn, conn.cursor() as cur:
+        cur.execute("""select full_name, auth, active from staff
+                        where lower(login) = lower(%s)""", (r.get("sam") or login,))
+        row = cur.fetchone()
+
+    # разбор: что именно закрывает вход
+    why, ok = [], True
+    if not auth.get("enabled"):
+        ok = False
+        why.append("Вход через домен выключен — поставьте галочку и сохраните.")
+    if not r.get("found"):
+        ok = False
+        why.append("В домене такой учётной записи не нашлось (искали по всему %s "
+                   "и по sAMAccountName, и по UPN). Проверьте написание логина."
+                   % (r.get("root") or "домену"))
+    else:
+        if not r.get("enabled"):
+            ok = False
+            why.append("Учётная запись отключена в домене.")
+        if not r.get("inBase"):
+            # входу это больше не мешает — вход ищет по всему домену; но в справочник
+            # сотрудников такой человек не переносится, и знать об этом полезно
+            why.append("Лежит вне корня поиска из настроек загрузки сотрудников («%s»). "
+                       "Входу это не мешает, но в справочник сотрудников он не "
+                       "переносится — если нужен и там, расширьте корень до «%s»."
+                       % (r.get("base") or "", r.get("root") or ""))
+        if r.get("groupWant"):
+            if not r.get("group"):
+                ok = False
+                why.append("Группа «%s» в домене не найдена — проверьте название."
+                           % r["groupWant"])
+            elif not r.get("inGroup"):
+                ok = False
+                why.append("Не состоит в группе %s (с учётом вложенных)." % r["group"])
+    if row and (row["auth"] or "local") != "ad":
+        ok = False
+        why.append("В приложении уже заведена учётка «%s» с нашим паролем. Через домен такие "
+                   "не пускаем: откройте её в «Пользователях ИТ» и переключите способ входа "
+                   "на «AD»." % row["full_name"])
+    if row and not row["active"]:
+        ok = False
+        why.append("Учётная запись «%s» в приложении отключена." % row["full_name"])
+    if ok:
+        why.append("Всё в порядке: этот человек должен заходить. Если не заходит — дело в "
+                   "пароле (истёк, требуется смена) или в раскладке при наборе.")
+    return jsonify({"ok": ok, "probe": r, "why": why,
+                    "staff": ({"name": row["full_name"], "auth": row["auth"],
+                               "active": bool(row["active"])} if row else None)})
+
+
 @app.get("/api/ldap")
 @need_any("ad.view", "ad.sync")
 def api_ldap_get():
@@ -2898,6 +3090,230 @@ def api_roles_delete():
     return jsonify({"ok": True})
 
 
+DOCX_MIME = "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+
+
+@app.post("/api/items/nomenclature")
+@need_auth
+def api_items_nom():
+    """Наклейки «Номенк.»: инвентарный номер, тип, склад — по выбранным записям.
+
+    Список приходит номерами записей, а содержимое берётся из базы: так в
+    документ попадает то, что в учёте, а не то, что успело устареть на странице.
+    """
+    ids = (request.get_json(silent=True) or {}).get("ids") or []
+    ids = [str(x) for x in ids][:2000]
+    if not ids:
+        return jsonify({"error": "empty", "message": "Нечего печатать"}), 400
+    org_id = current_org(request.user)
+    with db() as conn, conn.cursor() as cur:
+        cur.execute("""select i.id, i.inv, i.warehouse_id, t.name as type_name,
+                              w.code as wh_code, w.name as wh_name
+                         from item i
+                         join registry r on r.id = i.registry_id
+                         left join item_type t on t.id = i.type_id
+                         left join warehouse w on w.id = i.warehouse_id
+                        where i.id = any(%s) and r.org_id = %s""", (ids, org_id))
+        by_id = {r["id"]: r for r in cur.fetchall()}
+    if not by_id:
+        return jsonify({"error": "not_found", "message": "Записи не найдены"}), 404
+    # порядок сохраняем тот, что был на экране
+    rows = []
+    for i in ids:
+        r = by_id.get(i)
+        if not r:
+            continue
+        wh = " ".join(x for x in ((r["wh_code"] or "").strip(), (r["wh_name"] or "").strip()) if x)
+        rows.append({"inv": r["inv"] or "", "type": r["type_name"] or "", "warehouse": wh})
+    try:
+        data = actdoc.build_nom(rows)
+    except ValueError as e:
+        return jsonify({"error": "no_template", "message": str(e)}), 500
+    # из карточки печатают одну запись — пусть и файл зовётся по её номеру
+    name = ("Номенклатура %s.docx" % re.sub(r"[\/:*?\"<>|]", "-", rows[0]["inv"]))         if len(rows) == 1 and rows[0]["inv"]         else ("Номенклатура %s.docx" % datetime.date.today().strftime("%d.%m.%Y"))
+    return send_file(io.BytesIO(data), as_attachment=True, mimetype=DOCX_MIME,
+                     download_name=name)
+
+
+# ------------------------------------------------- шаблоны акта на списание
+
+def _tpl_row(r):
+    return {"id": r["id"], "name": r["name"], "note": r["note"],
+            "origName": r["orig_name"], "who": r["who"], "size": r["size"],
+            "at": r["at"].isoformat() if r["at"] else ""}
+
+
+@app.get("/api/acttpl")
+@need_auth
+def api_acttpl():
+    """Шаблоны своего учреждения. Сам файл не отдаём — только описание."""
+    org_id = current_org(request.user)
+    with db() as conn, conn.cursor() as cur:
+        cur.execute("""select id, name, note, orig_name, who, at,
+                              octet_length(data) as size
+                         from act_template where org_id = %s
+                        order by lower(btrim(name))""", (org_id,))
+        return jsonify({"templates": [_tpl_row(r) for r in cur.fetchall()]})
+
+
+@app.post("/api/acttpl")
+@need_perm("dict.edit")
+def api_acttpl_save():
+    """Добавить шаблон или поправить у заведённого название, примечание, файл.
+
+    Приходит form-data: JSON файлов не носит. Файл обязателен только для
+    нового шаблона — у старого без него меняются лишь подписи.
+    """
+    org_id = current_org(request.user)
+    tid = (request.form.get("id") or "").strip()
+    name = (request.form.get("name") or "").strip()
+    note = (request.form.get("note") or "").strip()
+    f = request.files.get("file")
+    if not name:
+        return jsonify({"error": "bad_value", "message": "Дайте шаблону название"}), 400
+    data = f.read() if (f and f.filename) else None
+    if data is not None:
+        try:
+            actdoc.check(data)
+        except ValueError as e:
+            return jsonify({"error": "bad_file", "message": str(e)}), 400
+    with db() as conn, conn.cursor() as cur:
+        if tid:
+            cur.execute("select id from act_template where id = %s and org_id = %s",
+                        (tid, org_id))
+            if not cur.fetchone():
+                return jsonify({"error": "not_found"}), 404
+            if data is None:
+                cur.execute("""update act_template set name = %s, note = %s where id = %s""",
+                            (name, note, tid))
+            else:
+                cur.execute("""update act_template set name = %s, note = %s, data = %s,
+                                      orig_name = %s, staff_id = %s, who = %s, at = now()
+                                where id = %s""",
+                            (name, note, data, f.filename, request.user["id"],
+                             request.user["name"], tid))
+        else:
+            if data is None:
+                return jsonify({"error": "no_file", "message": "Выберите файл шаблона"}), 400
+            tid = "atpl" + secrets.token_hex(6)
+            cur.execute("""insert into act_template (id, org_id, name, note, orig_name,
+                                                     data, staff_id, who)
+                           values (%s,%s,%s,%s,%s,%s,%s,%s)""",
+                        (tid, org_id, name, note, f.filename, data,
+                         request.user["id"], request.user["name"]))
+        cur.execute("""select id, name, note, orig_name, who, at,
+                              octet_length(data) as size
+                         from act_template where id = %s""", (tid,))
+        return jsonify({"ok": True, "template": _tpl_row(cur.fetchone())})
+
+
+@app.post("/api/acttpl/delete")
+@need_perm("dict.edit")
+def api_acttpl_delete():
+    org_id = current_org(request.user)
+    tid = ((request.get_json(silent=True) or {}).get("id") or "").strip()
+    with db() as conn, conn.cursor() as cur:
+        cur.execute("delete from act_template where id = %s and org_id = %s", (tid, org_id))
+        if not cur.rowcount:
+            return jsonify({"error": "not_found"}), 404
+    return jsonify({"ok": True})
+
+
+@app.get("/api/acttpl/sample")
+@need_auth
+def api_acttpl_sample():
+    """Встроенный образец — с него удобно начинать свой шаблон."""
+    try:
+        data = actdoc.sample()
+    except ValueError as e:
+        return jsonify({"error": "no_sample", "message": str(e)}), 500
+    return send_file(io.BytesIO(data), as_attachment=True,
+                     download_name="Образец акта.docx", mimetype=DOCX_MIME)
+
+
+@app.get("/api/acttpl/<tid>/file")
+@need_auth
+def api_acttpl_file(tid):
+    """Скачать заведённый шаблон — посмотреть или поправить в Word."""
+    org_id = current_org(request.user)
+    with db() as conn, conn.cursor() as cur:
+        cur.execute("select name, orig_name, data from act_template where id = %s and org_id = %s",
+                    (tid, org_id))
+        t = cur.fetchone()
+    if not t:
+        return jsonify({"error": "not_found"}), 404
+    return send_file(io.BytesIO(t["data"]), as_attachment=True,
+                     download_name=(t["orig_name"] or (t["name"] + ".docx")),
+                     mimetype=DOCX_MIME)
+
+
+@app.get("/api/writeoffs/<path:act>/act")
+@need_auth
+def api_writeoff_act(act):
+    """Акт на списание в Word: шаблон заказчика плюс список материалов.
+
+    Ключ тот же, что у акта в интерфейсе: `act_id`, а у старых одиночных
+    списаний — «one-<id>» (актов у них ещё не было).
+    """
+    org_id = current_org(request.user)
+    one = act.startswith("one-")
+    key = act[4:] if one else act
+    sql = """select w.*, s.name as sup_name, s.unit as unit,
+                    d.name as div_name, dep.name as dep_name, wh.code as wh_code
+               from stock_writeoff w
+               left join supply s on s.id = w.supply_id
+               left join division d on d.id = w.division_id
+               left join department dep on dep.id = w.department_id
+               left join warehouse wh on wh.id = w.warehouse_id
+              where w.org_id = %s and w.{} = %s
+              order by w.sku, s.name, d.name, dep.name, w.id""".format("id" if one else "act_id")
+    with db() as conn, conn.cursor() as cur:
+        cur.execute(sql, (org_id, key))
+        rows = cur.fetchall()
+    if not rows:
+        return jsonify({"error": "not_found"}), 404
+
+    # материалы в списке — по связке «материал + номенклатура», как и на экране:
+    # одно название с разными номенклатурами считается по отдельности
+    groups, order = {}, []
+    for r in rows:
+        k = (r["supply_id"], r["sku"] or "")
+        if k not in groups:
+            groups[k] = {"name": r["sup_name"] or "", "sku": r["sku"] or "",
+                         "unit": r["unit"] or "", "total": 0, "places": []}
+            order.append(k)
+        g = groups[k]
+        g["total"] += r["qty"] or 0
+        g["places"].append({"place": actdoc.place_label(r["div_name"], r["dep_name"],
+                                                        r["wh_code"]),
+                            "qty": r["qty"] or 0})
+    lines = [actdoc.material_line(g["name"], g["sku"], g["unit"], g["total"], g["places"])
+             for g in (groups[k] for k in order)]
+
+    number = next((r["act"] for r in rows if r["act"]), "")
+    date = next((r["d"] for r in rows if r["d"]), None) or datetime.date.today()
+
+    # по какому шаблону оформлять: выбранный в окне, иначе встроенный образец.
+    # Шаблон берётся только свой — в чужом подписанты другого учреждения.
+    tpl = (request.args.get("tpl") or "").strip()
+    data_tpl = None
+    if tpl:
+        with db() as conn, conn.cursor() as cur:
+            cur.execute("select data from act_template where id = %s and org_id = %s",
+                        (tpl, org_id))
+            row = cur.fetchone()
+        if not row:
+            return jsonify({"error": "no_template",
+                            "message": "Шаблон не найден — обновите страницу"}), 404
+        data_tpl = row["data"]
+    try:
+        data = actdoc.build(number, date, lines, data_tpl)
+    except ValueError as e:
+        return jsonify({"error": "no_template", "message": str(e)}), 500
+    return send_file(io.BytesIO(data), as_attachment=True,
+                     download_name=actdoc.file_name(number, date), mimetype=DOCX_MIME)
+
+
 # ------------------------------------------------------------------ статика
 
 @app.get("/")
@@ -2905,9 +3321,14 @@ def index():
     return send_from_directory(ROOT, "it-inventory.html")
 
 
-@app.get("/<path:filename>")
+# Из корня проекта раздавалась любая запрошенная дорожка — а рядом со страницей
+# лежат `server/.env` с паролем базы, дампы в `backup/` и сами исходники, и всё
+# это отдавалось кому угодно в сети, даже без входа. Теперь из корня уходит
+# только сама страница, а файлы, которые понадобятся ей потом (стили, картинки,
+# скрипты), кладутся в `static/` — оттуда и берутся.
+@app.get("/static/<path:filename>")
 def static_files(filename):
-    return send_from_directory(ROOT, filename)
+    return send_from_directory(ROOT / "static", filename)
 
 
 if __name__ == "__main__":
