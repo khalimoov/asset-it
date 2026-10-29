@@ -99,12 +99,12 @@ function renderOrgsScreen(list){
 
   $("orgsBody").innerHTML = shown.map(function(o, i){
     var who = orgStaff.filter(function(st){ return st.orgId === o.id; }).length;
-    return '<tr data-o="'+esc(o.id)+'"><td class="num">'+(i+1)+'</td>'+
+    return '<tr data-o="'+esc(o.id)+'"'+(can("org.manage") ? ' class="pick"' : '')+'><td class="num">'+(i+1)+'</td>'+
       cellText(o.name + (o.id === orgId ? "" : "")) +
       cellText(o.note || "—") +
       '<td>'+(counts[o.id] === undefined ? "—" : counts[o.id])+'</td>'+
       '<td>'+who+'</td>'+
-      acts(['<button class="ic js-oedit" title="Изменить">✎</button>']) + '</tr>';
+      acts(can("org.manage") ? ['<button class="ic js-oedit" title="Изменить">✎</button>'] : []) + '</tr>';
   }).join("");
   $("orgsEmpty").hidden = shown.length > 0;
 
@@ -169,6 +169,7 @@ function openOrg(o){
 }
 $("btnAddOrg").onclick = function(){ openOrg(null); };
 $("orgsBody").addEventListener("click", function(e){
+  if(!can("org.manage")) return;
   var tr = e.target.closest("tr[data-o]"); if(!tr) return;
   var o = orgList.find(function(x){ return x.id === tr.dataset.o; });
   if(o) openOrg(o);

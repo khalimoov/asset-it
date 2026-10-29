@@ -6,14 +6,14 @@
           <button class="btn-sm" id="btnDocCfg">⚙ Куда сохранять</button>
         </div>
         <div class="dropzone" id="docDrop">
-          <b>Перетащите сюда скан накладной</b>
-          <span>PDF или изображение, до 40 МБ. Или <a href="#" id="docPick">выберите файл</a></span>
+          <b><a href="#" id="docPick">Выберите файл</a> или вставьте сюда</b>
           <input type="file" id="docFile" accept=".pdf,.png,.jpg,.jpeg,.tif,.tiff,.bmp" hidden>
           <div class="docwait" id="docWait">
             <div class="spin"></div>
             <b id="dwTitle">Загружаем файл…</b>
             <span id="dwSub"></span>
             <span id="dwJoke"></span>
+            <span id="dwScore"></span>
             <div class="pbar" id="dwBar"><i></i></div>
           </div>
         </div>

@@ -1,0 +1,11 @@
+# Обновление кода поверх уже загруженного на сервере образа — без интернета.
+# Python, библиотеки, Tesseract и шрифты берутся из BASE как есть, меняются
+# только страница (web/) и сервер (server/). Годится, пока не менялись
+# Dockerfile и server/requirements.txt — update.sh это проверяет.
+ARG BASE=asset-it:latest
+FROM ${BASE}
+
+# прежние файлы убираем целиком: удалённое в новой версии не должно остаться
+RUN rm -rf /app/web /app/server
+COPY app/web/ /app/web/
+COPY app/server/ /app/server/

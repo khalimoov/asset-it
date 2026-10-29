@@ -1,7 +1,7 @@
 <!-- Экран входа и первого запуска -->
 <div id="loginScreen" hidden>
   <form id="loginForm" autocomplete="on">
-    <h1>Учёт ИТ-отдела</h1>
+    <h1 class="lg-brand"><img src="/static/favicon/favicon.svg" alt="" width="34" height="34">Athena</h1>
     <div class="sub" id="lg_sub">Вход в систему</div>
     <div class="field"><label for="lg_login">Логин</label>
       <input id="lg_login" name="username" autocomplete="username" autofocus></div>
@@ -12,7 +12,7 @@
   </form>
   <!-- первый запуск: учётных записей ещё нет, администратор заводит себя сам -->
   <form id="setupForm" autocomplete="off" hidden>
-    <h1>Учёт ИТ-отдела</h1>
+    <h1 class="lg-brand"><img src="/static/favicon/favicon.svg" alt="" width="34" height="34">Athena</h1>
     <div class="sub">Первый запуск — задайте логин и пароль администратора.</div>
     <div class="field"><label for="su_name">Ваше имя</label>
       <input id="su_name" placeholder="Фамилия Имя" autocomplete="off"></div>

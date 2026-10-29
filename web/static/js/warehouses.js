@@ -14,11 +14,11 @@ function renderWhs(){
   });
   $("whsBody").innerHTML = list.map(function(w, i){
     var used = items.filter(function(x){ return x.warehouse === w.id; }).length;
-    return '<tr data-w="'+esc(w.id)+'"><td class="num">'+(i+1)+'</td>'+
+    return '<tr data-w="'+esc(w.id)+'"'+(canDict("warehouses") ? ' class="pick"' : '')+'><td class="num">'+(i+1)+'</td>'+
       '<td class="mono">'+esc(w.code||"—")+'</td>'+
       cellText(w.name||"—") + cellText(w.note||"") +
       '<td>'+used+'</td>'+
-      acts(can("users.manage")
+      acts(canDict("warehouses")
         ? ['<button class="ic js-whedit" title="Изменить">✎</button>',
            '<button class="ic btn-danger js-whdel"'+
              (used ? ' disabled title="На складе числится техника"' : ' title="Удалить"')+
@@ -47,6 +47,8 @@ function openWh(w){
 }
 $("btnAddWh").onclick = function(){ openWh(null); };
 $("whsBody").addEventListener("click", function(e){
+  /* на просмотре склад не открывается: окно — это форма правки */
+  if(!canDict("warehouses")) return;
   var tr = e.target.closest("tr[data-w]"); if(!tr) return;
   var w = (cfg.warehouses || []).find(function(x){ return x.id === tr.dataset.w; });
   if(!w) return;

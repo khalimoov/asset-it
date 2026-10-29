@@ -1,8 +1,16 @@
 <!-- Боковое меню -->
   <aside class="side">
     <div class="brand">
-      <div>Учёт ИТ-отдела<small>Единая база</small></div>
-      <button type="button" class="tsw" id="themeSw" role="switch" aria-checked="false" title="Тёмная тема"><span class="knob"></span></button>
+      <div class="brand-txt">
+        <svg class="brand-logo" viewBox="0 0 64 64" aria-hidden="true">
+          <path d="M32 4 L55 12 V31 Q55 50 32 60 Q9 50 9 31 V12 Z" fill="#ffffff"/>
+          <path d="M21.5 47 L32 18 L42.5 47" fill="none" stroke="#0b2545" stroke-width="5.5" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M26 37 H38" fill="none" stroke="#0b6670" stroke-width="5" stroke-linecap="round"/>
+        </svg>
+        <div><span class="brand-name">Athena</span>
+          <!-- ITDI при наведении раскрывается в полное название: дописываются недостающие буквы -->
+          <small class="brand-sub" title="IT Department Inventory"><span>IT</span><span class="x"> </span><span>D</span><span class="x">epartment </span><span>I</span><span class="x">nventory</span></small></div>
+      </div>
     </div>
     <select id="orgPick" class="orgpick" title="Учреждение"></select>
 
@@ -15,7 +23,7 @@
     <button data-nav="dels" id="navDels"><span class="ico">✕</span><span class="nm">История удалений</span><span class="cnt" id="cntDels"></span></button>
     <button data-nav="xhist" id="navXhist"><span class="ico">⇢</span><span class="nm">История передач</span><span class="cnt" id="cntXhist"></span></button>
 
-    <div class="grp">Учёт</div>
+    <div class="grp">Разделы учёта</div>
     <div id="regNav"></div>
     <button data-nav="ips"><span class="ico">⌗</span><span class="nm">IP-адреса</span><span class="cnt" id="cntIps"></span></button>
     <button data-nav="docs" id="navDocs"><span class="ico">⎙</span><span class="nm">Приходные накладные</span><span class="cnt" id="cntDocs"></span></button>
@@ -24,7 +32,6 @@
     <div class="grp">Справочники</div>
     <button data-nav="users"><span class="ico">☺</span><span class="nm">Сотрудники</span><span class="cnt" id="cntUsers"></span></button>
     <button data-nav="orgs" id="navOrgs"><span class="ico">⚑</span><span class="nm">Учреждения</span><span class="cnt" id="cntOrgs"></span></button>
-    <button data-nav="ad" id="navAd"><span class="ico">⇄</span><span class="nm">Active Directory</span><span class="cnt" id="cntAd"></span></button>
     <button data-nav="warehouses" id="navWh"><span class="ico">▤</span><span class="nm">Склады</span><span class="cnt" id="cntWh"></span></button>
     <button data-nav="staff" id="navStaff"><span class="ico">⚒</span><span class="nm">Пользователи ИТ</span><span class="cnt" id="cntStaff"></span></button>
     <button data-nav="roles" id="navRoles"><span class="ico">⚿</span><span class="nm">Роли и доступ</span><span class="cnt" id="cntRoles"></span></button>
@@ -33,6 +40,7 @@
     <button data-nav="places"><span class="ico">⌖</span><span class="nm">Место</span><span class="cnt" id="cntPlaces"></span></button>
     <button data-nav="models"><span class="ico">▣</span><span class="nm">Модели</span><span class="cnt" id="cntModels"></span></button>
     <button data-nav="acttpl"><span class="ico">▧</span><span class="nm">Шаблоны актов</span><span class="cnt" id="cntActTpl"></span></button>
+    <button data-nav="ad" id="navAd"><span class="ico">⇄</span><span class="nm">LDAP</span><span class="cnt" id="cntAd"></span></button>
 
     </div><!-- /side-nav -->
 
@@ -40,6 +48,10 @@
       <div class="whoami">
         <div class="who"><b id="meName">—</b><span id="meRole">—</span></div>
         <button id="btnLogout" title="Выйти из системы">Выйти</button>
+      </div>
+      <div class="foot-row">
+        <div class="appver" id="appVer"></div>
+        <button type="button" class="tsw" id="themeSw" role="switch" aria-checked="false" title="Тёмная тема"><span class="knob"></span></button>
       </div>
     </div>
   </aside>

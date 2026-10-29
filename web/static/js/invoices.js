@@ -137,13 +137,10 @@ function loadDocs(){
   }).catch(function(){});
 }
 
+/* Когда распознавание в порядке, над списком ничего не пишем — заказчик просил
+   оставить только «выберите файл или вставьте сюда». Говорим лишь о неполадках. */
 function ocrNote(){
-  if(!docsOcr) return "";
-  if(docsOcr.ready)
-    return "Распознавание готово: " + esc(docsOcr.version || "Tesseract") +
-           ", языки — " + esc((docsOcr.langs || []).join(", ")) +
-           (docsOcr.tessdata ? "<br>Словари: <code>" + esc(docsOcr.tessdata) + "</code>" +
-             (docsOcr.own ? " (из пакета)" : " (системные)") : "");
+  if(!docsOcr || docsOcr.ready) return "";
   if((docsOcr.missingLibs || []).length)
     return "Распознавание выключено: на сервере не хватает библиотек — " +
            esc(docsOcr.missingLibs.join(", ")) +
@@ -170,7 +167,7 @@ function renderDocs(){
       '<td><span class="badge '+(d.status==="applied"?"b-ok":"b-info")+'">'+
         esc(ST[d.status] || d.status)+'</span></td>'+
       '<td class="hide-md" title="'+esc(d.who||"")+'">'+esc(d.who||"")+'</td>'+
-      acts(can("docs.scan")
+      acts(can("docs.edit")
         ? ['<button class="ic js-docopen" title="Разобрать">✎</button>',
            '<button class="ic btn-danger js-docdel" title="Удалить накладную">✕</button>']
         : ['<button class="ic js-docopen" title="Посмотреть">👁</button>'])+'</tr>';
@@ -192,6 +189,9 @@ function docWaitStop(){
   $("dwBar").firstChild.style.width = "0";
   $("dwJoke").textContent = "";
   $("dwJoke").classList.remove("loud");
+  $("dwScore").textContent = "";
+  mailGame.stop();
+  dz.classList.remove("game");
 }
 function sendDoc(file){
   if(!file) return;
@@ -206,6 +206,13 @@ function sendDoc(file){
     stage = "ocr";
     $("dwTitle").textContent = "Распознаём документ…";
     bar.classList.add("ind"); bar.firstChild.style.width = "";
+    /* скан читается до минуты — пока ждём, конверт гоняется за мышкой */
+    if(mailGame.start(dz.querySelector(".spin"), function(n){
+      $("dwScore").textContent = "Конверт поймал вас " + n + " " + timesWord(n);
+    })){
+      dz.classList.add("game");
+      $("dwScore").textContent = "Поводите мышкой — конверт попробует вас поймать";
+    }
     var tick = function(){
       var s = Math.round((Date.now() - started) / 1000);
       var j = $("dwJoke");
@@ -256,6 +263,10 @@ function sendDoc(file){
   };
   xhr.send(fd);
 }
+function timesWord(n){
+  var a = n % 10, b = n % 100;
+  return (a >= 2 && a <= 4 && (b < 12 || b > 14)) ? "раза" : "раз";
+}
 function fmtBytes(n){
   n = n || 0;
   if(n < 1024) return n + " Б";
@@ -274,6 +285,19 @@ function fmtBytes(n){
   dz.onclick = function(){ $("docFile").click(); };
   $("docPick").onclick = function(e){ e.preventDefault(); e.stopPropagation(); $("docFile").click(); };
   $("docFile").onchange = function(){ sendDoc($("docFile").files[0]); $("docFile").value = ""; };
+  /* «вставьте сюда»: Ctrl+V с файлом или снимком экрана в буфере. Перехватываем
+     только файлы — текст по-прежнему вставляется в поля. */
+  document.addEventListener("paste", function(e){
+    if(nav !== "docs" || !can("docs.edit") || dz.classList.contains("busy")) return;
+    var cd = e.clipboardData, file = cd && cd.files && cd.files[0];
+    if(!file && cd && cd.items){
+      for(var i = 0; i < cd.items.length && !file; i++)
+        if(cd.items[i].kind === "file") file = cd.items[i].getAsFile();
+    }
+    if(!file) return;
+    e.preventDefault();
+    sendDoc(file);
+  });
 })();
 
 $("btnDocCfg").onclick = function(){
@@ -418,7 +442,7 @@ function openDoc(id){
     (applied ? " · уже заведена" : "");
   /* По заведённой накладной второй раз проводить нельзя: иначе та же техника
      появится в учёте дважды. Открыть её обратно может только администратор. */
-  var mayScan = can("docs.scan");
+  var mayScan = can("docs.edit");
   $("btnDrApply").hidden = applied || !mayScan;
   $("btnDrReopen").hidden = !(applied && isAdmin());
   $("btnDrDel").hidden = !mayScan;

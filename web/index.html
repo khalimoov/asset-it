@@ -3,7 +3,13 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Учёт ИТ-отдела</title>
+<title>Athena</title>
+<link rel="icon" href="/static/favicon/favicon.ico" sizes="any">
+<link rel="icon" href="/static/favicon/favicon.svg" type="image/svg+xml">
+<link rel="icon" type="image/png" sizes="32x32" href="/static/favicon/favicon-32x32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="/static/favicon/favicon-16x16.png">
+<link rel="apple-touch-icon" sizes="180x180" href="/static/favicon/apple-touch-icon.png">
+<link rel="manifest" href="/static/favicon/site.webmanifest">
 <link rel="stylesheet" href="/static/app.css">
 <script>
   /* тема применяется до отрисовки, чтобы не было вспышки */
@@ -27,7 +33,7 @@
       </div>
       <select id="scopeOrg" class="scopepick" hidden title="Показывать данные учреждения"></select>
       <div class="row" id="topActions" hidden>
-        <button id="btnImport">Импорт CSV</button>
+        <button id="btnImport" title="Загрузить CSV или Excel (.xlsx). Строки с номером, который уже есть в разделе, обновляют эту запись">Импорт</button>
         <button id="btnExport">Экспорт CSV</button>
         <button id="btnExcel">Экспорт Excel</button>
       </div>
@@ -75,7 +81,7 @@
 <!-- include: parts/dialogs/supplies.html -->
 <!-- include: parts/dialogs/employees.html -->
 
-<div id="toast"></div>
+<div id="toast" popover="manual" role="status" aria-live="polite"></div>
 
 <script src="/static/js/core.js"></script>
 <script src="/static/js/nav.js"></script>
@@ -87,6 +93,7 @@
 <script src="/static/js/deletions.js"></script>
 <script src="/static/js/warehouses.js"></script>
 <script src="/static/js/act-templates.js"></script>
+<script src="/static/js/mail-game.js"></script>
 <script src="/static/js/invoices.js"></script>
 <script src="/static/js/orgs.js"></script>
 <script src="/static/js/netscan-ad.js"></script>

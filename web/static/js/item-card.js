@@ -16,7 +16,7 @@ function refreshFilters(){
   $("fSub").innerHTML = opts(subsOf(keep.c), "Все подкатегории"); $("fSub").value = keep.g;
   $("fType").innerHTML = opts(typesOf(keep.c, $("fSub").value), "Все типы"); $("fType").value = keep.t;
   $("fDiv").innerHTML = opts(cfg.divisions, "Все подразделения"); $("fDiv").value = keep.d;
-  $("fDep").innerHTML = opts(cfg.departments, "Все отделы"); $("fDep").value = keep.p;
+  $("fDep").innerHTML = depOptions(keep.d, "Все отделы"); $("fDep").value = keep.p;
   $("fStatus").innerHTML = '<option value="">Все статусы</option>' +
     statusesOf().map(function(s){ return '<option>'+esc(s)+'</option>'; }).join("");
   $("fStatus").value = keep.s;
@@ -343,6 +343,9 @@ function fillWarehouses(sel){
              esc((w.code ? w.code + " · " : "") + (w.name || ""))+'</option>'; }).join("");
   /* у расходных материалов склада нет — они лежат общей кучей */
   $("wrapWh").hidden = isSupplyReg(curReg);
+  /* обязателен, только когда есть из чего выбрать (та же проверка — в btnSave) */
+  document.querySelector('label[for="f_wh"]').innerHTML = "Склад" +
+    ((cfg.warehouses || []).length ? ' <span class="req" title="обязательное поле">*</span>' : '');
 }
 function syncStatusFields(){
   var st = $("f_status").value, isNew = !editingId;
@@ -385,9 +388,7 @@ function syncStatusFields(){
     if(!$("f_sdate").value || $("f_sdate").value === (prevIt.statusDate||"")) $("f_sdate").value = today();
   }
   if(wantRep){
-    $("f_master").disabled = !can("repair.assign");
-    document.querySelector('label[for="f_master"]').textContent =
-      can("repair.assign") ? "Мастер" : "Мастер (назначает администратор)";
+    $("f_master").disabled = !cardEditable;
     var keep = $("f_master").value, ms = masters();
     $("f_master").innerHTML = ms.length
       ? '<option value="">— не назначен —</option>' + ms.map(function(m){
@@ -499,13 +500,13 @@ function openDlg(it){
   refreshTypeSelect($("f_cat").value, $("f_sub").value, it ? it.type : "");
   refreshOwnerSelect(it ? (it.owner||"") : "");
   $("f_div").innerHTML = opts(cfg.divisions, "— не указано —");
-  $("f_dep").innerHTML = opts(cfg.departments, "— не указан —");
-  var sts = statusesOf(), prevSt = it ? (it.status||"") : "";
+  $("f_dep").innerHTML = depOptions("", "— не указан —");
+  var sts = statusesOf();
   $("f_status").innerHTML = sts.map(function(s){
-    return '<option'+(statusForbidden(s, prevSt) ? ' disabled' : '')+'>'+esc(s)+'</option>';
+    return '<option>'+esc(s)+'</option>';
   }).join("");
   $("f_div").value = it ? (it.division||"") : "";
-  $("f_dep").value = it ? (it.department||"") : "";
+  fillDeps("f_div", "f_dep", it ? (it.department||"") : "");
   $("dlgTitle").textContent = (it ? "Карточка: " + (it.inv || typeName(it.type) || "") : "Новая запись") + " · " + reg().name;
   $("f_inv").value = it ? (it.inv||"") : "";
   $("f_cost").value = it && it.cost != null ? money(it.cost) : "";
@@ -523,7 +524,8 @@ function openDlg(it){
   fillWarehouses(it ? (it.warehouse||"") : "");
   /* передача — только у уже заведённой единицы оборудования: новой сразу
      ставят нужный склад, а у материалов складов нет */
-  $("xferWrap").hidden = !it || isSupplyReg(curReg);
+  /* передача — отдельная строка роли: «Накладные по передаче» на правку */
+  $("xferWrap").hidden = !it || isSupplyReg(curReg) || !can("transfers.edit");
   $("f_xfer").checked = false; $("xferBox").hidden = true;
   $("f_xnote").value = ""; $("f_xfile").value = "";
   $("f_wh").disabled = false;
@@ -588,9 +590,11 @@ $("f_type").onchange = function(){
 /* выбрали сотрудника — подставляем его подразделение и отдел, если поля пусты */
 $("f_owner").onchange = function(){
   var u = byId("users", this.value); if(!u) return;
-  if(!$("f_div").value && u.divisionId) $("f_div").value = u.divisionId;
-  if(!$("f_dep").value && u.departmentId) $("f_dep").value = u.departmentId;
+  if(!$("f_div").value && u.divisionId){ $("f_div").value = u.divisionId; fillDeps("f_div", "f_dep", $("f_dep").value); }
+  if(!$("f_dep").value && u.departmentId) fillDeps("f_div", "f_dep", u.departmentId);
 };
+$("f_div").onchange = function(){ fillDeps("f_div", "f_dep", $("f_dep").value); };
+$("f_dep").onchange = function(){ depPicksDiv("f_div", "f_dep"); };
 
 /* Новые события уходят в historyAdd — автора и время проставляет сервер.
    В history дублируем, чтобы карточка показала запись сразу, не дожидаясь ответа. */
@@ -758,16 +762,16 @@ $("btnSave").onclick = function(){
   if(regCats().length && !$("f_cat").value) need.push(["f_cat", "категорию"]);
   else if(regLayout(curReg).subs && subsOf($("f_cat").value).length && !$("f_sub").value) need.push(["f_sub", "подкатегорию"]);
   if(!o.type) need.push(["f_type", "тип"]);
-  /* у прикреплённого склад — от основного, его не спрашиваем */
-  if(!isSupplyReg(curReg) && !o.warehouse && !(o.holder === "item" && o.parent)) need.push(["f_wh", "склад"]);
+  /* у прикреплённого склад — от основного, его не спрашиваем; пока ни одного
+     склада не заведено, выбрать нечего — тогда и не требуем */
+  if(!isSupplyReg(curReg) && (cfg.warehouses || []).length && !o.warehouse &&
+     !(o.holder === "item" && o.parent)) need.push(["f_wh", "склад"]);
   if(need.length){
-    var noWh = !isSupplyReg(curReg) && !(cfg.warehouses || []).length;
-    toast("Укажите: " + need.map(function(x){ return x[1]; }).join(", ") +
-          (noWh ? " (склад сначала заведите на экране «Склады»)" : ""));
+    toast("Укажите: " + need.map(function(x){ return x[1]; }).join(", "));
     $(need[0][0]).focus();
     return;
   }
-  if(can("repair.assign") && o.status===ST_REPAIR && masters().length && !o.masterId){
+  if(o.status===ST_REPAIR && masters().length && !o.masterId){
     toast("Выберите мастера"); return; }
   if(o.status===ST_USE){
     var miss = [];
@@ -896,8 +900,16 @@ $("qField").onchange = renderItems;
 $("fCat").onchange = function(){ $("fSub").value=""; $("fType").value=""; refreshFilters(); renderItems(); };
 $("fSub").onchange = function(){ $("fType").value=""; refreshFilters(); renderItems(); };
 $("fType").onchange = renderItems;
+/* без своего обработчика выбор модели не действовал, пока не тронешь другой фильтр */
+$("fModel").onchange = function(){ markFilters(); renderItems(); };
 $("fStatus").onchange = renderItems;
-$("fDiv").onchange = renderItems;
+/* фильтр отделов сужается по подразделению: одноимённые отделы разных подразделений не путаются */
+$("fDiv").onchange = function(){
+  var keep = $("fDep").value;
+  $("fDep").innerHTML = depOptions($("fDiv").value, "Все отделы");
+  $("fDep").value = keep && $("fDep").querySelector('option[value="'+keep+'"]') ? keep : "";
+  renderItems();
+};
 $("fDep").onchange = renderItems;
 $("btnReset").onclick = function(){
   $("fCat").value=""; $("fSub").value=""; $("fType").value=""; $("fStatus").value="";

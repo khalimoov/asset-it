@@ -124,7 +124,7 @@ function renderStock(){
   $("supNames").innerHTML = cfg.supplies.slice()
     .sort(function(a,b){ return a.name.toLowerCase()<b.name.toLowerCase()?-1:1; })
     .map(function(m){ return '<option value="'+esc(m.name)+'"></option>'; }).join("");
-  var q = $("qStock").value.trim().toLowerCase(), giveOk = can("supply.issue");
+  var q = $("qStock").value.trim().toLowerCase(), giveOk = canSup();
   var all = lots().sort(function(a,b){
     var an = (supplyById(a.supplyId)||{}).name || "", bn = (supplyById(b.supplyId)||{}).name || "";
     if(an.toLowerCase() !== bn.toLowerCase()) return an.toLowerCase()<bn.toLowerCase()?-1:1;
@@ -246,13 +246,13 @@ function openSupCard(key){
     '<div><span>По документам</span><b>'+lotDocLeft(l)+' '+esc(u)+'</b></div>';
   $("sp_err").textContent = "";
   /* номенклатура и цена переписывают и выдачи со списаниями — нужны оба права */
-  var mayLot = can("supply.receive") && can("supply.issue");
+  var mayLot = canSup();
   $("sp_sku").disabled = $("sp_cost").disabled = !mayLot;
-  var may = can("supply.receive");
+  var may = canSup();
   ["sp_name","sp_unit","sp_note","spNoModel"].forEach(function(id){ $(id).disabled = !may; });
   $("sp_model").disabled = $("btnSpModelAdd").disabled = !may || $("spNoModel").checked;
-  hide("btnSpSave", can("supply.receive"));
-  hide("btnSpDel", can("supply.receive"));
+  hide("btnSpSave", canSup());
+  hide("btnSpDel", canSup());
   $("dlgSup").showModal();
 }
 $("btnSpModelAdd").onclick = function(){
@@ -367,7 +367,7 @@ function fillIssueForm(key){
   $("isTitle").textContent = pl ? "Выдать: " + (pm.name||"—") + (pl.sku ? " · " + pl.sku : "") : "Выдать / установить";
   $("isLeft").value = pl ? lotLeft(pl) + " " + (pm.unit||"шт") +
     (pl.cost===null ? "" : " · по " + money(pl.cost)) : "—";
-  $("btnIssue").disabled = !pl || !can("supply.issue");
+  $("btnIssue").disabled = !pl || !canSup();
   $("isUser").innerHTML = cfg.users.length
     ? '<option value="">— выберите сотрудника —</option>' + cfg.users.slice().sort(function(a,b){
         return a.name.toLowerCase()<b.name.toLowerCase()?-1:1; }).map(function(u){
@@ -395,7 +395,7 @@ function fillIssueForm(key){
   syncIssueTarget();
 }
 function openIssue(key){
-  if(!can("supply.issue")){ toast("Нет прав на выдачу материалов"); return; }
+  if(!canSup()){ toast("Нет прав на выдачу материалов"); return; }
   var l = lots().find(function(x){ return x.key===key; });
   if(l && lotLeft(l) <= 0){ toast("«"+lotLabel(l)+"» закончился — сначала оприходуйте приход"); return; }
   fillIssueForm(key);

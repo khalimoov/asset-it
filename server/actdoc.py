@@ -328,12 +328,14 @@ def build_nom(rows, template=None):
     def one_line(proto, mark, text, base):
         """Номер и склад — строго в одну строку: не влезает, уменьшаем кегль.
 
-        Оба выровнены по центру наклейки, и перенос выглядел бы как вторая
-        строка посередине — заказчик просил этого не допускать.
+        Перенос выглядел бы как вторая строка номера — заказчик просил этого
+        не допускать. Выравнивание — с левого края, как у типа (в шаблоне они
+        по центру; заказчик попросил 02.10.2026 начинать слева).
         """
         got, pt = fit_text(text, width, base, lines=1, min_pt=NOM_MIN_PT,
                            bold="<w:b/>" in proto)
-        return _resize(proto.replace(mark, esc(got[0])), pt)
+        para = proto.replace(mark, esc(got[0])).replace('<w:jc w:val="center"/>', "")
+        return _resize(para, pt)
 
     body = []
     for r in rows:
@@ -465,10 +467,11 @@ def build_nom_pdf(rows, template=None):
         # наклейка целиком на одном листе: не влезает — на следующий
         if state["y"] + need > g["page_h"] - g["bottom"] and state["y"] > g["top"]:
             new_page()
-        put(inv[0], inv_pt, True, True)
+        # всё с левого края: номер и склад раньше стояли по центру
+        put(inv[0], inv_pt, True, False)
         for ln in typ:
             put(ln, typ_pt, False, False)
-        put(wh[0], wh_pt, True, True)
+        put(wh[0], wh_pt, True, False)
         state["y"] += _line_h(g["typ_pt"])[0]     # пустая строка между наклейками, как в шаблоне
     R.FPDFPage_GenerateContent(state["page"].raw)
 

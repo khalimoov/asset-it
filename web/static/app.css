@@ -1,48 +1,82 @@
+/* Палитра — общая с программой «Заявки ИТ»: обе стоят рядом и должны выглядеть одной системой.
+   Текст и акцент — не ниже 4.5:1 к фону (WCAG AA) в обеих темах. */
 :root{
-  --bg:#f6f7f9;--surface:#ffffff;--surface-2:#f1f3f6;--border:#dfe3e8;
-  --text:#16191d;--muted:#6b7280;--accent:#2f6fdd;--accent-fg:#ffffff;
-  --ok:#15803d;--ok-bg:#e7f6ec;--warn:#a15c00;--warn-bg:#fdf1dc;
-  --danger:#b42318;--danger-bg:#fdeceb;--info:#1e5eb8;--info-bg:#e7effb;
-  --shadow:0 1px 2px rgba(16,24,40,.06),0 8px 24px rgba(16,24,40,.08);
+  color-scheme:light;
+  --bg:#eef1f5;--surface:#ffffff;--surface-2:#f6f8fb;--hover:#f1f5f9;
+  --border:#d9dfe8;--line-strong:#b9c3d2;
+  --text:#0f1b2d;--ink-2:#44526a;--muted:#5b6880;            /* muted: 5.6:1 на белом */
+  --brand:#0b2545;--brand-2:#13315c;                         /* боковая панель */
+  --accent:#0b6670;--accent-2:#08525a;--accent-soft:#e0f0f1;--accent-fg:#ffffff;  /* 6.7:1 */
+  --primary:#0b6670;--primary-2:#08525a;--primary-fg:#ffffff;
+  --ok:#067647;--ok-bg:#e6f4ec;--warn:#b54708;--warn-bg:#fef3e6;
+  --danger:#b42318;--danger-bg:#fdecea;--info:#1d3f7a;--info-bg:#e7eefb;
+  --shadow:0 1px 2px rgba(15,27,45,.06),0 1px 1px rgba(15,27,45,.04);
+  --shadow-pop:0 8px 24px rgba(15,27,45,.14);
+  --shadow-lg:0 20px 60px rgba(15,27,45,.25);
+  --backdrop:rgba(11,37,69,.4);
+  --sb:#c3ccd8;--sb-hover:#a3afbf;
   --side:236px;--rowh:44px;
-  --sb:#c9cfd8;--sb-hover:#a8b1bd;
 }
 @media (prefers-color-scheme: dark){
   :root:not([data-theme="light"]){
-    --bg:#14161a;--surface:#1c1f24;--surface-2:#23272e;--border:#333941;
-    --text:#e8eaed;--muted:#9aa2ad;--accent:#5b90f0;--accent-fg:#0d1117;
-    --ok:#6ee7a0;--ok-bg:#12301f;--warn:#f2c168;--warn-bg:#332711;
-    --danger:#f28b82;--danger-bg:#3a1c1a;--info:#8ab4f8;--info-bg:#16243d;
-    --shadow:0 1px 2px rgba(0,0,0,.4),0 8px 24px rgba(0,0,0,.35);
-    --sb:#3b434e;--sb-hover:#525c69;
+    color-scheme:dark;
+    --bg:#0d141d;--surface:#151e2a;--surface-2:#1a2533;--hover:#1f2c3c;
+    --border:#2a384a;--line-strong:#3d4f66;
+    --text:#e5ebf2;--ink-2:#b7c3d1;--muted:#8f9db1;
+    --brand:#08162a;--brand-2:#0d213b;
+    --accent:#4fc1ca;--accent-2:#7dd3da;--accent-soft:#123239;--accent-fg:#06222a;
+    --primary:#0e7c86;--primary-2:#0b6670;--primary-fg:#ffffff;
+    --ok:#5ccf8f;--ok-bg:#12301f;--warn:#f2a965;--warn-bg:#36240f;
+    --danger:#f2837b;--danger-bg:#3a1c1d;--info:#a9c6ff;--info-bg:#1b2d4d;
+    --shadow:0 1px 2px rgba(0,0,0,.4);
+    --shadow-pop:0 8px 24px rgba(0,0,0,.45);
+    --shadow-lg:0 20px 60px rgba(0,0,0,.55);
+    --backdrop:rgba(0,0,0,.55);
+    --sb:#3d4f66;--sb-hover:#53688a;
   }
 }
 :root[data-theme="dark"]{
-  --bg:#14161a;--surface:#1c1f24;--surface-2:#23272e;--border:#333941;
-  --text:#e8eaed;--muted:#9aa2ad;--accent:#5b90f0;--accent-fg:#0d1117;
-  --ok:#6ee7a0;--ok-bg:#12301f;--warn:#f2c168;--warn-bg:#332711;
-  --danger:#f28b82;--danger-bg:#3a1c1a;--info:#8ab4f8;--info-bg:#16243d;
-  --sb:#3b434e;--sb-hover:#525c69;
-  --shadow:0 1px 2px rgba(0,0,0,.4),0 8px 24px rgba(0,0,0,.35);
+    color-scheme:dark;
+    --bg:#0d141d;--surface:#151e2a;--surface-2:#1a2533;--hover:#1f2c3c;
+    --border:#2a384a;--line-strong:#3d4f66;
+    --text:#e5ebf2;--ink-2:#b7c3d1;--muted:#8f9db1;
+    --brand:#08162a;--brand-2:#0d213b;
+    --accent:#4fc1ca;--accent-2:#7dd3da;--accent-soft:#123239;--accent-fg:#06222a;
+    --primary:#0e7c86;--primary-2:#0b6670;--primary-fg:#ffffff;
+    --ok:#5ccf8f;--ok-bg:#12301f;--warn:#f2a965;--warn-bg:#36240f;
+    --danger:#f2837b;--danger-bg:#3a1c1d;--info:#a9c6ff;--info-bg:#1b2d4d;
+    --shadow:0 1px 2px rgba(0,0,0,.4);
+    --shadow-pop:0 8px 24px rgba(0,0,0,.45);
+    --shadow-lg:0 20px 60px rgba(0,0,0,.55);
+    --backdrop:rgba(0,0,0,.55);
+    --sb:#3d4f66;--sb-hover:#53688a;
 }
 *{box-sizing:border-box}
 [hidden]{display:none !important}   /* иначе .row{display:flex} перебивает атрибут */
 body{margin:0;background:var(--bg);color:var(--text);
   font-family:"Segoe UI",Inter,system-ui,-apple-system,Roboto,Arial,sans-serif;font-size:14px;line-height:1.45}
+a{color:var(--accent);text-decoration:none}
+a:hover{color:var(--accent-2);text-decoration:underline}
+/* видимый фокус с клавиатуры (WCAG 2.4.7); у полей — своя подсветка рамки */
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+input:focus-visible,select:focus-visible,textarea:focus-visible{outline:none}
 h1{font-size:19px;margin:0;font-weight:650;letter-spacing:-.01em}
 h2{font-size:15px;margin:0 0 10px;font-weight:650}
 .sub{color:var(--muted);font-size:12.5px;margin-top:2px}
 
 /* ---------- каркас: боковая панель + рабочая область ---------- */
 .app{display:flex;align-items:flex-start;min-height:100vh}
-aside.side{width:var(--side);flex:0 0 var(--side);background:var(--surface);border-right:1px solid var(--border);
+aside.side{width:var(--side);flex:0 0 var(--side);color:#dfe7f3;
+  background:linear-gradient(180deg,var(--brand) 0%,var(--brand-2) 100%);border-right:2px solid var(--primary);
   position:sticky;top:0;height:100vh;overflow:hidden;padding:14px 10px;display:flex;flex-direction:column}
 /* список разделов забирает свободную высоту; полосу прокрутки не показываем */
 .scopepick{font-size:12.5px;font-weight:600;padding:8px 10px;border-radius:9px;
   background:var(--surface-2);border:1px solid var(--border);max-width:260px}
 .scopepick[hidden]{display:none !important}
 .orgpick{margin:8px 0 2px;font-size:12.5px;font-weight:600;padding:7px 9px;
-  border-radius:8px;background:var(--surface-2);border:1px solid var(--border)}
+  border-radius:6px;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.18);color:#fff}
+.orgpick:hover{background:rgba(255,255,255,.11);border-color:rgba(255,255,255,.3)}
+.orgpick option{background:var(--surface);color:var(--text)}
 .orgpick[hidden]{display:none !important}
 /* Полосы прокрутки оформляем сами: стандартная в Chrome широкая и серая, внутри
    карточки это бросается в глаза. Сначала стандартные свойства — их понимают
@@ -59,33 +93,48 @@ aside.side{width:var(--side);flex:0 0 var(--side);background:var(--surface);bord
 .dlg-body{scrollbar-gutter:stable}
 .side-nav{flex:1 1 auto;min-height:0;overflow-y:auto;scrollbar-width:none}
 .side-nav::-webkit-scrollbar{width:0;height:0}
-.brand{display:flex;align-items:center;justify-content:space-between;gap:8px;
-  font-weight:700;font-size:14.5px;padding:4px 10px 2px;letter-spacing:-.01em}
-.brand small{display:block;font-weight:500;font-size:11.5px;color:var(--muted);margin-top:2px}
+.brand{display:flex;align-items:center;justify-content:space-between;gap:8px;color:#fff;
+  font-weight:650;font-size:14.5px;padding:4px 10px 2px;letter-spacing:.01em}
+.brand small{display:block;font-weight:500;font-size:11.5px;color:#9fb2cd;margin-top:2px;letter-spacing:0}
+.brand-txt{display:flex;align-items:center;gap:9px;min-width:0;flex:1 1 auto}
+.brand-logo{flex:0 0 28px;width:28px;height:28px}
+.brand-name{display:block;line-height:1.2}
+/* ITDI → IT Department Inventory: недостающие буквы выезжают при наведении */
+.brand-sub{white-space:nowrap;letter-spacing:.06em;cursor:default}
+.brand-sub .x{display:inline-block;max-width:0;overflow:hidden;vertical-align:bottom;white-space:pre;
+  letter-spacing:0;opacity:0;transition:max-width .35s ease,opacity .25s ease}
+.brand-txt:hover .brand-sub{letter-spacing:0;color:#dfe7f3}
+.brand-txt:hover .brand-sub .x{max-width:10em;opacity:1}
+@media (prefers-reduced-motion: reduce){ .brand-sub .x{transition:none} }
 /* тумблер темы: слева солнце — светлая, справа луна — тёмная */
 .side .tsw{flex:0 0 auto;width:42px;height:24px;padding:0;border-radius:12px;position:relative;
-  border:1px solid var(--border);background:var(--surface-2);cursor:pointer;display:block}
-.side .tsw:hover{background:var(--surface-2);border-color:var(--muted)}
+  border:1px solid rgba(255,255,255,.22);background:rgba(255,255,255,.07);cursor:pointer;display:block}
+.side .tsw:hover{background:rgba(255,255,255,.12);border-color:rgba(255,255,255,.4)}
 .side .tsw .knob{position:absolute;top:2px;left:2px;width:18px;height:18px;border-radius:50%;
   background:var(--surface);border:1px solid var(--border);box-shadow:0 1px 2px rgba(0,0,0,.15);
   display:flex;align-items:center;justify-content:center;font-size:11px;line-height:1;color:var(--text);
   transition:left .18s ease}
 .side .tsw .knob::before{content:"☀"}
-.side .tsw.on{background:var(--accent);border-color:var(--accent)}
+.side .tsw.on{background:var(--primary);border-color:var(--primary)}
 .side .tsw.on .knob{left:20px}
 .side .tsw.on .knob::before{content:"☾"}
-.side .grp{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);
+.side .grp{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:#8ea3c0;
   font-weight:700;margin:12px 10px 4px}
 .side-nav > .grp:first-child{margin-top:6px}
 .side button{display:flex;align-items:center;gap:9px;width:100%;text-align:left;border:none;background:none;
-  border-radius:8px;padding:6px 10px;color:var(--text);font:inherit;font-weight:600;font-size:13px;cursor:pointer}
-.side button:hover{background:var(--surface-2)}
-.side button.on{background:var(--accent);color:var(--accent-fg)}
+  border-radius:6px;padding:6px 10px;color:#c5d2e6;font:inherit;font-weight:500;font-size:13px;cursor:pointer}
+.side button:hover{background:rgba(255,255,255,.08);color:#fff}
+.side button.on{background:rgba(14,124,134,.5);color:#fff;box-shadow:inset 3px 0 0 #4fc1ca}
+.side button:focus-visible{outline-color:#4fc1ca}
 .side .ico{width:17px;text-align:center;flex:0 0 17px}
 .side .nm{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.side .cnt{margin-left:auto;font-size:11px;font-weight:700;color:var(--muted)}
-.side button.on .cnt{color:var(--accent-fg);opacity:.8}
-.side-foot{flex:0 0 auto;padding:12px 0 0;border-top:1px solid var(--border)}
+.side .cnt{margin-left:auto;font-size:11px;font-weight:600;color:#8ea3c0}
+.side button.on .cnt{color:#fff;opacity:.85}
+.side-foot{flex:0 0 auto;padding:12px 0 0;border-top:1px solid rgba(255,255,255,.12)}
+.appver{padding:6px 10px 0;font-size:11px;color:#8ea3c0}
+/* низ панели: версия слева, переключатель темы справа */
+.foot-row{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:8px 2px 0 10px}
+.foot-row .appver{padding:0}
 .copy{font-size:10.5px;color:var(--muted);text-align:center;line-height:1.35;margin-top:10px;
   opacity:.85;word-break:break-word}
 #loginScreen .copy{position:fixed;left:0;right:0;bottom:14px;margin:0}
@@ -104,37 +153,40 @@ main{display:flex;flex-direction:column;min-height:100vh}
 #m_preview{max-width:100%;max-height:320px;border-radius:8px;border:1px solid var(--border);display:block}
 /* увеличенное фото при наведении на миниатюру: свой слой, иначе ячейка таблицы обрежет */
 #photoPop{position:fixed;z-index:120;padding:6px;background:var(--surface);border:1px solid var(--border);
-  border-radius:10px;box-shadow:var(--shadow);pointer-events:none}
+  border-radius:8px;box-shadow:var(--shadow-pop);pointer-events:none}
 #photoPop img{display:block;max-width:360px;max-height:360px;border-radius:6px}
 #mi_photo{max-width:100%;max-height:260px;border-radius:8px;border:1px solid var(--border);display:block;margin-bottom:12px}
 .whoami{display:flex;align-items:center;gap:8px;padding:8px 10px;
-  border:1px solid var(--border);border-radius:9px}
+  border:1px solid rgba(255,255,255,.14);border-radius:6px;background:rgba(255,255,255,.04)}
 .whoami .who{flex:1 1 auto;min-width:0}
-.whoami b{display:block;font-size:12.5px;font-weight:650;color:var(--text);
+.whoami b{display:block;font-size:12.5px;font-weight:600;color:#fff;
   overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.whoami span{display:block;font-size:11px;color:var(--muted);margin-top:1px;
+.whoami span{display:block;font-size:11px;color:#9fb2cd;margin-top:1px;
   overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.whoami button{flex:0 0 auto;width:auto;border:1px solid var(--border);border-radius:7px;
-  padding:5px 10px;font-size:11.5px;font-weight:600;color:var(--muted)}
-.whoami button:hover{background:var(--surface-2);color:var(--text)}
-#loginScreen{position:fixed;inset:0;z-index:200;background:var(--bg);
+.whoami button{flex:0 0 auto;width:auto;border:1px solid rgba(255,255,255,.2);border-radius:6px;
+  padding:5px 10px;font-size:11.5px;font-weight:500;color:#c5d2e6}
+.whoami button:hover{background:rgba(255,255,255,.08);color:#fff}
+#loginScreen{position:fixed;inset:0;z-index:200;
+  background:radial-gradient(circle at 20% 10%,#18406f 0,var(--brand) 55%);
   display:flex;align-items:center;justify-content:center;padding:20px}
 #loginScreen form{width:min(360px,94vw);background:var(--surface);border:1px solid var(--border);
-  border-radius:14px;box-shadow:var(--shadow);padding:24px}
+  border-radius:12px;box-shadow:0 30px 80px rgba(0,0,0,.35);padding:28px}
+#loginScreen .copy{color:#9fb2cd}
 #loginScreen h1{font-size:18px;margin:0 0 4px}
+#loginScreen h1.lg-brand{display:flex;align-items:center;gap:10px;font-size:22px}
 #loginScreen .sub{margin-bottom:18px}
 #loginScreen .field{margin-bottom:12px}
 #loginScreen button{width:100%;padding:10px;margin-top:4px}
 #lg_err{min-height:16px;margin:2px 0 6px}
-.side #roleSw button{width:auto;flex:1;justify-content:center;border:1px solid var(--border);
-  border-radius:7px;padding:5px 4px;font-size:11px;color:var(--muted)}
-.side #roleSw button.on{background:var(--surface-2);border-color:var(--accent);color:var(--text)}
+.side #roleSw button{width:auto;flex:1;justify-content:center;border:1px solid rgba(255,255,255,.18);
+  border-radius:6px;padding:5px 4px;font-size:11px;color:#c5d2e6}
+.side #roleSw button.on{background:rgba(255,255,255,.1);border-color:#4fc1ca;color:#fff;box-shadow:none}
 body.noadmin .col-adm{display:none}
 body.nodict .col-dict{display:none}
 #xferBody td:last-child .ic, #xhistBody td:last-child .ic{margin-left:12px}
 .ntc{display:flex;gap:10px;align-items:flex-start;padding:10px 12px;border:1px solid var(--border);
   border-radius:10px;margin-bottom:8px;background:var(--surface);cursor:pointer}
-.ntc:hover{border-color:var(--accent)}
+.ntc:hover{border-color:var(--line-strong);background:var(--hover)}
 .ntc.new{border-left:3px solid var(--accent)}
 .ntc .ico{font-size:15px;line-height:1.2;width:20px;text-align:center;flex:0 0 20px}
 .ntc .body{flex:1;min-width:0}
@@ -149,15 +201,16 @@ main{flex:1;min-width:0;padding:20px 22px 20px}
 header.top{display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:space-between;margin-bottom:14px}
 
 /* Узкое окно: панель переезжает наверх, но остаётся той же по смыслу —
-   выбор учреждения, затем группы «Обзор», «Учёт», «Справочники», в каждой
+   выбор учреждения, затем группы «Обзор», «Разделы учёта», «Справочники», в каждой
    кнопки в строку с переносом. Раньше панель просто ложилась набок: выбор
    учреждения растягивался на полблока, а все кнопки слипались в один столбец. */
 @media(max-width:900px){
   .app{display:block}
-  aside.side{width:auto;height:auto;position:static;border-right:none;border-bottom:1px solid var(--border);
+  aside.side{width:auto;height:auto;position:static;border-right:none;border-bottom:2px solid var(--primary);
     display:block;overflow:visible;padding:10px 12px}
   .brand{padding:0 0 6px}
   .brand small{display:inline;margin-left:6px}
+  .brand-name{display:inline}
   .orgpick{width:auto;min-width:200px;max-width:320px;margin:0 0 4px}
   .side-nav{display:flex;flex-wrap:wrap;align-items:center;gap:3px 4px;overflow:visible}
   #regNav{display:contents}
@@ -167,17 +220,25 @@ header.top{display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-conte
   .side .cnt{margin-left:4px}
   .side-foot{display:flex;align-items:center;gap:10px;padding:8px 0 0;margin-top:8px}
   .whoami{flex:1 1 auto;min-width:0;padding:5px 8px}
+  .foot-row{flex:0 0 auto;padding:0 2px 0 4px;gap:10px}
   main{padding:16px 12px 48px}
 }
 
 /* ---------- элементы управления ---------- */
-button,.btn{font:inherit;cursor:pointer;border-radius:8px;border:1px solid var(--border);
-  background:var(--surface);color:var(--text);padding:8px 13px;transition:.12s}
-button:hover{background:var(--surface-2)}
+button,.btn{font:inherit;font-weight:500;cursor:pointer;border-radius:6px;border:1px solid var(--border);
+  background:var(--surface);color:var(--text);padding:7px 14px;
+  transition:background-color .12s,border-color .12s,color .12s}
+button:hover,.btn:hover{background:var(--hover);border-color:var(--line-strong)}
 button:disabled{opacity:.45;cursor:not-allowed}
-.btn-primary{background:var(--accent);border-color:var(--accent);color:var(--accent-fg);font-weight:600}
-.btn-primary:hover{filter:brightness(1.07);background:var(--accent)}
+a.btn{display:inline-flex;align-items:center;gap:6px;text-decoration:none;color:var(--text)}
+a.btn:hover{text-decoration:none;color:var(--text)}
+.btn-primary,a.btn-primary{background:var(--primary);border-color:var(--primary);color:var(--primary-fg);font-weight:600}
+.btn-primary:hover,a.btn-primary:hover{background:var(--primary-2);border-color:var(--primary-2);color:var(--primary-fg)}
+/* второстепенное действие, которое должно быть заметно: переход в другую программу и т. п. */
+.btn-accent,a.btn-accent{color:var(--accent);border-color:var(--accent);font-weight:600}
+.btn-accent:hover,a.btn-accent:hover{background:var(--accent-soft);border-color:var(--accent);color:var(--accent)}
 .btn-danger{color:var(--danger)}
+.btn-danger:hover:not(:disabled){background:var(--danger-bg);border-color:var(--danger);color:var(--danger)}
 .btn-sm{padding:5px 9px;font-size:12.5px}
 .ic{width:28px;height:28px;padding:0;font-size:13px;line-height:1;border-radius:7px;
   display:inline-flex;align-items:center;justify-content:center;margin-left:4px}
@@ -185,19 +246,23 @@ button:disabled{opacity:.45;cursor:not-allowed}
 nav.tabs{display:flex;gap:2px;border-bottom:1px solid var(--border);margin-bottom:18px;flex-wrap:wrap}
 nav.tabs button{border:none;background:none;border-radius:0;border-bottom:2px solid transparent;
   padding:9px 12px;color:var(--muted);font-weight:600;font-size:13px}
-nav.tabs button:hover{background:var(--surface-2)}
+nav.tabs button:hover{background:var(--hover);color:var(--text)}
 nav.tabs button.on{color:var(--accent);border-bottom-color:var(--accent)}
 input,select,textarea{font:inherit;background:var(--surface);color:var(--text);
-  border:1px solid var(--border);border-radius:8px;padding:8px 10px;max-width:100%}
-input:focus,select:focus,textarea:focus{outline:2px solid var(--accent);outline-offset:-1px;border-color:var(--accent)}
-label{display:block;font-size:12px;color:var(--muted);margin-bottom:4px;font-weight:600}
+  border:1px solid var(--border);border-radius:6px;padding:7px 10px;max-width:100%}
+input:hover,select:hover,textarea:hover{border-color:var(--line-strong)}
+input:focus,select:focus,textarea:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+/* только просмотр: поле должно отличаться от того, которое можно править */
+input:disabled,select:disabled,textarea:disabled{background:var(--surface-2);color:var(--ink-2);
+  border-color:var(--border);cursor:not-allowed;opacity:1}
+label{display:block;font-size:12px;color:var(--ink-2);margin-bottom:4px;font-weight:500}
 .field input,.field select,.field textarea{width:100%}
 /* поле с подсказками вместо длинного списка; список — fixed, чтобы окно его не обрезало */
 .pick-list{position:fixed;z-index:1000;background:var(--surface);border:1px solid var(--border);
-  border-radius:10px;box-shadow:var(--shadow);overflow-y:auto;padding:4px}
+  border-radius:6px;box-shadow:var(--shadow-pop);overflow-y:auto;padding:4px}
 .pick-it{display:flex;justify-content:space-between;gap:10px;padding:6px 9px;border-radius:7px;cursor:pointer}
-.pick-it.on{background:var(--surface-2);outline:1px solid var(--accent)}
-.pick-it:hover{background:var(--surface-2)}
+.pick-it.on{background:var(--accent-soft);outline:1px solid var(--accent)}
+.pick-it:hover{background:var(--accent-soft)}
 .pick-t{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .pick-g{flex:none;color:var(--muted);font-size:12px}
 .pick-more{padding:6px 9px;color:var(--muted);font-size:12.5px}
@@ -218,21 +283,22 @@ input.bad,select.bad{border-color:var(--danger);outline-color:var(--danger)}
 .req{color:var(--danger);font-weight:700}
 
 /* ---------- карточки, плитки ---------- */
-.card{background:var(--surface);border:1px solid var(--border);border-radius:12px;box-shadow:var(--shadow);overflow:hidden}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:8px;box-shadow:var(--shadow);overflow:hidden}
 .pad{padding:16px}
 .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:16px}
-.stat{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:12px 14px;box-shadow:var(--shadow)}
+.stat{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:12px 14px;box-shadow:var(--shadow)}
 .stat b{display:block;font-size:22px;font-weight:650;letter-spacing:-.02em}
 .stat span{color:var(--muted);font-size:12px;display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .stat.clickable{cursor:pointer}
-.stat.clickable:hover{border-color:var(--accent)}
+.stat.clickable:hover{border-color:var(--accent);background:var(--hover)}
 .cols2{display:grid;grid-template-columns:repeat(auto-fit,minmax(330px,1fr));gap:14px;align-items:start}
 .bar{height:6px;border-radius:3px;background:var(--surface-2);overflow:hidden}
 .bar i{display:block;height:100%;background:var(--accent);border-radius:3px}
 .searchbar{display:flex;gap:12px;flex-wrap:wrap;align-items:center;justify-content:space-between;margin-bottom:14px}
 .searchbox{display:flex;align-items:stretch;background:var(--surface);border:1px solid var(--border);
-  border-radius:10px;overflow:hidden;box-shadow:var(--shadow);flex:1 1 380px;max-width:560px;min-width:220px}
-.searchbox:focus-within{border-color:var(--accent)}
+  border-radius:6px;overflow:hidden;box-shadow:var(--shadow);flex:1 1 380px;max-width:560px;min-width:220px}
+.searchbox:focus-within{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+.searchbox input:focus,.searchbox select:focus{box-shadow:none}
 .searchbox select{border:none;border-right:1px solid var(--border);border-radius:0;background:var(--surface-2);
   color:var(--muted);font-weight:600;font-size:12.5px;padding:9px 10px}
 .searchbox input{border:none;border-radius:0;flex:1;min-width:100px;padding:9px 12px;background:transparent}
@@ -254,7 +320,13 @@ th{font-size:11.5px;text-transform:uppercase;letter-spacing:.04em;color:var(--mu
   font-weight:600;background:var(--surface-2)}
 th[data-s],th.sortable{cursor:pointer;user-select:none}
 tbody tr.pick{cursor:pointer}
-tbody tr:hover{background:var(--surface-2)}
+/* раздел открыт только на просмотр: формы правки спрятаны, кнопки и поля
+   в таблицах категорий, типов, характеристик и наборов не нажимаются
+   (кнопки скрыты без сдвига колонок; клики гасит reg-dicts.js) */
+#v-reg.ro .edit-only{display:none !important}
+#v-reg.ro .reg-dict td.act > *{visibility:hidden}
+#v-reg.ro .reg-dict tbody select, #v-reg.ro .reg-dict tbody input{pointer-events:none;opacity:.6}
+tbody tr:hover{background:var(--hover)}
 td.act{overflow:visible;text-align:right;padding:0 8px}
 td.mono{font-family:ui-monospace,Consolas,"Courier New",monospace;font-size:12.5px}
 th.num,td.num{text-align:center;padding:0 2px;color:var(--muted);
@@ -306,6 +378,19 @@ td.st-x .badge{white-space:nowrap}
 /* «Не смог прочитать» под ячейкой: не ошибка, а приглашение вписать самому */
 .unread{display:block;font-size:11.5px;line-height:1.3;color:var(--warn);margin-top:2px}
 .docwait #dwJoke{margin-top:6px;font-size:13px;color:var(--muted)}
+.docwait #dwScore{margin-top:4px;font-weight:650;color:var(--text)}
+/* конверт на месте крутилки: пока ждём распознавания, он гоняется за мышкой (mail-game.js) */
+.dropzone.game .docwait .spin{visibility:hidden}
+.mailgame{position:fixed;inset:0;width:100%;height:100%;pointer-events:none;z-index:60;overflow:visible}
+.mailgame .mg-paper{fill:#FFF9EC;stroke:#2A333A;stroke-width:1.6;stroke-linejoin:round}
+.mailgame .mg-line{fill:none;stroke:#C9B98F;stroke-width:1.4;stroke-linecap:round}
+.mailgame .mg-wing{fill:#FFFFFF;stroke:#2A333A;stroke-width:1.4;stroke-linejoin:round}
+.mailgame .mg-mouth{fill:#3B1A12}
+.mailgame .mg-eye{fill:#fff;stroke:#2A333A;stroke-width:1}
+.mailgame .mg-pupil{fill:#141A1F}
+.mailgame .mg-stamp{fill:#E46B4F}
+.mailgame .mg-stamp-t{font:800 4.2px system-ui,sans-serif;fill:#fff;text-anchor:middle}
+.mailgame .mg-bit{fill:#FFF9EC;stroke:#2A333A;stroke-width:.6}
 /* после сорока секунд подпись становится заметной — ждать дольше уже странно */
 .docwait #dwJoke.loud{font-size:19px;font-weight:700;color:var(--warn);letter-spacing:.3px}
 .docwait .pbar{height:6px;max-width:340px;margin:12px auto 0;border-radius:3px;
@@ -322,6 +407,35 @@ td.st-x .badge{white-space:nowrap}
 .adlog li{font-size:12.5px;color:var(--muted);margin-bottom:3px}
 .sec{margin-top:16px;border-top:1px dashed var(--border);padding-top:12px}
 .sec b{font-size:12.5px}
+/* карточка сотрудника: слева данные, техника и заявки, справа — полномочия из «Заявок ИТ».
+   Прокручивается всё окно целиком, без отдельных прокруток у таблиц. */
+.ui-grid{display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:20px;align-items:start}
+#dlgUserInfo .miniwrap{max-height:none;overflow:visible}
+.ui-side{background:var(--surface-2);border:1px solid var(--border);border-radius:8px;padding:12px 14px}
+.ui-side-head{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;
+  margin:-2px 0 8px;padding-bottom:10px;border-bottom:1px solid var(--border)}
+.ui-side-head b{font-size:12.5px;text-transform:uppercase;letter-spacing:.06em;color:var(--ink-2)}
+.ui-side-head .btn{padding:4px 10px;font-size:12px}
+.ui-side .note{margin-top:4px}
+/* номер слева, как в «Заявках»: «1.» — система или ресурс без системы, «1.1» — подпункт */
+.rt,.rg-sys{display:flex;align-items:flex-start;gap:6px;padding:4px 6px;margin:0 -6px;border-radius:6px;
+  line-height:1.3}
+.rt{color:var(--text);text-decoration:none;font-size:12.5px}
+.rt[href]:hover{background:var(--surface);text-decoration:none;color:var(--text)}
+.rt-n{flex:0 0 30px;color:var(--muted);font-size:12px;font-variant-numeric:tabular-nums;padding-top:1px}
+.rt-name{flex:1 1 auto;min-width:0;overflow-wrap:anywhere}
+.rt .chip,.rt .badge{flex:0 0 auto;margin:0}
+.rt.child{padding-left:16px}
+.rg-sys{font-size:12px;font-weight:650;color:var(--ink-2)}
+.rg-sys .rt-n{color:var(--ink-2)}
+.rg-sys > span:last-child{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+/* пункты верхнего уровня разделены пунктиром */
+.rt + .rg-sys,.rt.child + .rt:not(.child){margin-top:6px;padding-top:9px;border-top:1px dashed var(--border);
+  border-radius:0}
+.ui-removed{margin-top:12px;padding-top:10px;border-top:1px dashed var(--border)}
+.ui-removed summary{cursor:pointer;font-size:12px;color:var(--muted);margin-bottom:6px}
+.ui-removed .rt{color:var(--muted);text-decoration:line-through}
+@media(max-width:900px){ .ui-grid{grid-template-columns:1fr} }
 .ipgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(62px,1fr));gap:6px}
 .ipcell{border:1px solid var(--border);border-radius:8px;padding:5px 3px;text-align:center;
   background:var(--surface);cursor:pointer;overflow:hidden;font-size:12px;line-height:1.25;position:relative}
@@ -351,10 +465,11 @@ td.st-x .badge{white-space:nowrap}
 .lg i.dot.off{background:var(--muted);opacity:.45}
 .lg i.dot.odd{background:#f59e0b}
 .pooltab{padding:6px 12px;border-radius:20px;font-size:12.5px;font-weight:600}
-.pooltab.on{background:var(--accent);border-color:var(--accent);color:var(--accent-fg)}
+.pooltab.on{background:var(--primary);border-color:var(--primary);color:var(--primary-fg)}
 .pre{display:flex;align-items:stretch;border:1px solid var(--border);border-radius:8px;
   overflow:hidden;background:var(--surface)}
-.pre:focus-within{border-color:var(--accent);outline:2px solid var(--accent);outline-offset:-1px}
+.pre:focus-within{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+.pre input:focus,.pre select:focus{box-shadow:none}
 .pre span{padding:8px 2px 8px 10px;background:var(--surface-2);color:var(--muted);font-weight:600;
   font-family:ui-monospace,Consolas,monospace;font-size:13px;white-space:nowrap;display:flex;align-items:center}
 .pre input{border:none;border-radius:0;flex:1;min-width:52px;background:transparent;
@@ -367,6 +482,9 @@ td.st-x .badge{white-space:nowrap}
 .kv{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px}
 .kv div span{display:block;font-size:11.5px;color:var(--muted);font-weight:600}
 .kv div b{font-weight:600;overflow-wrap:anywhere;word-break:break-word}
+/* почта и прочие ссылки среди данных — цветом текста, акцент только при наведении */
+.kv a{color:inherit}
+.kv a:hover{color:var(--accent)}
 .mini{width:100%;border-collapse:collapse;table-layout:fixed}
 .mini th,.mini td{padding:6px 8px;height:34px;font-size:12.5px;border-bottom:1px solid var(--border);
   text-align:left;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;vertical-align:middle}
@@ -383,11 +501,11 @@ td.st-x .badge{white-space:nowrap}
 @media(max-width:1180px){ .hide-md{display:none} }
 @media(max-width:820px){ .hide-sm{display:none} }
 
-dialog{border:1px solid var(--border);border-radius:14px;background:var(--surface);color:var(--text);
-  padding:0;width:min(700px,94vw);box-shadow:var(--shadow);max-height:94vh;overflow:hidden}
+dialog{border:1px solid var(--border);border-radius:10px;background:var(--surface);color:var(--text);
+  padding:0;width:min(700px,94vw);box-shadow:var(--shadow-lg);max-height:94vh;overflow:hidden}
 /* только у открытого: закрытому display задаёт браузер, и flex его бы показал */
 dialog[open]{display:flex;flex-direction:column}
-dialog::backdrop{background:rgba(0,0,0,.45)}
+dialog::backdrop{background:var(--backdrop)}
 dialog.wide{width:min(860px,96vw)}
 dialog.xwide{width:min(1120px,97vw)}
 dialog.xxwide{width:min(1400px,97vw)}
@@ -415,7 +533,7 @@ dialog.xxwide{width:min(1400px,97vw)}
   .doctbl .c-cost{width:15%} .doctbl .c-sum{width:12%}
   .doctbl .c-to{width:13%}  .doctbl .c-cat{width:12%}
 }
-.dlg-head{padding:16px 18px;border-bottom:1px solid var(--border);font-weight:650;font-size:16px;
+.dlg-head{padding:14px 18px;border-bottom:1px solid var(--border);font-weight:650;font-size:16px;
   overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 /* прокручивается только середина: кнопки внизу видны всегда, до них не листают */
 .dlg-body{padding:16px 18px;flex:1 1 auto;min-height:0;overflow-y:auto;overflow-x:hidden}
@@ -453,8 +571,49 @@ details.sec[open] > summary::before{content:"\25be"}
 /* Всплывашка: скрыта не сдвигом за край (у пустого элемента высота меньше сдвига,
    и у низа экрана оставалась полоска), а прозрачностью и visibility. */
 #toast{position:fixed;left:50%;bottom:22px;transform:translateX(-50%) translateY(30px);
-  background:var(--text);color:var(--bg);padding:10px 16px;border-radius:10px;font-size:13px;
+  background:var(--brand);color:#fff;padding:10px 16px;border-radius:8px;font-size:13px;
+  box-shadow:0 10px 30px rgba(0,0,0,.25);
   transition:opacity .25s,transform .25s,visibility 0s .25s;z-index:99;max-width:90vw;
-  opacity:0;visibility:hidden;pointer-events:none}
+  opacity:0;visibility:hidden;pointer-events:none;
+  /* сбрасываем то, что браузер даёт popover: растяжку на весь экран, рамку, отступы */
+  top:auto;right:auto;margin:0;border:0;overflow:visible;width:max-content}
 #toast.on{transform:translateX(-50%) translateY(0);opacity:1;visibility:visible;
   transition:opacity .25s,transform .25s,visibility 0s}
+
+/* Active Directory: три вкладки — подключение, загрузка, вход */
+.grid-ad{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr) minmax(220px,.55fr);gap:12px 14px;align-items:start}
+@media(max-width:900px){.grid-ad{grid-template-columns:1fr 1fr}}
+@media(max-width:560px){.grid-ad{grid-template-columns:1fr}}
+.grid-ad .err{font-size:11.5px;line-height:1.35}
+.ad-on{font-size:13px;color:var(--text);font-weight:600}
+.ad-status{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:0 0 12px;font-size:12px;color:var(--muted);min-height:22px}
+.ad-status .badge{white-space:normal}
+.ad-foot{justify-content:flex-end;margin-top:14px}
+.ad-foot .err{flex:1 1 200px;margin:0}
+.ad-check{display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap}
+.ad-check h2{margin:0}
+
+/* Пользователь ИТ из AD: поле поиска и подсказки под ним */
+.dlg-sec{margin-top:16px;padding-top:12px;border-top:1px solid var(--border)}
+.dlg-sec:first-child{margin-top:0;padding-top:0;border-top:none}
+.dlg-sec > h3{font-size:13.5px;margin:0 0 10px;font-weight:650}
+.ldap-list{margin-top:6px;border:1px solid var(--border);border-radius:10px;max-height:300px;overflow:auto}
+.ldap-list:empty{display:none}
+.ldap-it{padding:9px 12px;border-bottom:1px solid var(--border);cursor:pointer;font-size:12px;color:var(--muted);line-height:1.5}
+.ldap-it:last-child{border-bottom:none}
+.ldap-it b{display:block;font-size:13px;color:var(--text);font-weight:650}
+.ldap-it:hover,.ldap-it.on{background:var(--accent-soft)}
+.ldap-it.used{cursor:default;opacity:.55}
+.ldap-it.used:hover{background:none}
+.ldap-it .tag{color:var(--warn);font-weight:600}
+.ldap-msg{padding:9px 12px;font-size:12px;color:var(--muted)}
+.ldap-picked{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:8px;padding:8px 12px;
+  border:1px solid var(--accent);border-radius:10px;font-size:12.5px}
+.ldap-picked b{font-weight:650}
+.ldap-picked span{color:var(--muted)}
+
+/* Отделы группами по подразделениям: строка-заголовок группы */
+tr.grp-row td{background:var(--surface-2);font-weight:650;font-size:12.5px;color:var(--text);
+  padding-top:7px;padding-bottom:7px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+tr.grp-row .cnt{color:var(--muted);font-weight:600;margin-left:6px}
+tr.grp-row:hover td{background:var(--surface-2)}

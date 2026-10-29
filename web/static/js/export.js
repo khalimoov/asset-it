@@ -333,8 +333,7 @@ function exportSupplies(){
   saveTable({sheet: suffix, head: head, rows: rows}, fileName(suffix));
 }
 
-function importSupplies(text){
-  var rows = parseCSV(text);
+function importSupplies(rows){
   if(rows.length<2){ toast("В файле нет данных"); return; }
   var head = rows[0].map(function(h){ return h.trim().toLowerCase(); });
   var find = function(names){
@@ -396,75 +395,287 @@ function findOrAdd(key, name, extra){
   var o = Object.assign({id:uid(key[0]), name:name}, extra||{});
   cfg[key].push(o); return o.id;
 }
-function importCSV(text){
-  var rows = parseCSV(text);
-  if(rows.length<2){ toast("В файле нет данных"); return; }
-  var head = rows[0].map(function(h){ return h.trim().toLowerCase(); });
+/* Одноимённые отделы бывают в разных подразделениях — ищем в своём. Нет там —
+   берём неразмеченный и приписываем к подразделению, нет и его — заводим. */
+function findDep(name, divId){
+  if(!name) return "";
+  var low = name.toLowerCase();
+  var same = cfg.departments.filter(function(d){ return d.name.toLowerCase()===low; });
+  var d = same.find(function(x){ return divId && x.divisionId===divId; }) ||
+          same.find(function(x){ return !x.divisionId || !byId("divisions", x.divisionId); }) ||
+          (!divId ? same[0] : null);
+  if(d){ if(divId && !d.divisionId) d.divisionId = divId; return d.id; }
+  d = {id:uid("d"), name:name, divisionId:divId||""};
+  cfg.departments.push(d); return d.id;
+}
+/* В колонке ответственного выгрузка пишет не только людей: «⌖ место» у
+   закреплённого за местом и «Имя (за инв. …)» у прикреплённого. Место
+   сотрудником не заводим, хвост про прикрепление отрезаем. */
+function importOwner(name){
+  name = String(name||"").replace(/\s*\(за инв\.[^)]*\)\s*$/, "").trim();
+  if(!name || name.charAt(0) === "⌖") return "";
+  var u = cfg.users.find(function(x){ return x.name.toLowerCase()===name.toLowerCase(); });
+  if(!u){ u = {id:uid("u"), name:name, position:"", divisionId:"", departmentId:""}; cfg.users.push(u); }
+  return u.id;
+}
+/* Модель берём только из справочника: опечатка не должна плодить модели */
+function importModel(name){
+  if(!name) return null;
+  var low = name.toLowerCase(), hit = function(m){ return m.name.toLowerCase()===low; };
+  return cfg.models.filter(function(m){ return rid(m)===curReg; }).find(hit) || cfg.models.find(hit) || null;
+}
+/* Тип по названию; нет — заводим вместе с категорией и подкатегорией из строки */
+function importType(g){
+  var tn = g("typeName"); if(!tn) return "";
+  var catName = g("catName"), catId = "";
+  if(catName){
+    var c = regCats().find(function(x){ return x.name.toLowerCase()===catName.toLowerCase(); });
+    if(!c){ c = {id:uid("c"), name:catName, registryId:curReg}; cfg.categories.push(c); }
+    catId = c.id;
+  }
+  var sn = g("subName"), subId = "";
+  if(sn){
+    var sub = regSubs().find(function(x){
+      return x.name.toLowerCase()===sn.toLowerCase() && (!catId || (x.categoryId||"")===catId); });
+    if(!sub){ sub = {id:uid("g"), name:sn, categoryId:catId, registryId:curReg}; cfg.subcategories.push(sub); }
+    else if(!sub.categoryId && catId) sub.categoryId = catId;
+    subId = sub.id;
+  }
+  var t = regTypes().find(function(x){ return x.name.toLowerCase()===tn.toLowerCase(); });
+  if(!t){ t = {id:uid("t"), name:tn, categoryId:catId, subcategoryId:subId, registryId:curReg}; cfg.types.push(t); }
+  else {
+    if(!t.categoryId && catId) t.categoryId = catId;
+    if(!t.subcategoryId && subId) t.subcategoryId = subId;
+  }
+  return t.id;
+}
+/* Ячейка характеристики — колонка с тем же заголовком, что пишет выгрузка */
+function specCell(r, head, sp){
+  var i = head.indexOf((sp.name+(sp.unit ? ", "+sp.unit : "")).toLowerCase());
+  if(i === -1) i = head.indexOf(sp.name.toLowerCase());
+  return i === -1 ? "" : String(r[i]==null ? "" : r[i]).trim();
+}
+/* Номер для сверки. Первой единице номенклатуры сервер хвост не пишет, а в
+   таблице его дописывают: «3613500/1» и «3613500» — одна и та же единица. */
+function invKey(v){
+  return String(v==null ? "" : v).replace(/\s+/g, "").replace(/\/1$/, "");
+}
+/* В выгрузке Excel над заголовками стоит полоса «Характеристики» — заголовок
+   ищем в первых строках, а не берём первую не глядя. */
+function headRow(rows){
+  for(var i=0; i<Math.min(rows.length, 5); i++){
+    var h = rows[i].map(function(x){ return String(x==null ? "" : x).trim().toLowerCase(); });
+    if(h.indexOf("инвентарный номер")!==-1 || h.indexOf("тип")!==-1 || h.indexOf("inv")!==-1) return i;
+  }
+  return 0;
+}
+
+/* Загрузка записей раздела из CSV или Excel. Выгрузку правят в Excel и
+   заливают обратно, поэтому строка с номером, который в разделе уже есть,
+   правит эту запись, а не заводит новую. Каждую запись берём один раз:
+   скопированная строка с тем же номером — это ещё одна единица, сервер
+   допишет ей следующий хвост /N. Пустая ячейка ничего не стирает, ячейка
+   как в выгрузке ничего не меняет. */
+function importRows(rows){
+  var hr = headRow(rows);
+  if(rows.length < hr + 2){ toast("В файле нет данных"); return; }
+  var head = rows[hr].map(function(h){ return String(h==null ? "" : h).trim().toLowerCase(); });
   var map = {};
   BASE.forEach(function(c){
     var i = head.indexOf(c[1].toLowerCase()); if(i===-1) i = head.indexOf(c[0]);
     if(i!==-1) map[c[0]] = i;
   });
   if(map.inv===undefined && map.typeName===undefined){ toast("Нужна колонка «Инвентарный номер» или «Тип»"); return; }
-  var queue = [], sts = statusesOf();
-  rows.slice(1).forEach(function(r){
-    var g = function(k){ return map[k]!==undefined ? (r[map[k]]||"").trim() : ""; };
+  var sts = statusesOf(), queue = [], added = 0, updated = 0, same = 0;
+  var badInv = [], noModel = {}, shown = {}, byInv = {}, used = {};
+  decorated().forEach(function(o){ shown[o.id] = o; });
+  regItems().forEach(function(it){
+    var k = invKey(it.inv); if(!k) return;
+    (byInv[k] = byInv[k] || []).push(it);
+  });
+  var low = function(v){ return String(v==null ? "" : v).trim().toLowerCase(); };
+
+  rows.slice(hr + 1).forEach(function(r, ri){
+    var g = function(k){ return map[k]!==undefined ? String(r[map[k]]==null ? "" : r[map[k]]).trim() : ""; };
     var inv = g("inv"), tn = g("typeName");
     if(!inv && !tn) return;
-    var catName = g("catName"), catId = "";
-    if(catName){
-      var c = regCats().find(function(x){ return x.name.toLowerCase()===catName.toLowerCase(); });
-      if(!c){ c = {id:uid("c"), name:catName, registryId:curReg}; cfg.categories.push(c); }
-      catId = c.id;
+    var prev = inv ? (byInv[invKey(inv)] || []).find(function(x){ return !used[x.id]; }) : null;
+    var mn = g("modelName"), model = importModel(mn);
+    if(mn && !model) noModel[mn] = true;
+
+    if(!prev){
+      /* номер с ошибкой сервер отверг бы вместе со всей партией — такую строку
+         пропускаем и называем, остальные загружаем */
+      if(inv && invProblem(inv)){ badInv.push(hr + ri + 2); return; }
+      var typeId = importType(g), st = g("status");
+      var status = sts.indexOf(st)!==-1 ? st : sts[0], free = ownerless(status);
+      var specs = {}, specsNone = {};
+      specsOf(typeId).forEach(function(sp){
+        var v = specCell(r, head, sp); if(!v) return;
+        if(v.toLowerCase() === "нет" && sp.opt) specsNone[sp.id] = true;
+        else specs[sp.id] = v;
+      });
+      var divId = free ? "" : findOrAdd("divisions", g("divName"));
+      var row = {
+        registryId: curReg, inv: inv, cost: numVal(g("cost")), type: typeId,
+        status: status, model: model ? model.id : "",
+        owner: free ? "" : importOwner(g("ownerName")),
+        division: divId,
+        department: free ? "" : findDep(g("depName"), divId),
+        notes: g("notes"), specs: specs, specsNone: specsNone
+      };
+      addHistory(row, "Добавлено импортом из файла");
+      queue.push(row); added++;
+      return;
     }
-    var sn = g("subName"), subId = "";
-    if(sn){
-      var sub = regSubs().find(function(x){
-        return x.name.toLowerCase()===sn.toLowerCase() && (!catId || (x.categoryId||"")===catId); });
-      if(!sub){ sub = {id:uid("g"), name:sn, categoryId:catId, registryId:curReg}; cfg.subcategories.push(sub); }
-      else if(!sub.categoryId && catId) sub.categoryId = catId;
-      subId = sub.id;
+
+    used[prev.id] = true;
+    var o = JSON.parse(JSON.stringify(prev)), was = shown[prev.id] || {}, ch = [];
+    delete o.historyAdd;
+    if(tn && low(tn) !== low(was.typeName)){
+      o.type = importType(g);
+      ch.push("Тип: "+(was.typeName||"—")+" → "+(typeName(o.type)||"—"));
     }
-    var typeId = "";
-    if(tn){
-      var t = regTypes().find(function(x){ return x.name.toLowerCase()===tn.toLowerCase(); });
-      if(!t){ t = {id:uid("t"), name:tn, categoryId:catId, subcategoryId:subId, registryId:curReg}; cfg.types.push(t); }
-      else {
-        if(!t.categoryId && catId) t.categoryId = catId;
-        if(!t.subcategoryId && subId) t.subcategoryId = subId;
+    if(model && model.id !== (prev.model||"")){
+      o.model = model.id; ch.push("Модель: "+(was.modelName||"—")+" → "+model.name);
+    }
+    var cost = numVal(g("cost"));
+    if(cost !== null && cost !== numVal(prev.cost)){
+      o.cost = cost; ch.push("Стоимость: "+(prev.cost==null ? "—" : prev.cost)+" → "+cost);
+    }
+    var st2 = g("status");
+    if(st2 && st2 !== prev.status && sts.indexOf(st2)!==-1){
+      o.status = st2; ch.push("Статус: "+(prev.status||"—")+" → "+st2);
+    }
+    if(ownerless(o.status)){
+      /* на складе и на списании за сотрудником не числится — как в карточке */
+      if(!ownerless(prev.status||"") && (prev.owner || prev.division || prev.department)){
+        o.owner = o.division = o.department = "";
+        ch.push("Снято с сотрудника: "+(ownerName(prev.owner)||"—"));
       }
-      typeId = t.id;
+    } else if((prev.holder||"person") === "person"){
+      /* за местом и за оборудованием ответственный и отдел — чужие, не трогаем */
+      var own = g("ownerName");
+      if(own && low(own) !== low(was.ownerName)){
+        var ownId = importOwner(own);
+        if(ownId && ownId !== (prev.owner||"")){
+          o.owner = ownId; ch.push("Ответственный: "+(ownerName(prev.owner)||"—")+" → "+ownerName(ownId));
+        }
+      }
+      var dn = g("divName");
+      if(dn && low(dn) !== low(was.divName)){
+        o.division = findOrAdd("divisions", dn);
+        ch.push("Подразделение: "+(was.divName||"—")+" → "+dn);
+      }
+      var pn = g("depName");
+      if(pn && (low(pn) !== low(was.depName) || o.division !== (prev.division||""))){
+        var depId = findDep(pn, o.division);
+        if(depId !== (prev.department||"")){
+          o.department = depId; ch.push("Отдел: "+(was.depName||"—")+" → "+pn);
+        }
+      }
     }
-    var own = g("ownerName"), ownerId = "";
-    if(own){
-      var u = cfg.users.find(function(x){ return x.name.toLowerCase()===own.toLowerCase(); });
-      if(!u){ u = {id:uid("u"), name:own, position:"", divisionId:"", departmentId:""}; cfg.users.push(u); }
-      ownerId = u.id;
-    }
-    /* Характеристики берём из одноимённых колонок — тех самых, что пишет экспорт. */
-    var specs = {}, specsNone = {};
-    specsOf(typeId).forEach(function(sp){
-      var i = head.indexOf((sp.name+(sp.unit ? ", "+sp.unit : "")).toLowerCase());
-      if(i === -1) i = head.indexOf(sp.name.toLowerCase());
-      if(i === -1) return;
-      var v = (r[i]||"").trim();
-      if(!v) return;
-      if(v.toLowerCase() === "нет" && sp.opt) specsNone[sp.id] = true;
-      else specs[sp.id] = v;
+    var nt = g("notes");
+    if(nt && nt !== (prev.notes||"")){ o.notes = nt; ch.push("Примечание"); }
+    o.specs = o.specs || {}; o.specsNone = o.specsNone || {};
+    specsOf(o.type).forEach(function(sp){
+      var v = specCell(r, head, sp); if(!v) return;
+      if(v.toLowerCase() === "нет" && sp.opt){
+        if(!o.specsNone[sp.id]){ o.specsNone[sp.id] = true; delete o.specs[sp.id]; ch.push(sp.name+": нет"); }
+      } else if(o.specsNone[sp.id] || v !== String(o.specs[sp.id]==null ? "" : o.specs[sp.id])){
+        o.specs[sp.id] = v; delete o.specsNone[sp.id]; ch.push(sp.name+": "+v);
+      }
     });
-    var row = {
-      registryId: curReg, inv: inv, cost: numVal(g("cost")), type: typeId,
-      status: sts.indexOf(g("status"))!==-1 ? g("status") : sts[0],
-      owner: ownerId,
-      division: findOrAdd("divisions", g("divName")),
-      department: findOrAdd("departments", g("depName")),
-      notes: g("notes"), specs: specs, specsNone: specsNone
-    };
-    addHistory(row, "Импортировано из CSV");
-    queue.push(row);
+    if(!ch.length){ same++; return; }
+    addHistory(o, "Изменено импортом из файла: " + ch.join("; "));
+    queue.push(o); updated++;
   });
+
   saveCfg();
-  saveItems(queue).then(function(){ toast("Импортировано записей: "+queue.length); });
+  var msg = "Добавлено: "+added+", обновлено: "+updated+(same ? ", без изменений: "+same : "");
+  if(badInv.length) msg += ". Пропущены строки с неверным номером: "+badInv.slice(0,5).join(", ")+(badInv.length>5 ? "…" : "");
+  var nm = Object.keys(noModel);
+  if(nm.length) msg += ". Нет в справочнике моделей: "+nm.slice(0,3).join(", ")+(nm.length>3 ? "…" : "");
+  if(!queue.length){ toast(msg); return; }
+  saveItems(queue).then(function(){ toast(msg); });
+}
+
+/* ================== чтение .xlsx ==================
+   Excel пересохраняет книгу со сжатием (deflate) — разжимает сам браузер
+   (DecompressionStream), своей распаковки не держим. */
+function unzipEntries(buf){
+  var dv = new DataView(buf), u8 = new Uint8Array(buf), dec = new TextDecoder();
+  var eocd = -1;
+  for(var i = u8.length - 22; i >= Math.max(0, u8.length - 65557); i--)
+    if(dv.getUint32(i, true) === 0x06054b50){ eocd = i; break; }
+  if(eocd < 0) throw new Error("not a zip");
+  var n = dv.getUint16(eocd + 10, true), p = dv.getUint32(eocd + 16, true), out = {};
+  for(var k=0; k<n; k++){
+    if(dv.getUint32(p, true) !== 0x02014b50) break;
+    var nl = dv.getUint16(p + 28, true), off = dv.getUint32(p + 42, true);
+    var name = dec.decode(u8.subarray(p + 46, p + 46 + nl));
+    /* размеры берём из центрального каталога: в локальном заголовке их может не быть */
+    var start = off + 30 + dv.getUint16(off + 26, true) + dv.getUint16(off + 28, true);
+    out[name] = {method: dv.getUint16(p + 10, true), data: u8.subarray(start, start + dv.getUint32(p + 20, true))};
+    p += 46 + nl + dv.getUint16(p + 30, true) + dv.getUint16(p + 32, true);
+  }
+  return out;
+}
+function unzipText(e){
+  if(!e) return Promise.resolve("");
+  if(e.method === 0) return Promise.resolve(new TextDecoder().decode(e.data));
+  try{
+    var s = new Blob([e.data]).stream().pipeThrough(new DecompressionStream("deflate-raw"));
+    return new Response(s).text();
+  }catch(err){ return Promise.reject(err); }
+}
+function xmlTags(node, name){ return Array.prototype.slice.call(node.getElementsByTagNameNS("*", name)); }
+function xmlDoc(t){ return new DOMParser().parseFromString(t || "<x/>", "application/xml"); }
+function colIndex(ref){
+  var m = /^[A-Z]+/.exec(ref || ""), n = 0;
+  if(!m) return -1;
+  for(var i=0; i<m[0].length; i++) n = n * 26 + m[0].charCodeAt(i) - 64;
+  return n - 1;
+}
+function sheetRows(doc, ss){
+  var rows = [];
+  xmlTags(doc, "row").forEach(function(row){
+    var line = [], next = 0;
+    xmlTags(row, "c").forEach(function(c){
+      var k = colIndex(c.getAttribute("r")); if(k < 0) k = next;
+      next = k + 1;
+      var t = c.getAttribute("t"), v = xmlTags(c, "v")[0], val = v ? v.textContent : "";
+      if(t === "s") val = ss[parseInt(val, 10)] || "";
+      else if(t === "inlineStr") val = xmlTags(c, "t").map(function(x){ return x.textContent; }).join("");
+      line[k] = val;
+    });
+    for(var i=0; i<line.length; i++) if(line[i] === undefined) line[i] = "";
+    if(line.some(function(x){ return String(x).trim() !== ""; })) rows.push(line);
+  });
+  return rows;
+}
+/* Строки первого листа книги — тем же видом, что отдаёт parseCSV */
+function readXlsx(buf){
+  var z = unzipEntries(buf), path = "xl/worksheets/sheet1.xml";
+  return Promise.all([unzipText(z["xl/workbook.xml"]), unzipText(z["xl/_rels/workbook.xml.rels"]),
+                      unzipText(z["xl/sharedStrings.xml"])]).then(function(a){
+    /* первый лист по порядку в книге — не обязательно sheet1.xml */
+    var sh = xmlTags(xmlDoc(a[0]), "sheet")[0];
+    var rel = sh ? (sh.getAttributeNS("http://schemas.openxmlformats.org/officeDocument/2006/relationships", "id") ||
+                    sh.getAttribute("r:id")) : "";
+    xmlTags(xmlDoc(a[1]), "Relationship").forEach(function(r){
+      if(rel && r.getAttribute("Id") === rel){
+        var t = r.getAttribute("Target") || "";
+        path = t.charAt(0) === "/" ? t.slice(1) : "xl/" + t;
+      }
+    });
+    var ss = xmlTags(xmlDoc(a[2]), "si").map(function(si){
+      return xmlTags(si, "t").filter(function(t){ return t.parentNode.localName !== "rPh"; })
+        .map(function(t){ return t.textContent; }).join("");
+    });
+    if(!z[path]) throw new Error("no sheet");
+    return unzipText(z[path]).then(function(x){ return sheetRows(xmlDoc(x), ss); });
+  });
 }
 function exportDashboard(){
   var assets = assetItems(), rows = [];
@@ -544,16 +755,34 @@ function runExport(fmt){
 }
 $("btnExport").onclick = function(){ runExport("csv"); };
 $("btnExcel").onclick  = function(){ runExport("xlsx"); };
-$("btnImport").onclick = function(){
-  var inp = document.createElement("input"); inp.type="file"; inp.accept=".csv,text/csv";
-  inp.onchange = function(){
-    var f = inp.files && inp.files[0]; if(!f) return;
+/* CSV из Excel бывает в кодировке Windows («CSV (разделители — точка с запятой)»):
+   прочитанное как UTF-8 тогда полно знаков-заглушек — перечитываем как cp1251 */
+function readCsvFile(f){
+  return new Promise(function(ok){
     var fr = new FileReader();
     fr.onload = function(){
       var txt = String(fr.result);
-      isSupplyReg(curReg) ? importSupplies(txt) : importCSV(txt);
+      if(txt.indexOf(String.fromCharCode(0xFFFD)) === -1) return ok(parseCSV(txt));
+      var fr2 = new FileReader();
+      fr2.onload = function(){ ok(parseCSV(String(fr2.result))); };
+      fr2.readAsText(f, "windows-1251");
     };
-    fr.readAsText(f,"utf-8");
+    fr.readAsText(f, "utf-8");
+  });
+}
+$("btnImport").onclick = function(){
+  var inp = document.createElement("input"); inp.type="file";
+  inp.accept = ".csv,.xlsx,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
+  inp.onchange = function(){
+    var f = inp.files && inp.files[0]; if(!f) return;
+    var rows;
+    if(/\.xlsx$/i.test(f.name)){
+      rows = f.arrayBuffer().then(readXlsx);
+    } else if(/\.xls$/i.test(f.name)){
+      toast("Старый формат .xls не читается — сохраните файл как .xlsx или CSV"); return;
+    } else rows = readCsvFile(f);
+    rows.then(function(r){ isSupplyReg(curReg) ? importSupplies(r) : importRows(r); },
+              function(){ toast("Не удалось прочитать файл — сохраните его как .xlsx или CSV (UTF-8) и загрузите снова"); });
   };
   inp.click();
 };

@@ -24,7 +24,8 @@ function renderUsers(){
         (cfg.issues.filter(function(x){ return x.userId===u.id; }).length
           ? ' <span class="chip" title="выдано расходных материалов">+'+
             cfg.issues.filter(function(x){ return x.userId===u.id; }).length+' мат.</span>' : '')+'</td>'+
-      acts(['<button class="ic js-edit" title="Изменить данные">✎</button>',
+      acts(!canDict("employees") ? [] :
+           ['<button class="ic js-edit" title="Изменить данные">✎</button>',
             '<button class="ic btn-danger js-del"'+
               (activeOfUser(u.id).length
                 ? ' disabled title="За сотрудником числится техника — удалить нельзя"'
@@ -74,9 +75,14 @@ function openItemById(id){
 function openUserInfo(u){
   editingUser = u.id;
   $("uiTitle").textContent = u.name;
+  $("btnUiEdit").hidden = !canDict("employees");
   $("ui_pos").textContent = u.position || "—";
   $("ui_div").textContent = nameById("divisions", u.divisionId) || "—";
   $("ui_dep").textContent = nameById("departments", u.departmentId) || "—";
+  $("ui_phone").textContent = u.phone || "—";
+  /* почта — ссылкой: по клику сразу письмо */
+  $("ui_mail").innerHTML = u.email
+    ? '<a href="mailto:'+esc(u.email)+'">'+esc(u.email)+'</a>' : "—";
   var own = itemsOfPerson(u.id);
   $("ui_items").innerHTML = miniTable(
     ["Раздел","Инв. номер","Тип","Статус"],
@@ -94,8 +100,89 @@ function openUserInfo(u){
     iss.map(function(x){ var m = supplyById(x.supplyId)||{};
       return [fmtDate(x.date), m.name||"—", String(x.qty||1), x.note||""]; }),
     "Расходные материалы не выдавались.");
+  loadUserRequests(u);
   $("dlgUserInfo").showModal();
 }
+
+/* заявки на доступ из программы «Заявки ИТ»: сервер сам ходит в её API */
+var REQ_BADGE = {done:"b-ok", created:"b-warn"};
+var RIGHT_BADGE = {requested:"b-warn", revoking:"b-danger"};
+function loadUserRequests(u){
+  var box = $("ui_req"), side = $("ui_rights");
+  function say(t){ box.innerHTML = side.innerHTML = '<div class="note">'+esc(t)+'</div>'; }
+  $("ui_reqLink").hidden = true;
+  say("Загрузка…");
+  api("/api/persons/"+encodeURIComponent(u.id)+"/requests").then(function(d){
+    if(editingUser!==u.id) return;            /* окно уже открыто на другом сотруднике */
+    if(!d.configured){
+      say("Связь с программой заявок не настроена: ключ API — ZAYAVKI_KEY в server/.env или файл api.txt.");
+      return;
+    }
+    if(!d.found){ say("В программе заявок этот сотрудник не найден."); return; }
+    if(d.url){ $("ui_reqLink").href = d.url; $("ui_reqLink").hidden = false; }
+    box.innerHTML = reqTable(["Дата","Заявка","На что","Состояние"], ["90px","150px","","140px"],
+      d.requests.map(function(r){
+        var what = r.resources.map(function(x){
+          return (x.system ? x.system+": " : "")+x.name+(x.permission ? " ("+x.permission+")" : ""); });
+        return {href:r.url, cells:[
+          fmtDate(r.date)+(r.number ? " №"+r.number : ""),
+          r.kindName+(r.action==="revoke" ? " · "+r.actionName : ""),
+          {text:r.label || what.join("; ") || "—", title:what.join("\n"), wrap:true},
+          {badge:REQ_BADGE[r.status]||"b-mute", text:r.statusName}]};
+      }), "Заявок на сотрудника нет.");
+    side.innerHTML = rightsList(d.rights, "Действующих полномочий нет.") +
+      (d.removed.length ? '<details class="ui-removed"><summary>Снятые полномочия: '+d.removed.length+
+        '</summary>'+rightsList(d.removed, "", true)+'</details>' : "");
+  }, function(e){
+    if(editingUser!==u.id || (e && e.auth)) return;
+    say("Заявки не загрузились"+apiWhy(e));
+  });
+}
+/* Полномочия столбиком, нумерация — как в «Заявках ИТ» (и в бланке заявки):
+   система — «1.», её подпункты — «1.1», «1.2»…; ресурс без системы — следующий номер.
+   Снятые (flat) — там же простым списком «1.», «2.» с «Система → ресурс». Порядок — как отдаёт API. */
+function rightsList(list, emptyMsg, flat){
+  if(!list.length) return emptyMsg ? '<div class="note">'+esc(emptyMsg)+'</div>' : "";
+  var out = "", n = 0, k = 0, sys = null;
+  list.forEach(function(x, i){
+    var name = x.resource;
+    if(flat){ n = i+1; if(x.system) name = x.system+" → "+name; }
+    else{
+      if(!x.system || x.system!==sys){ n++; k = 0; }
+      if(x.system && x.system!==sys)
+        out += '<div class="rg-sys" title="'+esc(x.system)+'"><span class="rt-n">'+n+'.</span>'+
+               '<span>'+esc(x.system)+'</span></div>';
+      sys = x.system;
+      if(x.system) k++;
+    }
+    var tip = (x.info ? x.info+"\n" : "")+(x.requestDate ? "заявка от "+fmtDate(x.requestDate) : "");
+    out += '<a class="rt'+(!flat && x.system ? ' child' : '')+'" target="_blank" rel="noopener"'+
+      (x.url ? ' href="'+esc(x.url)+'"' : '')+' title="'+esc(tip)+'">'+
+      '<span class="rt-n">'+n+'.'+(!flat && x.system ? k : '')+'</span><span class="rt-name">'+esc(name)+'</span>'+
+      (x.permission ? '<span class="chip">'+esc(x.permission)+'</span>' : '')+
+      (RIGHT_BADGE[x.state] ? '<span class="badge '+RIGHT_BADGE[x.state]+'">'+esc(x.stateName)+'</span>' : '')+
+      '</a>';
+  });
+  return out;
+}
+function reqTable(head, widths, rows, emptyMsg){
+  if(!rows.length) return '<div class="note">'+esc(emptyMsg)+'</div>';
+  return '<div class="miniwrap"><table class="mini"><colgroup>'+widths.map(function(w){
+      return '<col'+(w ? ' style="width:'+w+'"' : '')+'>'; }).join("")+'</colgroup><thead><tr>'+
+    head.map(function(h){ return '<th>'+esc(h)+'</th>'; }).join("")+'</tr></thead><tbody>'+
+    rows.map(function(r){
+      return '<tr'+(r.href ? ' class="pick" data-href="'+esc(r.href)+'" title="открыть заявку"' : '')+'>'+
+        r.cells.map(function(c){
+          if(typeof c==="string") c = {text:c};
+          var body = c.badge ? '<span class="badge '+c.badge+'">'+esc(c.text)+'</span>' : esc(c.text);
+          return '<td'+(c.wrap ? ' class="wrap"' : '')+' title="'+esc(c.title||c.text)+'">'+body+'</td>';
+        }).join("")+'</tr>';
+    }).join("")+'</tbody></table></div>';
+}
+$("ui_req").addEventListener("click", function(e){
+  var tr = e.target.closest("tr[data-href]");
+  if(tr) window.open(tr.dataset.href, "_blank", "noopener");
+});
 $("btnUiClose").onclick = function(){ $("dlgUserInfo").close(); };
 $("btnUiEdit").onclick = function(){
   var u = byId("users", editingUser);
@@ -111,11 +198,10 @@ function openUser(u){
   $("u_phone").value = u ? (u.phone||"") : "";
   $("u_mail").value = u ? (u.email||"") : "";
   $("u_div").innerHTML = opts(cfg.divisions, "— не указано —");
-  $("u_dep").innerHTML = opts(cfg.departments, "— не указан —");
   $("u_div").value = u ? (u.divisionId||"") : "";
-  $("u_dep").value = u ? (u.departmentId||"") : "";
+  fillDeps("u_div", "u_dep", u ? (u.departmentId||"") : "");
   $("btnUserDel").hidden = !u;
-  var mayUsers = can("users.manage");
+  var mayUsers = canDict("employees");
   $("dlgUser").querySelectorAll("input,select,textarea").forEach(function(el){ el.disabled = !mayUsers; });
   $("btnUserSave").hidden = !mayUsers;
   if(!mayUsers) $("btnUserDel").hidden = true;
@@ -123,6 +209,8 @@ function openUser(u){
   setTimeout(function(){ $("u_name").focus(); }, 30);
 }
 $("btnAddUser").onclick = function(){ openUser(null); };
+$("u_div").onchange = function(){ fillDeps("u_div", "u_dep", $("u_dep").value); };
+$("u_dep").onchange = function(){ depPicksDiv("u_div", "u_dep"); };
 $("btnUserCancel").onclick = function(){ $("dlgUser").close(); };
 $("btnUserSave").onclick = function(){
   var nm = $("u_name").value.trim();
@@ -156,8 +244,9 @@ $("btnUserDel").onclick = function(){
 $("usersBody").addEventListener("click", function(e){
   var tr = e.target.closest("tr"); if(!tr) return;
   var u = byId("users", tr.dataset.u); if(!u) return;
-  if(e.target.classList.contains("js-del")){ editingUser = u.id; $("btnUserDel").onclick(); return; }
-  if(e.target.classList.contains("js-edit")){ openUser(u); return; }
+  var may = canDict("employees");
+  if(e.target.classList.contains("js-del") && may){ editingUser = u.id; $("btnUserDel").onclick(); return; }
+  if(e.target.classList.contains("js-edit") && may){ openUser(u); return; }
   openUserInfo(u);
 });
 $("btnCollectUsers").onclick = function(){

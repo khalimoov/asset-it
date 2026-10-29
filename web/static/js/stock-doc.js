@@ -54,13 +54,13 @@ function renderWh(){
       '<td>'+a.qty+'</td>'+
       '<td class="mono">'+esc(money(a.sum) || "—")+'</td>'+
       '<td class="hide-md" title="'+esc(a.note||"")+'">'+esc(a.note||"")+'</td>'+
-      acts(can("supply.issue")
+      acts(canSup()
         ? ['<button class="ic btn-danger js-delact" title="Отменить акт">✕</button>'] : [])+'</tr>';
   }).join("");
   var we = $("whEmpty"); we.hidden = shown.length>0;
   we.textContent = all.length ? "Ничего не найдено." : "Списаний по документам пока не было.";
 
-  $("btnWhOff").disabled = !can("supply.issue") ||
+  $("btnWhOff").disabled = !canSup() ||
     !lots().some(function(l){ return lotDocLeft(l) > 0; });
 }
 $("qWh2").oninput = renderWh;
@@ -121,7 +121,7 @@ function openWoCard(id){
       '<td>'+(x.qty||0)+'</td>'+
       '<td class="mono">'+esc(money(lineSum(x.cost, x.qty||0)) || "—")+'</td></tr>';
   }).join("");
-  hide("btnWoCardDel", can("supply.issue"));
+  hide("btnWoCardDel", canSup());
   $("dlgWoCard").showModal();
 }
 $("btnWoCardClose").onclick = function(){ $("dlgWoCard").close(); };

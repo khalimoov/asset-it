@@ -4,6 +4,17 @@
 
 /* ================== категории ================== */
 function acts(list){ return '<td class="act">'+list.join("")+'</td>'; }
+/* Раздел открыт только на просмотр (#v-reg.ro): в таблицах категорий, подкатегорий,
+   типов, характеристик и наборов ничего не нажимается — клики и смену значений
+   гасим до обработчиков. Выбор, что смотреть (уровень характеристик, набор), работает. */
+["click", "change"].forEach(function(ev){
+  $("v-reg").addEventListener(ev, function(e){
+    if(!$("v-reg").classList.contains("ro") || !e.target.closest(".reg-dict")) return;
+    if(e.target.closest("#specScope, #presetSel")) return;
+    if(!e.target.closest("tbody, .edit-only, button, input, select")) return;
+    e.stopPropagation(); e.preventDefault();
+  }, true);
+});
 function renderCategories(){
   $("categoriesBody").innerHTML = regCats().map(function(c, i){
     var tIds = typesOf(c.id).map(function(t){ return t.id; });
@@ -172,7 +183,7 @@ function renderModels(){
   var list = cfg.models.slice().sort(function(a,b){
     var ka = (nameById("registries", rid(a)) + "|" + a.name).toLowerCase(), kb = (nameById("registries", rid(b)) + "|" + b.name).toLowerCase();
     return ka<kb?-1:ka>kb?1:0; });
-  var mayEdit = can("dict.edit");
+  var mayEdit = canDict("models");
   $("modelsBody").innerHTML = list.map(function(m, i){
     var used = items.filter(function(x){ return x.model===m.id; }).length;
     var pic = m.hasPhoto
@@ -207,12 +218,12 @@ $("newModel").addEventListener("keydown", function(e){ if(e.key==="Enter") $("bt
 $("modelsBody").addEventListener("click", function(e){
   var tr = e.target.closest("tr[data-m]"); if(!tr) return;
   var m = byId("models", tr.dataset.m); if(!m) return;
-  if(e.target.closest(".js-del")){
+  if(e.target.closest(".js-del") && canDict("models")){
     if(!confirm("Удалить модель «"+m.name+"»?")) return;
     cfg.models = cfg.models.filter(function(x){ return x.id!==m.id; });
     saveCfg(); toast("Удалено"); return;
   }
-  if(e.target.closest(".js-edit")){ openModel(m); return; }
+  if(e.target.closest(".js-edit") && canDict("models")){ openModel(m); return; }
   if(e.target.closest(".js-open") || e.target.closest(".js-thumb")){ openModelItems(m); }
 });
 /* наведение на миниатюру — фото побольше рядом с курсором */
@@ -257,7 +268,7 @@ function openModelItems(m){
       return [x.inv||"", typeName(x.type)||"", x.status||"", who, whCode(x.warehouse)||"", nameById("divisions", (h.kind==="item" && h.root) ? h.root.division : x.division)||""];
     }),
     "Оборудования этой модели пока нет.", list.map(function(x){ return x.id; }));
-  $("btnMiEdit").hidden = !can("dict.edit");
+  $("btnMiEdit").hidden = !canDict("models");
   $("dlgModelItems").showModal();
 }
 $("mi_items").addEventListener("click", function(e){
@@ -603,7 +614,7 @@ $("btnAddSpec").onclick = function(){
 };
 $("newSpecName").addEventListener("keydown", function(e){ if(e.key==="Enter") $("btnAddSpec").click(); });
 $("specsBody").addEventListener("change", function(e){
-  if(!can("registry.manage")){ toast("Настройка характеристик доступна администратору"); renderSpecs(); return; }
+  if(!canEdit(curReg)){ toast("Раздел открыт вам только на просмотр"); renderSpecs(); return; }
   var tr0 = e.target.closest("tr"); if(!tr0) return;
   var target = cfg.specs.find(function(x){ return x.id===tr0.dataset.s; }); if(!target) return;
   if(e.target.hasAttribute("data-kindsel")){

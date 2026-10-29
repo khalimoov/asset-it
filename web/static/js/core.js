@@ -29,7 +29,7 @@ var cfg = { registries:[], categories:[], subcategories:[], types:[], specs:[], 
 var nav = "dash", curReg = "equipment", regTab = "items", supTab = "stock";
 var sortKey = "inv", sortDir = 1, editingId = null, editingUser = null;
 var curSpecScope = "", curPreset = "", curPool = "";
-var me = null, permList = [], downloads = null, screenRestored = false;
+var me = null, permList = [], areaList = [], downloads = null, screenRestored = false;
 /* Учреждение — верхний уровень: всё остальное приходит уже отфильтрованным
    сервером, поэтому здесь нужен только список и текущий выбор. */
 var orgs = [], orgId = "", orgStaff = [], orgOverview = [];
@@ -38,13 +38,58 @@ var $ = function(id){ return document.getElementById(id); };
 function uid(p){ return (p||"e") + Date.now().toString(36) + Math.random().toString(36).slice(2,7); }
 function esc(s){ return String(s==null?"":s).replace(/[&<>"']/g,function(c){
   return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]; }); }
-function toast(m){ var t=$("toast"); t.textContent=m; t.classList.add("on");
+/* Открытое модальное окно лежит в верхнем слое браузера — поверх любого z-index,
+   и обычная всплывашка пряталась под ним: «не сохраняется, и ничего не пишет».
+   Поэтому всплывашка — popover: при каждом показе поднимаем её в верхний слой
+   заново, выше последнего открытого окна. Где popover нет — кладём её в окно. */
+function toast(m){ var t=$("toast"); t.textContent=m;
+  if(t.showPopover){
+    try{ if(t.matches(":popover-open")) t.hidePopover(); t.showPopover(); }catch(e){}
+  } else {
+    var dl = document.querySelectorAll("dialog[open]");
+    (dl.length ? dl[dl.length-1] : document.body).appendChild(t);
+  }
+  t.classList.add("on");
   clearTimeout(t._t); t._t=setTimeout(function(){t.classList.remove("on");},2800); }
 function cellText(v){ var s = esc(v==null?"":v); return '<td title="'+s+'">'+s+'</td>'; }
 
 /* ================== выборки ================== */
 function byId(list,id){ return (cfg[list]||[]).find(function(o){ return o.id===id; }); }
 function nameById(list,id){ var x=byId(list,id); return x?x.name:""; }
+/* Отделы. Одноимённые отделы бывают в разных подразделениях (ООТиЗ есть и в
+   ГМЗ-6, и в ГМЗ-7), поэтому список отделов всегда строится с оглядкой на
+   подразделение: выбрано — только его отделы и ещё не размеченные; не выбрано —
+   все, сгруппированные по подразделениям, чтобы одинаковые названия не шли подряд. */
+function byName(a, b){ return a.name.toLowerCase() < b.name.toLowerCase() ? -1 : a.name.toLowerCase() > b.name.toLowerCase() ? 1 : 0; }
+function depOptions(divId, empty){
+  var one = function(d){ return '<option value="'+esc(d.id)+'">'+esc(d.name)+'</option>'; };
+  var head = '<option value="">'+esc(empty)+'</option>';
+  var free = cfg.departments.filter(function(d){ return !d.divisionId || !byId("divisions", d.divisionId); }).sort(byName);
+  if(divId){
+    var own = cfg.departments.filter(function(d){ return d.divisionId === divId; }).sort(byName);
+    if(!free.length) return head + own.map(one).join("");
+    return head + own.map(one).join("") +
+      '<optgroup label="Без подразделения">' + free.map(one).join("") + '</optgroup>';
+  }
+  return head + cfg.divisions.slice().sort(byName).map(function(v){
+    var list = cfg.departments.filter(function(d){ return d.divisionId === v.id; }).sort(byName);
+    return list.length ? '<optgroup label="'+esc(v.name)+'">' + list.map(one).join("") + '</optgroup>' : "";
+  }).join("") + (free.length ? '<optgroup label="Без подразделения">' + free.map(one).join("") + '</optgroup>' : "");
+}
+/* Пара «подразделение → отдел» в окне: отдел перестраивается под подразделение,
+   выбранный отдел сохраняется, если он в новом списке есть. */
+function fillDeps(divSel, depSel, keep, empty){
+  var dep = $(depSel);
+  dep.innerHTML = depOptions($(divSel).value, empty || "— не указан —");
+  dep.value = keep && dep.querySelector('option[value="'+keep+'"]') ? keep : "";
+}
+/* выбрали отдел при пустом подразделении — подставляем его подразделение */
+function depPicksDiv(divSel, depSel){
+  var d = byId("departments", $(depSel).value);
+  if(d && d.divisionId && !$(divSel).value && byId("divisions", d.divisionId)){
+    $(divSel).value = d.divisionId; fillDeps(divSel, depSel, d.id);
+  }
+}
 function rid(o){ return (o && o.registryId) || "equipment"; }
 function reg(id){ return cfg.registries.find(function(r){ return r.id===(id||curReg); }) || cfg.registries[0] || REG_SEED[0]; }
 function statusesOf(id){ var r = reg(id); return (r && r.statuses && r.statuses.length) ? r.statuses : DEF_STATUSES; }
@@ -391,9 +436,12 @@ function normCfg(v){
   return c;
 }
 
-/* Версия интерфейса. Сервер отдаёт свою в /api/state; расходятся —
+/* Версия приложения: 0.<вторая>.<третья>. Третья цифра растёт с каждым
+   изменением, первую и вторую меняем только по слову заказчика. Та же строка —
+   APP_BUILD в server/app.py: сервер отдаёт свою в /api/state, расходятся —
    значит файлы обновили, а сервер не перезапустили. */
-var UI_BUILD = "2026-09-28.4";
+var UI_BUILD = "0.2";
+$("appVer").textContent = "Версия " + UI_BUILD;
 
 /* ================== связь с сервером ================== */
 function api(path, data){
@@ -439,17 +487,16 @@ function loadState(){
   return api("/api/state").then(function(d){
     cfg = normCfg(d.cfg);
     items = d.items || [];
-    me = d.me; permList = d.permList || [];
+    me = d.me; permList = d.permList || []; areaList = d.areaList || [];
     orgs = d.orgs || []; orgId = d.orgId || "";
     renderOrgPick();
     $("loginScreen").hidden = true;
     $("appRoot").hidden = false;
     $("meName").textContent = me.name; $("meName").title = me.name;
     showBuildWarning(d.build);
-    $("meRole").textContent = (me.roleName || "роль не назначена") +
-      (me.canEdit ? "" : " · только просмотр");
+    $("meRole").textContent = me.roleName || "роль не назначена";
     document.body.classList.toggle("noadmin", !isAdmin());
-    document.body.classList.toggle("nodict", !can("dict.edit"));
+    document.body.classList.toggle("nodict", !can("models.edit"));
     if(!screenRestored){ screenRestored = true; restoreScreen(); }
     renderAll();
     loadDeletions();
@@ -621,9 +668,10 @@ $("btnLogout").onclick = function(){
    Здесь права нужны, чтобы не показывать то, чего нельзя. */
 function can(code){ return !!me && me.perms.indexOf(code) !== -1; }
 function isAdmin(){ return can("admin"); }
-/* Те же правила, что и на сервере: без галочки «разрешено редактирование»
-   доступ к учреждению даёт только просмотр, а роли общие на всю базу, поэтому
-   уровень ищется и по исходному имени раздела («<учреждение>_equipment»). */
+/* Те же правила, что и на сервере: уровень раздела решает роль, а роли общие
+   на всю базу, поэтому уровень ищется и по исходному имени раздела
+   («<учреждение>_equipment»). Правка раздела — это всё внутри него: записи,
+   категории, типы, характеристики, наборы, ремонт, списание. */
 function regLevel(id){
   if(!me) return "none";
   if(isAdmin()) return "edit";
@@ -633,57 +681,62 @@ function regLevel(id){
     var base = (id || "").indexOf("_") !== -1 ? id.slice(id.indexOf("_") + 1) : id;
     lvl = acc[base] || "none";
   }
-  /* «Учёт» видят все; ledger.edit даёт правку во всех разделах */
-  if(lvl === "none") lvl = "view";
-  if(can("ledger.edit")) lvl = "edit";
-  if(lvl === "edit" && !me.canEdit) return "view";
+  /* разделы учёта видят все: «нет доступа» здесь значит просмотр */
+  if(lvl !== "edit") lvl = "view";
   /* чужое учреждение: правка только с org.editall */
   if(lvl === "edit" && orgId && me.org_id && orgId !== me.org_id && !can("org.editall")) return "view";
   return lvl;
 }
 function canEdit(id){ return regLevel(id || curReg) === "edit"; }
-/* переход в ремонт и обратно, а также списание — отдельные права */
-function statusForbidden(st, prevStatus){
-  if(st === ST_REPAIR && !can("repair.send")) return true;
-  if(prevStatus === ST_REPAIR && st !== ST_REPAIR && !can("repair.close")) return true;
-  if(st === ST_OFF && !can("item.writeoff")) return true;
-  /* «На списание» — это заявка в комиссию, её ставит любой, кто правит записи.
-     Само списание по-прежнему требует отдельного права. */
-  return false;
+/* приход и выдача материалов — правка раздела «Расходные материалы» */
+function canSup(){
+  var r = cfg.registries.find(function(x){ return x.kind === "supplies"; });
+  return !!r && canEdit(r.id);
 }
+/* Справочник: правка — «<код>.edit», просмотр — «<код>.view» (сервер выводит
+   их из таблицы доступа роли). Без просмотра страницы справочника нет в меню. */
+function canDict(code){ return can(code + ".edit"); }
 function hide(id, allowed){ var el = $(id); if(el) el.hidden = !allowed; }
 function applyPerms(){
-  var reg = can("registry.manage"), usr = can("users.manage");
-  hide("btnAdd", canEdit(curReg));
+  var reg = canEdit(curReg);
+  hide("btnAdd", reg);
   /* при взгляде на несколько учреждений непонятно, куда добавлять раздел */
   hide("btnAddReg", isAdmin() && !scopeWide());
-  hide("btnAddUser", usr);
-  hide("btnCollectUsers", usr);
+  hide("btnAddUser", canDict("employees"));
+  hide("btnCollectUsers", canDict("employees"));
   hide("btnAddStaff", can("staff.manage"));
+  hide("btnAaTest", isAdmin());          /* проверка входа LDAP — только администратору */
   hide("btnAddRole", can("staff.manage"));
-  hide("btnAdSync", can("ad.sync") && !!(me && me.canEdit));
+  hide("btnAdSync", can("ad.sync"));
   hide("btnAdSave", can("ad.sync"));
   hide("btnAdTest", can("ad.sync"));
   hide("btnAddOrg", can("org.manage"));
-  hide("btnAddWh", usr);
-  hide("btnAddModel", can("dict.edit"));
-  hide("btnAddActTpl", can("dict.edit"));
-  hide("btnShowModel", can("dict.edit"));
-  ["btnShowDivisions","btnShowDepartments","btnShowPlaces"].forEach(function(id){ hide(id, usr); });
-  if(!usr) ["addDivisions","addDepartments","addPlaces"].forEach(function(id){ var e = $(id); if(e) e.hidden = true; });
-  if(!can("dict.edit") && $("addModel")) $("addModel").hidden = true;
-  hide("docDrop", can("docs.scan"));
-  hide("btnDocCfg", can("docs.scan"));
-  hide("btnPools", can("ip.manage"));
-  hide("btnAddIp", can("ip.manage"));
-  hide("btnAddSup", can("supply.receive"));
+  hide("btnAddWh", canDict("warehouses"));
+  hide("btnAddModel", canDict("models"));
+  hide("btnAddActTpl", canDict("acttpl"));
+  hide("btnShowModel", canDict("models"));
+  if(!canDict("models") && $("addModel")) $("addModel").hidden = true;
+  ["divisions","departments","places"].forEach(function(k){
+    var K = k.charAt(0).toUpperCase() + k.slice(1), ok = canDict(k);
+    hide("btnShow" + K, ok);
+    if(!ok && $("add" + K)) $("add" + K).hidden = true;
+    var b = document.querySelector('[data-add="' + k + '"]'); if(b) b.hidden = !ok;
+  });
+  hide("docDrop", can("docs.edit"));
+  hide("btnDocCfg", can("docs.edit"));
+  hide("btnPools", can("ip.edit"));
+  hide("btnAddIp", can("ip.edit"));
+  /* материалы: без правки раздела нет ни «+ Приход материала», ни «Списание» */
+  var sup = canSup();
+  hide("btnShowSup", sup);
+  hide("btnWhOff", sup);
+  if(!sup && $("supAddCard")) $("supAddCard").hidden = true;
   ["btnAddSub","btnAddType","btnAddSpec","btnApplyPreset","btnTagPreset",
    "btnAddPresetSpec","btnRenPreset","btnDelPreset"].forEach(function(id){ hide(id, reg); });
   var c = document.querySelector('[data-add="categories"]'); if(c) c.hidden = !reg;
   var pr = document.querySelector('[data-add="presets"]');   if(pr) pr.hidden = !reg;
-  ['[data-add="divisions"]','[data-add="departments"]','[data-add="places"]'].forEach(function(sel){
-    var el = document.querySelector(sel); if(el) el.hidden = !usr;
-  });
+  /* раздел только на просмотр: формы правки спрятаны, таблицы не нажимаются */
+  $("v-reg").classList.toggle("ro", !reg);
 }
 
 /* ================== оформление ================== */

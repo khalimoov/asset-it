@@ -1,7 +1,17 @@
 # -*- coding: utf-8 -*-
-"""Загрузка пользователей из Active Directory по LDAP.
+"""Active Directory по LDAP: подключение, загрузка сотрудников, вход.
 
-Берём только те учётные записи, у которых в атрибуте-признаке (по умолчанию
+Настройки — две части, как две вкладки раздела «LDAP»:
+
+    подключение LDAP     одно на всё (setting.ldap): сервер, порт, режим, Base DN,
+                         где искать пользователей, служебная учётка, таймауты.
+                         Оно же — вход: пользователь ИТ с источником LDAP входит
+                         доменным паролем, пока подключение включено. Кто входит —
+                         решает администратор поимённо в «Пользователях ИТ».
+    загрузка сотрудников у каждого учреждения своя (org_setting.ldap): подразделение
+                         AD, признак, отключённые, вложенные OU
+
+Загрузка берёт только те учётные записи, у которых в атрибуте-признаке (по умолчанию
 employeeType) стоит условленное значение — так администратор домена сам решает,
 кто попадает в учёт, не трогая наше приложение.
 
@@ -32,21 +42,68 @@ ATTRS = ["givenName", "initials", "sn", "telephoneNumber", "mail",
          "title", "department", "company", "displayName", "cn",
          "sAMAccountName", "objectGUID", "userAccountControl"]
 
-DEFAULTS = {
-    "server": "", "baseDn": "", "user": "", "password": "",
+# Подключение — одно на всю установку
+CONN_DEFAULTS = {
+    "enabled": True,          # «Использовать конфигурацию LDAP»
+    "server": "", "port": 0,
+    "mode": "plain",          # plain — без шифрования, ldaps — 636, starttls — 389 + STARTTLS
+    "baseDn": "",
+    "userBase": "",           # где искать пользователей для входа; пусто — Base DN
+    "user": "", "password": "",
+    "connectTimeout": 5000, "opTimeout": 10000,   # мс
+}
+MODES = ("plain", "ldaps", "starttls")
+
+# Загрузка сотрудников — своя у каждого учреждения
+LOAD_DEFAULTS = {
     "ou": "",                 # искать только в этом подразделении AD
     "subtree": True,          # вместе с вложенными или только на одном уровне
     "markAttr": "employeeType", "markValue": "ok",
-    "skipDisabled": True, "useSsl": False, "port": 0,
+    "skipDisabled": True,
 }
 
 ACCOUNT_DISABLED = 0x0002
 
 
-def merge_config(saved):
-    cfg = dict(DEFAULTS)
-    cfg.update(saved or {})
+def _ms(v, default):
+    try:
+        v = int(v)
+    except (TypeError, ValueError):
+        return default
+    return min(max(v, 500), 120000)
+
+
+def merge_conn(saved):
+    cfg = dict(CONN_DEFAULTS)
+    cfg.update({k: v for k, v in (saved or {}).items() if k in CONN_DEFAULTS})
+    if cfg["mode"] not in MODES:
+        cfg["mode"] = "plain"
+    cfg["connectTimeout"] = _ms(cfg["connectTimeout"], CONN_DEFAULTS["connectTimeout"])
+    cfg["opTimeout"] = _ms(cfg["opTimeout"], CONN_DEFAULTS["opTimeout"])
     return cfg
+
+
+def merge_load(saved):
+    cfg = dict(LOAD_DEFAULTS)
+    cfg.update({k: v for k, v in (saved or {}).items() if k in LOAD_DEFAULTS})
+    return cfg
+
+
+def merge_config(conn, load=None):
+    """Рабочие настройки: подключение + загрузка выбранного учреждения."""
+    cfg = merge_conn(conn)
+    cfg.update(merge_load(load))
+    return cfg
+
+
+def conn_from_legacy(old):
+    """Подключение из прежних настроек, когда сервер и пароль жили у учреждения."""
+    old = old or {}
+    return merge_conn({
+        "server": old.get("server") or "", "port": old.get("port") or 0,
+        "mode": "ldaps" if old.get("useSsl") else "plain",
+        "baseDn": old.get("baseDn") or "", "user": old.get("user") or "",
+        "password": old.get("password") or ""})
 
 
 def public_config(cfg):
@@ -54,7 +111,6 @@ def public_config(cfg):
     out = {k: v for k, v in cfg.items() if k != "password"}
     out["hasPassword"] = bool(cfg.get("password"))
     return out
-
 
 def _one(entry, attr):
     """Значение атрибута строкой. ldap3 отдаёт то список, то одиночное значение."""
@@ -194,38 +250,106 @@ def resolve_base(conn, cfg):
     return found[0]
 
 
-def make_server(cfg):
-    """Сервер домена из настроек: адрес, порт, LDAPS."""
+def host_port(cfg):
+    """Адрес и порт сервера с учётом режима и приставок ldap:// / ldaps://."""
     host = (cfg.get("server") or "").strip()
     if not host:
-        raise ValueError("не указан адрес сервера домена")
-    if not search_base(cfg):
-        raise ValueError("не указана база поиска (Base DN)")
-
-    use_ssl = bool(cfg.get("useSsl"))
-    port = int(cfg.get("port") or 0) or (636 if use_ssl else 389)
+        raise ValueError("не указан адрес LDAP-сервера")
+    mode = cfg.get("mode") or "plain"
     if host.startswith("ldap://"):
-        host, use_ssl = host[7:], False
+        host = host[7:]
     elif host.startswith("ldaps://"):
-        host, use_ssl = host[8:], True
+        host, mode = host[8:], "ldaps"
+    host = host.rstrip("/")
+    port = int(cfg.get("port") or 0) or (636 if mode == "ldaps" else 389)
     if ":" in host and not host.startswith("["):
         host, _, p = host.partition(":")
         port = int(p or port)
-    return Server(host, port=port, use_ssl=use_ssl, get_info=ALL, connect_timeout=10)
+    return host, port, mode
 
 
-def connect(cfg):
-    """Подключение и вход под служебной учётной записью."""
-    server = make_server(cfg)
-    conn = Connection(server,
-                      user=(cfg.get("user") or "").strip() or None,
-                      password=cfg.get("password") or None,
-                      authentication=SIMPLE if cfg.get("user") else None,
-                      auto_bind=False, raise_exceptions=False, receive_timeout=30)
-    if not conn.bind():
-        raise RuntimeError("вход не принят: %s" % (conn.result.get("description") or conn.result))
+def make_server(cfg):
+    """Сервер домена из настроек: адрес, порт, режим, таймаут подключения."""
+    host, port, mode = host_port(cfg)
+    return Server(host, port=port, use_ssl=(mode == "ldaps"), get_info=ALL,
+                  connect_timeout=max(1, int(cfg.get("connectTimeout") or 5000) / 1000.0))
+
+
+def _why(conn):
+    r = conn.result or {}
+    desc = r.get("description") or ""
+    msg = (r.get("message") or "").strip()
+    if desc == "invalidCredentials":
+        return "неверная учётная запись или пароль"
+    return (desc + (" — " + msg if msg else "")) or "нет ответа"
+
+
+def _open(cfg, user, password, server=None, strategy=None):
+    """Соединение, уже вошедшее под user. Не вошло — RuntimeError с причиной."""
+    srv = server or make_server(cfg)
+    kw = {"client_strategy": strategy} if strategy else {}
+    # Таймаут операции — ЦЕЛЫЕ секунды. Под Linux ldap3 кладёт его в SO_RCVTIMEO
+    # через pack('LL', …), и дробное 10.0 падает «required argument is not an
+    # integer» — под Windows он сам умножает на 1000, поэтому здесь не ловилось.
+    op = int(cfg.get("opTimeout") or 10000)
+    conn = Connection(srv, user=user or None, password=password or None,
+                      authentication=SIMPLE if user else None, auto_bind=False,
+                      raise_exceptions=False, receive_timeout=max(1, -(-op // 1000)), **kw)
+    try:
+        if cfg.get("mode") == "starttls" and not strategy:
+            conn.open()
+            if not conn.start_tls():
+                raise RuntimeError("сервер не принял STARTTLS: " + _why(conn))
+        if not conn.bind():
+            raise RuntimeError("вход не принят: " + _why(conn))
+    except RuntimeError:
+        raise
+    except Exception as e:
+        host, port, _ = host_port(cfg)
+        raise RuntimeError("не удалось подключиться к %s:%s — %s" % (host, port, e))
     return conn
 
+
+def connect(cfg, server=None, strategy=None):
+    """Подключение и вход под служебной учётной записью."""
+    if not cfg.get("enabled", True):
+        raise RuntimeError("подключение к LDAP выключено: включите его на вкладке «Подключение LDAP»")
+    return _open(cfg, (cfg.get("user") or "").strip(), cfg.get("password") or "",
+                 server, strategy)
+
+
+def _close(conn):
+    try:
+        conn.unbind()
+    except Exception:
+        pass
+
+
+def test_connection(cfg):
+    """Проверка вкладки «Подключение»: подключиться, войти, прочитать Base DN."""
+    base = (cfg.get("baseDn") or "").strip()
+    if not base:
+        raise ValueError("не указан Base DN")
+    host, port, mode = host_port(cfg)
+    conn = connect(cfg)
+    try:
+        out = {"server": "%s:%s" % (host, port), "mode": mode, "base": base,
+               "bindAs": (cfg.get("user") or "").strip() or "анонимно"}
+        for key, dn in (("base", base), ("userBase", (cfg.get("userBase") or "").strip())):
+            if not dn:
+                continue
+            conn.search(search_base=dn, search_filter="(objectClass=*)", search_scope=BASE,
+                        attributes=["objectClass"])
+            r = conn.result or {}
+            if r.get("result") not in (0, None):
+                what = "Base DN" if key == "base" else "User Search Base"
+                if r.get("description") == "noSuchObject":
+                    raise RuntimeError("%s «%s» в домене не найден" % (what, dn))
+                raise RuntimeError("%s «%s» не читается: %s" % (what, dn, _why(conn)))
+        out["userBase"] = (cfg.get("userBase") or "").strip() or base
+        return out
+    finally:
+        _close(conn)
 
 def fetch(cfg, limit=0, info=None):
     """Возвращает список словарей с уже разобранными полями.
@@ -237,17 +361,21 @@ def fetch(cfg, limit=0, info=None):
     conn = connect(cfg)
     try:
         base = resolve_base(conn, cfg)
+        if not base:
+            raise ValueError("не указан Base DN — задайте его на вкладке «Подключение LDAP»")
         if info is not None:
             info["base"] = base
         ok = conn.search(search_base=base, search_filter=build_filter(cfg),
                          search_scope=(SUBTREE if cfg.get("subtree", True) else LEVEL),
                          attributes=ATTRS, paged_size=500, size_limit=limit or 0)
         # без raise_exceptions ldap3 о неудаче сообщает только False: раньше
-        # несуществующая база поиска выглядела как «никого не нашлось»
+        # несуществующая база поиска выглядела как «никого не нашлось».
+        # Но False бывает и при успехе: ldap3 так отвечает, когда домен вернул
+        # success и ни одной записи — это пустая выборка, а не отказ.
         if not ok:
             r = conn.result or {}
             desc = r.get("description") or ""
-            if desc == "sizeLimitExceeded":
+            if desc in ("success", "sizeLimitExceeded") or r.get("result") == 0:
                 pass
             elif desc == "noSuchObject":
                 raise RuntimeError("домен не знает такой базы поиска: %s" % base)
@@ -299,28 +427,6 @@ def probe(cfg, limit=5):
 
 # ------------------------------------------------------------------ вход через домен
 
-AUTH_DEFAULTS = {
-    "enabled": False,
-    "orgId": "",          # чьи настройки домена (сервер, база поиска) использовать
-    "suffix": "",         # хвост UPN: i.ivanov + @company.local
-    "group": "",          # группа AD, членам которой открыт вход (пусто — всем)
-    "roleId": "",         # роль, с которой заводится новый пользователь ИТ
-    "newOrgId": "",       # учреждение, в которое он попадает
-}
-
-
-def merge_auth(saved):
-    cfg = dict(AUTH_DEFAULTS)
-    cfg.update(saved or {})
-    return cfg
-
-
-# Правило Active Directory «состоит в группе с учётом вложенных».
-# Домен сам обходит цепочку: человек в «ГИТ-инженеры», та группа внутри
-# «Asset-IT-Users» — вход открыт, хотя в memberOf у человека второй группы нет.
-IN_CHAIN = "1.2.840.113556.1.4.1941"
-
-
 def domain_root(dn):
     """Корень домена из DN — только части DC=.
 
@@ -330,257 +436,119 @@ def domain_root(dn):
     return ",".join(dcs)
 
 
-def group_name(want):
-    r"""Название группы из того, что написал администратор: COMPANY\Asset-IT -> Asset-IT."""
-    want = (want or "").strip()
-    if "\\" in want:
-        want = want.rsplit("\\", 1)[-1]
-    if "@" in want:
-        want = want.split("@", 1)[0]
-    return want.strip()
+def user_base(cfg):
+    """Где искать пользователей: User Search Base, а без него — Base DN."""
+    return (cfg.get("userBase") or "").strip() or (cfg.get("baseDn") or "").strip()
 
 
-def resolve_group(conn, cfg, want):
-    r"""DN группы по названию.
-
-    Принимаем как полный DN, так и просто название — в том числе в видах
-    «COMPANY\Asset-IT» и «Asset-IT@company.local», их легко скопировать из оснастки.
-    Опечатка в названии не должна выглядеть как «никого не пускает»: если
-    такой группы в домене нет, говорим об этом прямо.
-    """
-    want = (want or "").strip()
-    if not want:
-        return ""
-    if "=" in want:
-        return want
-    name = group_name(want)
-    base = (cfg.get("baseDn") or "").strip()
-    conn.search(search_base=base,
-                search_filter="(&(objectClass=group)(|(cn=%s)(sAMAccountName=%s)))"
-                              % (escape_filter(name), escape_filter(name)),
-                search_scope=SUBTREE, attributes=["cn"], paged_size=100)
-    found = [e.get("dn") for e in (conn.response or [])
-             if e.get("type") == "searchResEntry" and e.get("dn")]
-    if not found:
-        raise RuntimeError("группа «%s» в домене не найдена (искали внутри %s). Проверьте "
-                           "написание или впишите её DN целиком"
-                           % (want, base or "всего каталога"))
-    if len(found) > 1:
-        raise RuntimeError("групп с названием «%s» несколько: %s. Впишите DN нужной"
-                           % (want, ", ".join(found[:5])))
-    return found[0]
-
-
-def _in_group(groups, want):
-    """Прямое членство по memberOf: сравниваем с полным DN или с названием.
-
-    Запасной путь на случай каталога, который не понимает правила IN_CHAIN
-    (например, не Active Directory). Вложенные группы так не видны.
-    """
-    want = (want or "").strip().lower()
-    if not want:
-        return True
-    names = {want, group_name(want).lower()}
-    for g in groups or []:
-        g = str(g).lower()
-        if g in names:
-            return True
-        cn = g.split(",", 1)[0]
-        if cn.startswith("cn=") and cn[3:] in names:
-            return True
-    return False
-
-
-def in_group_deep(conn, user_dn, group_dn, groups, want):
-    """Членство с учётом вложенных групп — спрашиваем у самого домена."""
-    if user_dn and group_dn:
-        ok = conn.search(search_base=user_dn,
-                         search_filter="(memberOf:%s:=%s)" % (IN_CHAIN, escape_filter(group_dn)),
-                         search_scope=BASE, attributes=["cn"], size_limit=1)
-        if ok:
-            for e in conn.response or []:
-                if e.get("type") == "searchResEntry":
-                    return True
-            return False
-        # каталог правила не знает — сверяем прямое членство
-    return _in_group(groups, group_dn or want)
-
-
-def check_group(cfg, want):
-    """Для настроек: существует ли группа и сколько в ней человек (с вложенными).
-
-    Администратор заводит группу и добавляет в неё людей — пусть сразу видит,
-    что приложение нашло именно её и кого в ней видит.
-    """
-    conn = connect(cfg)
-    try:
-        dn = resolve_group(conn, cfg, want)
-        if not dn:
-            return {"dn": "", "members": 0}
-        # считаем по всему домену: раньше счёт шёл от baseDn, и администратор видел
-        # «в группе 7 чел.», когда на деле их больше — просто часть лежит в других
-        # подразделениях. Входить они при этом вправе: доступ раздаёт группа.
-        base = (cfg.get("baseDn") or "").strip()
-        conn.search(search_base=domain_root(base) or base,
-                    search_filter="(&(objectCategory=person)(objectClass=user)(memberOf:%s:=%s))"
-                                  % (IN_CHAIN, escape_filter(dn)),
-                    search_scope=SUBTREE, attributes=["sAMAccountName"], paged_size=500)
-        names = [_one(e.get("attributes") or {}, "sAMAccountName")
-                 for e in (conn.response or []) if e.get("type") == "searchResEntry"]
-        return {"dn": dn, "members": len(names), "sample": [n for n in names if n][:10]}
-    finally:
-        try:
-            conn.unbind()
-        except Exception:
-            pass
-
-
-def _members(conn, base, group_dn):
-    """Сколько человек в группе видно из указанного корня (с вложенными группами)."""
-    if not base or not group_dn:
-        return 0
-    conn.search(search_base=base,
-                search_filter="(&(objectCategory=person)(objectClass=user)(memberOf:%s:=%s))"
-                              % (IN_CHAIN, escape_filter(group_dn)),
-                search_scope=SUBTREE, attributes=["sAMAccountName"], paged_size=500)
-    return len([e for e in (conn.response or []) if e.get("type") == "searchResEntry"])
-
-
-def probe_login(cfg, auth, login):
-    """Почему человек не может войти — проверка одной учётной записи.
-
-    Пароль не нужен: смотрим служебной учёткой, есть ли такой в домене, где он
-    лежит, включён ли и состоит ли в группе доступа. Ищем **от корня домена**, а
-    не от корня поиска из настроек загрузки: иначе человека, который лежит в
-    другом подразделении, просто не видно — а это и есть частая причина отказа.
-    """
+def _names(login):
+    """sAMAccountName и UPN из того, что набрал человек."""
     login = (login or "").strip()
-    if not login:
-        return {"found": False, "login": ""}
     sam = login.split("@")[0].split("\\")[-1]
-    upn = login if "@" in login else (login + "@" + (auth.get("suffix") or "").strip().lstrip("@")
-                                      if (auth.get("suffix") or "").strip() else login)
-    base = (cfg.get("baseDn") or "").strip()
-    root = domain_root(base) or base
+    return sam, (login if "@" in login else "")
+
+
+def _find_user(conn, cfg, sam, upn, attrs):
+    """Запись человека по логину: (dn, атрибуты) или (None, None).
+
+    Ищем от корня домена, а не от User Search Base: человек мог переехать в
+    другое подразделение, а доступ ему уже выдан поимённо.
+    """
+    base = domain_root((cfg.get("baseDn") or "").strip()) or user_base(cfg)
+    flt = "(sAMAccountName=%s)" % escape_filter(sam)
+    if upn:
+        flt = "(|%s(userPrincipalName=%s))" % (flt, escape_filter(upn))
+    conn.search(search_base=base, search_filter="(&(objectClass=user)%s)" % flt,
+                search_scope=SUBTREE, attributes=attrs, size_limit=2)
+    for e in conn.response or []:
+        if e.get("type") == "searchResEntry":
+            return e.get("dn") or "", (e.get("attributes") or {})
+    return None, None
+
+
+def _disabled(entry):
+    try:
+        return bool(int(_one(entry, "userAccountControl") or 0) & ACCOUNT_DISABLED)
+    except ValueError:
+        return False
+
+
+def _person(entry, dn=""):
+    return {"login": _one(entry, "sAMAccountName"), "name": full_name(entry),
+            "email": _one(entry, "mail"), "position": _one(entry, "title"),
+            "upn": _one(entry, "userPrincipalName"), "guid": _guid(entry),
+            "disabled": _disabled(entry), "dn": dn}
+
+
+def search_users(cfg, q, limit=20):
+    """Подсказки при добавлении пользователя: ищем по логину, ФИО и почте."""
+    q = (q or "").strip()
+    if len(q) < 2:
+        return []
+    base = user_base(cfg)
+    if not base:
+        raise ValueError("не указан Base DN")
+    v = escape_filter(q)
+    flt = ("(&(objectCategory=person)(objectClass=user)(|(sAMAccountName=*%s*)"
+           "(displayName=*%s*)(cn=*%s*)(sn=*%s*)(givenName=*%s*)(mail=*%s*)"
+           "(userPrincipalName=*%s*)))" % ((v,) * 7))
     conn = connect(cfg)
     try:
-        conn.search(search_base=root,
-                    search_filter="(&(objectClass=user)(|(sAMAccountName=%s)(userPrincipalName=%s)))"
-                                  % (escape_filter(sam), escape_filter(upn)),
-                    search_scope=SUBTREE, size_limit=2,
-                    attributes=ATTRS + ["memberOf", "userAccountControl", "userPrincipalName"])
-        entry = entry_dn = None
-        for e in conn.response or []:
-            if e.get("type") == "searchResEntry":
-                entry, entry_dn = (e.get("attributes") or {}), (e.get("dn") or "")
-                break
-        out = {"found": entry is not None, "login": login, "sam": sam,
-               "base": base, "root": root, "group": "", "groupWant": (auth.get("group") or "").strip()}
-        if entry is None:
-            return out
-        try:
-            uac = int(_one(entry, "userAccountControl") or 0)
-        except ValueError:
-            uac = 0
-        groups = entry.get("memberOf") or []
-        if isinstance(groups, (str, bytes)):
-            groups = [groups]
-        low = (entry_dn or "").lower()
-        out.update({"dn": entry_dn, "name": full_name(entry),
-                    "upn": _one(entry, "userPrincipalName") or "",
-                    "enabled": not (uac & ACCOUNT_DISABLED),
-                    "inBase": (not base) or low.endswith(base.lower()),
-                    "groups": len(groups)})
-        want = out["groupWant"]
-        if want:
-            group_dn = resolve_group(conn, cfg, want)
-            out["group"] = group_dn or ""
-            out["inGroup"] = bool(group_dn) and in_group_deep(conn, entry_dn, group_dn, groups, want)
-            out["membersInBase"] = _members(conn, base, group_dn)
-            out["membersInRoot"] = _members(conn, root, group_dn)
+        conn.search(search_base=base, search_filter=flt, search_scope=SUBTREE,
+                    attributes=ATTRS + ["userPrincipalName"], size_limit=limit)
+        r = conn.result or {}
+        if r.get("description") == "noSuchObject":
+            raise RuntimeError("домен не знает такой базы поиска: %s" % base)
+        out = [_person(e.get("attributes") or {}, e.get("dn") or "")
+               for e in (conn.response or []) if e.get("type") == "searchResEntry"]
+        out = [p for p in out if p["login"]]
+        ql = q.lower()
+        # сначала те, у кого совпало начало логина — их и ищут чаще всего
+        out.sort(key=lambda p: (not p["login"].lower().startswith(ql), p["name"].lower()))
         return out
     finally:
-        try:
-            conn.unbind()
-        except Exception:
-            pass
+        _close(conn)
 
 
-def authenticate(cfg, auth, login, password, server=None, strategy=None):
+def authenticate(cfg, login, password, server=None, strategy=None):
     """Проверяет логин и пароль в домене и возвращает сведения о человеке.
 
-    Вход — самим пользователем (simple bind под его UPN), а не служебной учёткой:
-    так домен сам проверяет пароль, отключённые учётки и истёкшие пароли, а у нас
-    пароль не хранится вовсе. После входа читаем свою же запись — имя и группы.
-    Возвращает dict(login, name, guid, groups, email, position) или None.
+    Служебная учётка находит человека по логину, затем входим **им самим** по его
+    DN — пароль проверяет домен (и отключённые учётки, и истёкшие пароли), у нас
+    он не хранится. Без служебной учётки входим тем, что набрано (UPN или
+    ДОМЕН\логин), и читаем свою же запись.
+    Возвращает dict(login, name, guid, email, position) или None.
     server/strategy — для проверки без настоящего домена.
     """
-    login = (login or "").strip()
-    if not login or not password:
+    sam, upn = _names(login)
+    if not sam or not password:
         return None
-    if "@" in login or "\\" in login:
-        upn, sam = login, login.split("@")[0].split("\\")[-1]
-    else:
-        suffix = (auth.get("suffix") or "").strip().lstrip("@")
-        upn = login + "@" + suffix if suffix else login
-        sam = login
-    srv = server or make_server(cfg)
-    kw = {"client_strategy": strategy} if strategy else {}
-    conn = Connection(srv, user=upn, password=password, authentication=SIMPLE,
-                      auto_bind=False, raise_exceptions=False, receive_timeout=15, **kw)
-    try:
-        if not conn.bind():
-            return None
-        # обычно логин — sAMAccountName; если ввели полный DN, читаем саму запись
-        if "=" in login:
-            conn.search(search_base=login, search_filter="(objectClass=*)", search_scope=BASE,
-                        attributes=ATTRS + ["memberOf"], size_limit=1)
-        else:
-            # Ищем по всему домену. Раньше здесь стоял baseDn из настроек загрузки
-            # сотрудников, и человек, лежащий в другом подразделении, просто не
-            # находился: вход ему закрывался, хотя в группе доступа он состоял, а
-            # выглядело это как «домен не принял пароль». Кого переносить в
-            # справочник — дело baseDn и OU, кому входить — дело группы AD ниже.
-            # Заодно пробуем и UPN: он не всегда совпадает с sAMAccountName.
-            base = domain_root((cfg.get("baseDn") or "").strip()) or \
-                (cfg.get("baseDn") or "").strip() or search_base(cfg)
-            conn.search(search_base=base,
-                        search_filter="(&(objectClass=user)(|(sAMAccountName=%s)(userPrincipalName=%s)))"
-                                      % (escape_filter(sam), escape_filter(upn)),
-                        search_scope=SUBTREE, attributes=ATTRS + ["memberOf"], size_limit=1)
-        entry = entry_dn = None
-        for e in conn.response or []:
-            if e.get("type") == "searchResEntry":
-                entry = e.get("attributes") or {}
-                entry_dn = e.get("dn") or ""
-                break
-        if entry is None:
-            return None
-        if auth.get("skipDisabled", True):
-            try:
-                if int(_one(entry, "userAccountControl") or 0) & ACCOUNT_DISABLED:
-                    return None
-            except ValueError:
-                pass
-        groups = entry.get("memberOf") or []
-        if isinstance(groups, (str, bytes)):
-            groups = [groups]
-        want = (auth.get("group") or "").strip()
-        if want:
-            # доступом заведует группа: кого в неё добавили — тот и заходит.
-            # Членство спрашиваем у домена, чтобы работали и вложенные группы.
-            group_dn = resolve_group(conn, cfg, want)
-            if not in_group_deep(conn, entry_dn, group_dn, groups, want):
-                return None
-        return {"login": _one(entry, "sAMAccountName") or sam, "name": full_name(entry), "guid": _guid(entry),
-                "email": _one(entry, "mail"), "position": _one(entry, "title"),
-                "groups": [str(g) for g in groups]}
-    finally:
+    attrs = ATTRS + ["userPrincipalName"]
+    dn = entry = None
+    if (cfg.get("user") or "").strip():
+        conn = connect(cfg, server, strategy)
         try:
-            conn.unbind()
-        except Exception:
-            pass
-
+            dn, entry = _find_user(conn, cfg, sam, upn, attrs)
+        finally:
+            _close(conn)
+        if entry is None or _disabled(entry):
+            return None
+    elif not cfg.get("enabled", True):
+        return None
+    try:
+        uconn = _open(cfg, dn or upn or login.strip(), password, server, strategy)
+    except RuntimeError:
+        return None
+    try:
+        if entry is None:
+            dn, entry = _find_user(uconn, cfg, sam, upn, attrs)
+            if entry is None or _disabled(entry):
+                return None
+    finally:
+        _close(uconn)
+    p = _person(entry, dn)
+    p["login"] = p["login"] or sam
+    return p
 
 # ------------------------------------------------------------------ перенос в учёт
 
@@ -594,6 +562,34 @@ def _find_ref(cur, table, name, org_id):
                 % table, (org_id, name))
     r = cur.fetchone()
     return r["id"] if r else None
+
+
+def _find_dep(cur, name, div_id, org_id):
+    """Отдел ищем внутри подразделения: ООТиЗ бывает и в ГМЗ-6, и в ГМЗ-7.
+
+    Сначала — отдел с этим названием в этом подразделении. Нет — ещё не
+    размеченный (без подразделения): его и берём, приписав к подразделению,
+    чтобы следующий человек из другого подразделения получил свой отдел.
+    Подразделения у человека нет — неразмеченный или единственный одноимённый;
+    если их несколько в разных подразделениях, чужой наугад не берём.
+    """
+    cur.execute("""select id, division_id from department
+                    where org_id = %s and lower(btrim(name)) = lower(btrim(%s))
+                    order by division_id nulls first, id""", (org_id, name))
+    found = cur.fetchall()
+    if not div_id:
+        free = [r for r in found if not r["division_id"]]
+        if free:
+            return free[0]["id"]
+        return found[0]["id"] if len(found) == 1 else None
+    for r in found:
+        if r["division_id"] == div_id:
+            return r["id"]
+    for r in found:
+        if not r["division_id"]:
+            cur.execute("update department set division_id = %s where id = %s", (div_id, r["id"]))
+            return r["id"]
+    return None
 
 
 def sync(cur, cfg, org_id):
@@ -619,13 +615,14 @@ def sync(cur, cfg, org_id):
                 stats["divisions"] += 1
                 log.append("новое подразделение: " + p["company"].strip())
         if p["department"]:
-            dep_id = _find_ref(cur, "department", p["department"], org_id)
+            dep_id = _find_dep(cur, p["department"], div_id, org_id)
             if not dep_id:
                 dep_id = _new_id("p")
-                cur.execute("insert into department (id, name, org_id) values (%s,%s,%s)",
-                            (dep_id, p["department"].strip(), org_id))
+                cur.execute("insert into department (id, name, org_id, division_id) values (%s,%s,%s,%s)",
+                            (dep_id, p["department"].strip(), org_id, div_id))
                 stats["departments"] += 1
-                log.append("новый отдел: " + p["department"].strip())
+                log.append("новый отдел: " + p["department"].strip() +
+                           (" (" + p["company"].strip() + ")" if div_id else ""))
 
         # ищем, кого обновляем: сначала по GUID, потом по почте, потом по ФИО
         pid = None

@@ -1,97 +1,110 @@
 <!-- Раздел v-ad -->
     <section id="v-ad" hidden>
-      <div class="card">
-        <div class="pad">
-          <h2>Откуда брать сотрудников</h2>
-          <div class="field" style="margin-top:14px;max-width:420px">
-            <label for="ad_org">Куда грузить сотрудников</label>
-            <select id="ad_org"></select>
+      <nav class="tabs" id="adTabs">
+        <button data-at="ldap" class="on">Подключение LDAP</button>
+        <button data-at="load">Загрузка сотрудников</button>
+      </nav>
+
+      <!-- вкладка: подключение LDAP — одно на всю установку -->
+      <section id="a-ldap">
+        <div class="ad-status" id="lc_status"></div>
+        <div class="card">
+          <div class="pad">
+            <label class="chk ad-on"><input type="checkbox" id="lc_on"> Использовать конфигурацию LDAP</label>
+            <div class="grid-ad" style="margin-top:14px">
+              <div class="field"><label for="lc_server">LDAP сервер</label>
+                <input id="lc_server" placeholder="dc01.company.local или 172.16.0.101"></div>
+              <div class="field"><label for="lc_port">Порт</label>
+                <input id="lc_port" type="number" min="0" max="65535" placeholder="389, для LDAPS 636"></div>
+              <div class="field"><label for="lc_mode">Режим подключения</label>
+                <select id="lc_mode">
+                  <option value="plain">LDAP (без TLS)</option>
+                  <option value="starttls">LDAP + STARTTLS</option>
+                  <option value="ldaps">LDAPS (TLS)</option>
+                </select>
+                <div class="err" id="lc_modeWarn">Соединение не шифруется. Используйте только в доверенной внутренней сети.</div></div>
+              <div class="field"><label for="lc_base">Base DN</label>
+                <input id="lc_base" placeholder="OU=Qizilqum,DC=company,DC=local"></div>
+              <div class="field"><label for="lc_ubase">User Search Base</label>
+                <input id="lc_ubase" placeholder="Необязательно; по умолчанию Base DN"></div>
+              <div class="field"><label for="lc_user">Bind DN / сервисная учётная запись</label>
+                <input id="lc_user" placeholder="COMPANY\svc_asset или CN=svc,OU=…"></div>
+              <div class="field"><label for="lc_pass">Bind password</label>
+                <input id="lc_pass" type="password" autocomplete="new-password">
+                <div class="note" id="lc_passHint" style="margin:4px 0 0"></div></div>
+              <div class="field"><label for="lc_cto">Таймаут подключения, мс</label>
+                <input id="lc_cto" type="number" min="500" step="500" placeholder="5000"></div>
+              <div class="field"><label for="lc_oto">Таймаут операции, мс</label>
+                <input id="lc_oto" type="number" min="500" step="500" placeholder="10000"></div>
+            </div>
+            <div class="row ad-foot">
+              <div class="err" id="lc_err"></div>
+              <button id="btnLcSave" class="btn-primary">Сохранить</button>
+            </div>
           </div>
-          <div class="note" id="ad_orgHint" style="margin-top:4px"></div>
-          <div class="grid2" style="margin-top:14px">
-            <div class="field"><label for="ad_server">Контроллер домена</label>
-              <input id="ad_server" placeholder="dc01.company.local"></div>
-            <div class="field"><label for="ad_base">База поиска (Base DN)</label>
-              <input id="ad_base" placeholder="DC=company,DC=local"></div>
-            <div class="field"><label for="ad_ou">Только подразделение AD (OU)</label>
-              <input id="ad_ou" placeholder="ГИТ, или Завод-1/ГИТ, или DN целиком"></div>
-            <div class="field"><label for="ad_user">Служебная учётная запись</label>
-              <input id="ad_user" placeholder="COMPANY\svc_asset или svc_asset@company.local"></div>
-            <div class="field"><label for="ad_pass">Пароль</label>
-              <input id="ad_pass" type="password" autocomplete="new-password"
-                     placeholder="оставьте пустым, чтобы не менять"></div>
-            <div class="field"><label for="ad_attr">Атрибут-признак</label>
-              <input id="ad_attr" placeholder="employeeType"></div>
-            <div class="field"><label for="ad_val">Значение признака</label>
-              <input id="ad_val" placeholder="ok"></div>
-            <div class="field"><label for="ad_port">Порт</label>
-              <input id="ad_port" type="number" placeholder="389, для LDAPS 636"></div>
-            <div class="field"><label>&nbsp;</label>
-              <label class="chk"><input type="checkbox" id="ad_ssl"> Шифрование LDAPS</label>
+        </div>
+        <div class="card" style="margin-top:14px">
+          <div class="pad ad-check">
+            <div>
+              <h2>Проверка подключения</h2>
+              <div class="note" style="margin:4px 0 0">Использует сохранённую конфигурацию:
+                подключение к серверу, вход служебной учётной записью и чтение Base DN.</div>
+            </div>
+            <button id="btnLcTest">Проверить подключение</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- вкладка: загрузка сотрудников — у каждого учреждения своя -->
+      <section id="a-load" hidden>
+        <div class="card">
+          <div class="pad">
+            <h2>Откуда брать сотрудников</h2>
+            <div class="note" id="ad_connHint" style="margin-top:6px"></div>
+            <div class="grid2" style="margin-top:14px">
+              <div class="field"><label for="ad_org">Куда грузить сотрудников</label>
+                <select id="ad_org"></select>
+                <div class="note" id="ad_orgHint" style="margin:4px 0 0"></div></div>
+              <div class="field"><label for="ad_ou">Только подразделение AD (OU)</label>
+                <input id="ad_ou" placeholder="ГИТ, или Завод-1/ГИТ, или DN целиком; пусто — весь Base DN"></div>
+              <div class="field"><label for="ad_attr">Атрибут-признак</label>
+                <input id="ad_attr" placeholder="employeeType"></div>
+              <div class="field"><label for="ad_val">Значение признака</label>
+                <input id="ad_val" placeholder="ok"></div>
+            </div>
+            <div class="row" style="margin-top:10px">
               <label class="chk"><input type="checkbox" id="ad_skip" checked> Пропускать отключённые</label>
               <label class="chk"><input type="checkbox" id="ad_sub" checked> Вместе с вложенными OU</label>
             </div>
+            <div class="row" style="margin-top:14px">
+              <button id="btnAdSave">Сохранить настройки</button>
+              <button id="btnAdTest">Проверить выборку</button>
+              <button id="btnAdSync" class="btn-primary">Загрузить сотрудников</button>
+            </div>
+            <div class="err" id="ad_err"></div>
           </div>
-          <div class="row" style="margin-top:14px">
-            <button id="btnAdSave">Сохранить настройки</button>
-            <button id="btnAdTest">Проверить подключение</button>
-            <button id="btnAdSync" class="btn-primary">Загрузить сотрудников</button>
-          </div>
-          <div class="err" id="ad_err"></div>
         </div>
-      </div>
 
-      <div class="card" style="margin-top:14px">
-        <div class="pad">
-          <h2>Вход через Active Directory</h2>
-          <div class="grid2" style="margin-top:14px">
-            <div class="field"><label>&nbsp;</label>
-              <label class="chk" style="margin:0"><input type="checkbox" id="aa_on"> Разрешить вход через домен</label></div>
-            <div class="field"><label for="aa_org">Настройки домена какого учреждения</label>
-              <select id="aa_org"></select></div>
-            <div class="field"><label for="aa_suffix">Домен для входа (хвост логина)</label>
-              <input id="aa_suffix" placeholder="company.local — тогда i.ivanov → i.ivanov@company.local"></div>
-            <div class="field"><label for="aa_group">Группа AD, кому открыт вход</label>
-              <input id="aa_group" placeholder="Asset-IT-Users, COMPANY\Asset-IT-Users или DN (пусто — всем)"></div>
-            <div class="field"><label for="aa_role">Роль для новых пользователей</label>
-              <select id="aa_role"></select></div>
-            <div class="field"><label for="aa_neworg">Учреждение для новых пользователей</label>
-              <select id="aa_neworg"></select></div>
+        <div class="card" style="margin-top:14px" id="adResultCard" hidden>
+          <div class="pad">
+            <h2 id="adResultTitle">Результат</h2>
+            <div class="stats" id="adStats" style="margin-top:10px"></div>
+            <ul id="adLog" class="adlog"></ul>
           </div>
-          <div class="row" style="margin-top:14px">
-            <button id="btnAaSave">Сохранить</button>
-            <button id="btnAaTest">Проверить вход</button>
-          </div>
-          <div class="row" style="margin-top:10px">
-            <input id="aa_probe" placeholder="Доменный логин сотрудника, например i.ivanov"
-                   style="max-width:360px">
-            <button id="btnAaProbe">Почему не заходит</button>
-          </div>
-          <div class="note" id="aa_probe_out"></div>
-          <div class="note" id="aa_hint"></div>
-          <div class="err" id="aa_err"></div>
         </div>
-      </div>
 
-      <div class="card" style="margin-top:14px">
-        <div class="pad">
-          <h2>Что переносится</h2>
-          <div class="kv" style="margin-top:10px">
-            <div><span>Вкладка «Общие»</span><b>Имя, Инициалы, Фамилия → ФИО</b></div>
-            <div><span>&nbsp;</span><b>Номер телефона, Эл. почта</b></div>
-            <div><span>Вкладка «Организация»</span><b>Должность → Должность</b></div>
-            <div><span>&nbsp;</span><b>Отдел → Отдел</b></div>
-            <div><span>&nbsp;</span><b>Организация → Подразделение</b></div>
+        <div class="card" style="margin-top:14px">
+          <div class="pad">
+            <h2>Что переносится</h2>
+            <div class="kv" style="margin-top:10px">
+              <div><span>Вкладка «Общие»</span><b>Имя, Инициалы, Фамилия → ФИО</b></div>
+              <div><span>&nbsp;</span><b>Номер телефона, Эл. почта</b></div>
+              <div><span>Вкладка «Организация»</span><b>Должность → Должность</b></div>
+              <div><span>&nbsp;</span><b>Отдел → Отдел</b></div>
+              <div><span>&nbsp;</span><b>Организация → Подразделение</b></div>
+            </div>
           </div>
         </div>
-      </div>
-
-      <div class="card" style="margin-top:14px" id="adResultCard" hidden>
-        <div class="pad">
-          <h2 id="adResultTitle">Результат</h2>
-          <div class="stats" id="adStats" style="margin-top:10px"></div>
-          <ul id="adLog" class="adlog"></ul>
-        </div>
-      </div>
-      <div class="note" id="adLast"></div>
+        <div class="note" id="adLast"></div>
+      </section>
     </section>

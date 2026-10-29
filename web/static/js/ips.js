@@ -661,7 +661,7 @@ function openIpCard(ip){
 var IPM = ["name","kind","os","host","mac","note"];
 function fillIpMan(res, show){
   $("ipManBox").hidden = !show;
-  var may = can("ip.manage");
+  var may = can("ip.edit");
   hide("btnIpSave", show && may);
   hide("btnIpUnres", show && may && !!(res && res.id));
   if(!show) return;
@@ -680,12 +680,7 @@ function fillIpMan(res, show){
   IPM.concat(["owner","div","dep"]).forEach(function(k){ $("ipm_"+k).disabled = !may; });
 }
 /* отделы — выбранного подразделения и ещё не размеченные */
-function fillIpmDeps(keep){
-  var dv = $("ipm_div").value;
-  $("ipm_dep").innerHTML = opts(cfg.departments.filter(function(d){
-    return !dv || !d.divisionId || d.divisionId === dv; }), "— не указан —");
-  $("ipm_dep").value = keep && $("ipm_dep").querySelector('option[value="'+keep+'"]') ? keep : "";
-}
+function fillIpmDeps(keep){ fillDeps("ipm_div", "ipm_dep", keep); }
 $("ipm_div").onchange = function(){ fillIpmDeps($("ipm_dep").value); };
 $("ipm_owner").onchange = function(){
   var u = byId("users", this.value); if(!u) return;

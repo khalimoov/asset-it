@@ -21,30 +21,51 @@
   </div>
 </dialog>
 
-<dialog id="dlgStaff">
+<dialog id="dlgStaff" class="wide">
   <div class="dlg-head" id="dlgStaffTitle">Пользователь ИТ</div>
   <div class="dlg-body">
-    <div class="grid2">
-      <div class="field"><label for="st_name">ФИО</label><input id="st_name" placeholder="Халимов Б.Ш."></div>
-      <div class="field"><label for="st_pos">Должность</label><input id="st_pos" placeholder="Инженер"></div>
-      <div class="field"><label for="st_login">Логин</label><input id="st_login" placeholder="i.ivanov"></div>
-      <div class="field"><label for="st_auth">Откуда пароль</label>
+    <div class="dlg-sec">
+      <h3>Авторизация</h3>
+      <div class="field"><label for="st_auth">Источник авторизации</label>
         <select id="st_auth">
-          <option value="local">Свой пароль (задаёт администратор)</option>
-          <option value="ad">Active Directory — доменный пароль</option>
-        </select></div>
-      <div class="field"><label for="st_org">Учреждение</label><select id="st_org"></select></div>
-      <div class="field"><label for="st_role">Роль</label><select id="st_role"></select></div>
+          <option value="local">Local — свой пароль, задаёт администратор</option>
+          <option value="ad">LDAP — учётная запись Active Directory</option>
+        </select>
+        <div class="note" id="st_authHint" style="margin:4px 0 0"></div></div>
     </div>
-    <div class="grid2" style="margin-top:12px">
-      <div class="field"><label for="st_pass">Пароль</label>
-        <input id="st_pass" type="password" autocomplete="new-password"
-               placeholder="оставьте пустым, чтобы не менять"></div>
-      <div class="field"><label>&nbsp;</label>
-        <label class="chk"><input type="checkbox" id="st_master"> Мастер по ремонту</label>
-        <label class="chk"><input type="checkbox" id="st_active" checked> Доступ разрешён</label>
-        <label class="chk"><input type="checkbox" id="st_edit"> Разрешено редактирование</label>
+    <div class="dlg-sec" id="st_ldapBox" hidden>
+      <h3>Учётные данные</h3>
+      <div class="field"><label for="st_ldapQ">Пользователь Active Directory</label>
+        <input id="st_ldapQ" autocomplete="off" spellcheck="false" placeholder="Логин, ФИО или почта">
+        <div class="note" style="margin:4px 0 0">Поиск начинается после двух символов.</div>
+        <div class="ldap-list" id="st_ldapList"></div>
+        <div class="ldap-picked" id="st_ldapPicked" hidden></div></div>
+    </div>
+    <div class="dlg-sec">
+      <h3>Основное</h3>
+      <div class="grid2">
+        <div class="field"><label for="st_name">ФИО</label><input id="st_name" placeholder="Халимов Б.Ш."></div>
+        <div class="field"><label for="st_pos">Должность</label><input id="st_pos" placeholder="Инженер"></div>
+        <div class="field"><label for="st_login">Логин</label><input id="st_login" placeholder="i.ivanov" autocomplete="off"></div>
+        <div class="field" id="st_passBox"><label for="st_pass" id="st_passLbl">Пароль</label>
+          <input id="st_pass" type="password" autocomplete="new-password"
+                 placeholder="оставьте пустым, чтобы не менять"></div>
+        <div class="field"><label for="st_org">Учреждение</label><select id="st_org"></select></div>
       </div>
+    </div>
+    <div class="dlg-sec">
+      <h3>Права</h3>
+      <div class="grid2">
+        <div class="field"><label for="st_role">Роль</label><select id="st_role"></select></div>
+        <div class="field"><label>&nbsp;</label>
+          <label class="chk"><input type="checkbox" id="st_master"> Мастер по ремонту</label>
+          <label class="chk"><input type="checkbox" id="st_active" checked> Доступ разрешён</label>
+        </div>
+      </div>
+      <div class="note" style="margin:6px 0 0">Что можно смотреть и править — по разделам и
+        справочникам — задаётся в роли («Роли и доступ»).</div>
+      <div class="note" id="st_firstHint" hidden>Первая учётная запись: входит всегда своим паролем,
+        что бы ни стояло в настройках AD. Источник, доступ и роль администратора у неё не меняются.</div>
     </div>
   </div>
   <div class="dlg-foot">

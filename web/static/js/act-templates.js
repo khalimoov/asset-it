@@ -25,7 +25,7 @@ function renderActTpl(){
       '<td class="hide-md"><a href="/api/acttpl/'+encodeURIComponent(t.id)+'/file">'+
         esc(t.origName||"скачать")+'</a></td>'+
       '<td class="hide-md">'+esc(fmtWhen(t.at)||"—")+'</td>'+
-      acts(can("dict.edit")
+      acts(canDict("acttpl")
         ? ['<button class="ic js-atedit" title="Изменить">✎</button>',
            '<button class="ic btn-danger js-atdel" title="Удалить">✕</button>']
         : [])+'</tr>';
@@ -55,6 +55,7 @@ function openActTpl(t){
 $("btnAddActTpl").onclick = function(){ openActTpl(null); };
 $("btnActTplCancel").onclick = function(){ $("dlgActTpl").close(); };
 $("actTplBody").addEventListener("click", function(e){
+  if(!canDict("acttpl")) return;
   var tr = e.target.closest("tr[data-t]"); if(!tr) return;
   var t = acttpls.find(function(x){ return x.id === tr.dataset.t; });
   if(!t) return;

@@ -31,7 +31,7 @@ for _s in (sys.stdout, sys.stderr):
 
 import psycopg
 from psycopg.rows import dict_row
-from flask import Flask, request, jsonify, make_response, send_file, send_from_directory
+from flask import Flask, request, jsonify, make_response, send_file, send_from_directory, redirect
 from werkzeug.exceptions import NotFound
 
 import actdoc
@@ -39,10 +39,11 @@ import adsync
 import webpage
 import netscan
 import docscan
+import zayavki
 
 # Версия сборки. Должна совпадать с UI_BUILD в web/static/js/core.js: если файлы
 # обновили, а сервер не перезапустили, приложение об этом само скажет.
-APP_BUILD = "2026-09-28.4"
+APP_BUILD = "0.2"
 
 BASE = Path(__file__).resolve().parent
 ROOT = BASE.parent
@@ -105,32 +106,27 @@ def check_password(password: str, stored: str) -> bool:
 
 # ------------------------------------------------------------------ права
 
-# Что видно всем вошедшим без всяких прав: своё учреждение, общий дашборд,
-# уведомления, ремонты, история передач, весь «Учёт» и справочники — сотрудники,
-# учреждения, склады, подразделения, отделы, места, модели. Права нужны, чтобы
-# ПРАВИТЬ, и для закрытых страниц: пользователи ИТ, роли, Active Directory,
-# «Все учреждения», журнал удалений.
+# Права роли — две части.
+#
+# 1. Таблица доступа (role.reg_access): у каждого раздела учёта, у IP-адресов,
+#    накладных и у каждого справочника свой уровень — просмотр или редактирование
+#    (справочник можно и закрыть вовсе). Редактирование раздела — это всё внутри
+#    него: записи, категории, подкатегории, типы, характеристики, наборы, ремонт,
+#    списание; у «Расходных материалов» — приход и выдача. Отдельных галочек на
+#    это нет. Строки, не связанные с разделом, хранятся под ключами с «@»
+#    (AREAS), из них выводятся коды «ip.edit», «models.view» и т. п. — проверки
+#    по коду остаются простыми.
+# 2. Галочки (PERMS) — закрытые страницы и то, что шире одного учреждения.
+#
+# Учёт (разделы, IP, накладные) видят все вошедшие; справочник «Шаблоны актов»
+# по умолчанию закрыт, остальные справочники по умолчанию открыты на просмотр.
 PERMS = [
     ("admin",           "Полный доступ и админ-панель"),
-    # --- учёт: одно право на всё редактирование, ниже — по частям ---
-    ("ledger.edit",     "Учёт: редактировать всё (записи, разделы, IP, накладные, материалы, ремонты, списание)"),
-    ("registry.manage", "Учёт: категории, типы, характеристики, наборы"),
-    ("ip.manage",       "Учёт: диапазоны и резерв IP-адресов"),
-    ("docs.scan",       "Учёт: приходные накладные — загрузка, разбор, заведение записей"),
-    ("supply.receive",  "Учёт: приход расходных материалов"),
-    ("supply.issue",    "Учёт: списание материалов на сотрудников и оборудование"),
-    ("repair.send",     "Учёт: отправлять оборудование в ремонт"),
-    ("repair.close",    "Учёт: выводить из ремонта"),
-    ("repair.assign",   "Учёт: назначать мастера"),
-    ("item.writeoff",   "Учёт: списывать оборудование"),
-    # --- справочники ---
-    ("dict.edit",       "Справочники: заполнять сотрудников, подразделения, отделы, места, склады, модели"),
-    ("users.manage",    "Справочники: сотрудники, подразделения, отделы, места, склады"),
     ("staff.view",      "Пользователи ИТ и роли: просмотр"),
     ("staff.manage",    "Пользователи ИТ и роли: редактирование"),
     ("ad.view",         "Active Directory: просмотр настроек"),
     ("ad.sync",         "Active Directory: настройки и загрузка"),
-    ("org.manage",      "Учреждения: создание и перевод пользователей ИТ"),
+    ("org.manage",      "Учреждения: создание, правка и перевод пользователей ИТ"),
     # --- все учреждения ---
     ("org.viewall",     "Все учреждения: просмотр — сводка и выбор учреждения в учёте"),
     ("org.editall",     "Все учреждения: редактирование учёта в любом учреждении"),
@@ -140,25 +136,55 @@ PERMS = [
 ]
 PERM_CODES = [p[0] for p in PERMS]
 
-# Составные права раскрываются в частные: так проверки по всему коду остаются
-# простыми («есть ли ip.manage»), а роль выдаёт одну галочку.
+# Строки таблицы доступа, кроме самих разделов: (ключ, код права, название, группа).
+# Уровень «view» даёт код «<код>.view», «edit» — ещё и «<код>.edit».
+AREAS = [
+    ("@ip",          "ip",          "IP-адреса",              "ledger"),
+    ("@docs",        "docs",        "Приходные накладные",    "ledger"),
+    ("@transfers",   "transfers",   "Накладные по передаче",  "ledger"),
+    ("@employees",   "employees",   "Сотрудники",             "dict"),
+    ("@warehouses",  "warehouses",  "Склады",                 "dict"),
+    ("@divisions",   "divisions",   "Подразделения",          "dict"),
+    ("@departments", "departments", "Отделы",                 "dict"),
+    ("@places",      "places",      "Место",                  "dict"),
+    ("@models",      "models",      "Модели",                 "dict"),
+    ("@acttpl",      "acttpl",      "Шаблоны актов",          "dict"),
+]
+# уровень, если в роли строки нет: учёт и справочники открыты на просмотр,
+# шаблоны актов — закрыты, их выдают отдельно
+AREA_DEFAULT = {"@acttpl": "none"}
+AREA_CODES = [a[1] + s for a in AREAS for s in (".view", ".edit")]
+ALL_CODES = PERM_CODES + AREA_CODES
+
+
+def area_level(acc, key, group):
+    """none | view | edit — уровень строки таблицы доступа; учёт не закрывается."""
+    lvl = (acc or {}).get(key)
+    if lvl not in ("none", "view", "edit"):
+        lvl = AREA_DEFAULT.get(key, "view")
+    if group == "ledger" and lvl == "none":
+        lvl = "view"
+    return lvl
+
+
+# Составные права раскрываются в частные: «правка» включает «просмотр».
 PERM_IMPLIES = {
-    "ledger.edit": ["registry.manage", "ip.manage", "docs.scan", "supply.receive", "supply.issue",
-                    "repair.send", "repair.close", "repair.assign", "item.writeoff"],
-    "dict.edit":   ["users.manage"],
     "staff.manage": ["staff.view"],
     "ad.sync":     ["ad.view"],
     "org.editall": ["org.viewall"],
     "deletions.manage": ["deletions.view"],
 }
 
+_DICT_EDIT = {"@employees": "edit", "@warehouses": "edit", "@divisions": "edit",
+              "@departments": "edit", "@places": "edit"}
+# (id, название, описание, галочки, уровень разделов, сортировка, прочие строки доступа)
 SEED_ROLES = [
-    ("role_admin", "Администратор", "Полный доступ ко всему", ["admin"], "edit", 0),
+    ("role_admin", "Администратор", "Полный доступ ко всему", ["admin"], "edit", 0, {}),
     ("role_master", "Мастер", "Ремонтирует технику: принимает и возвращает",
-     ["repair.send", "repair.close", "supply.issue"], "edit", 1),
+     [], "edit", 1, {"@transfers": "edit"}),
     ("role_it", "Сотрудник ИТ", "Ведёт учёт, отправляет в ремонт",
-     ["repair.send", "supply.issue", "supply.receive", "users.manage"], "edit", 2),
-    ("role_view", "Только просмотр", "Видит данные, ничего не меняет", [], "view", 3),
+     [], "edit", 2, dict(_DICT_EDIT, **{"@transfers": "edit"})),
+    ("role_view", "Только просмотр", "Видит данные, ничего не меняет", [], "view", 3, {}),
 ]
 
 SEED_REGISTRIES = [
@@ -232,13 +258,23 @@ def next_inv(cur, org_id, inv, skip_id=None):
 
 
 def perms_of(row) -> set:
-    """Набор прав сотрудника: из роли; admin открывает всё, составные раскрываются."""
-    p = set(row.get("perms") or [])
+    """Набор прав сотрудника: галочки роли плюс коды из таблицы доступа.
+
+    admin открывает всё, составные раскрываются.
+    """
+    p = set(row.get("perms") or []) & set(PERM_CODES)
     if "admin" in p:
-        return set(PERM_CODES)
+        return set(ALL_CODES)
     for code, more in PERM_IMPLIES.items():
         if code in p:
             p.update(more)
+    acc = row.get("reg_access") or {}
+    for key, code, _title, group in AREAS:
+        lvl = area_level(acc, key, group)
+        if lvl in ("view", "edit"):
+            p.add(code + ".view")
+        if lvl == "edit":
+            p.add(code + ".edit")
     return p
 
 
@@ -319,15 +355,11 @@ def can(user, code: str) -> bool:
 
 
 def reg_level(user, registry_id: str) -> str:
-    """none | view | edit — уровень доступа к разделу.
+    """view | edit — уровень доступа к разделу; решает только роль.
 
-    Две вещи помимо роли:
-
-    1. Доступ к учреждению сам по себе даёт только просмотр — правка включается
-       отдельной галочкой в карточке сотрудника. Иначе выдача доступа новому
-       человеку сразу пускала бы его менять чужой учёт.
-    2. Разделы других учреждений заводятся с приставкой «<учреждение>_», поэтому
-       уровень из роли ищем и по исходному имени раздела — роли общие на всю базу.
+    Разделы других учреждений заводятся с приставкой «<учреждение>_», поэтому
+    уровень из роли ищем и по исходному имени раздела — роли общие на всю базу.
+    Править чужое учреждение можно только с org.editall.
     """
     if "admin" in user["perms"]:
         return "edit"
@@ -335,13 +367,9 @@ def reg_level(user, registry_id: str) -> str:
     if lvl is None:
         base = registry_id.split("_", 1)[1] if "_" in registry_id else registry_id
         lvl = user["reg_access"].get(base, "none")
-    # «Учёт» видят все; право ledger.edit даёт правку во всех разделах
-    if lvl == "none":
+    # разделы учёта видят все: «нет доступа» здесь значит просмотр
+    if lvl not in ("view", "edit"):
         lvl = "view"
-    if "ledger.edit" in user["perms"]:
-        lvl = "edit"
-    if lvl == "edit" and not user.get("can_edit"):
-        return "view"
     # чужое учреждение: смотреть можно с org.viewall, править — только с org.editall
     if lvl == "edit" and reg_org_of(registry_id) != (user.get("org_id") or ""):
         if "org.editall" not in user["perms"]:
@@ -358,7 +386,7 @@ def current_user():
     with db() as conn, conn.cursor() as cur:
         cur.execute("""
             select s.token, s.expires_at, st.id, st.full_name, st.position, st.login,
-                   st.is_master, st.active, st.role_id, st.can_edit, st.org_id,
+                   st.is_master, st.active, st.role_id, st.org_id,
                    r.name as role_name, r.perms, r.reg_access
               from session s
               join staff st on st.id = s.staff_id
@@ -377,7 +405,7 @@ def current_user():
         "login": row["login"], "isMaster": row["is_master"],
         "roleId": row["role_id"], "roleName": row["role_name"] or "",
         "perms": perms_of(row), "reg_access": reg_access_of(row),
-        "can_edit": bool(row["can_edit"]), "org_id": row.get("org_id") or "",
+        "org_id": row.get("org_id") or "",
     }
 
 
@@ -461,8 +489,9 @@ def seed():
             cur.execute("""insert into org (id, name, sort) values (%s, 'Основное', 0)
                            on conflict (id) do nothing""", (org_id,))
 
-        for rid, name, descr, perms, level, sort in SEED_ROLES:
+        for rid, name, descr, perms, level, sort, areas in SEED_ROLES:
             access = {r[0]: level for r in SEED_REGISTRIES} if level else {}
+            access.update(areas)
             cur.execute("""
                 insert into role (id, name, descr, perms, reg_access, builtin, sort)
                 values (%s,%s,%s,%s,%s,true,%s)
@@ -482,6 +511,8 @@ def seed():
             on conflict (key) do nothing
         """, (json.dumps(DEF_UNITS),))
 
+        migrate_roles(cur)
+
         # Учётную запись администратора не выдумываем: пока в базе нет ни одного
         # логина, страница показывает экран первого запуска, и администратор
         # сам задаёт себе логин и пароль (/api/setup).
@@ -491,6 +522,56 @@ def seed():
 
 
 # ------------------------------------------------------------------ чтение состояния
+
+# права до 02.10.2026: отдельные галочки на части раздела и на справочники
+_LEGACY = {"ledger.edit", "registry.manage", "ip.manage", "docs.scan", "supply.receive",
+           "supply.issue", "repair.send", "repair.close", "repair.assign", "item.writeoff",
+           "dict.edit", "users.manage"}
+
+
+def migrate_roles(cur):
+    """Переводит роли на таблицу доступа — один раз, отметка в setting.perm_model.
+
+    Что человек мог раньше, он может и после: ledger.edit становится правкой
+    всех разделов, IP и накладных; ip.manage и docs.scan — правкой своих строк;
+    приход и выдача материалов — правкой разделов материалов; users.manage —
+    правкой справочников, dict.edit — ещё и моделей с шаблонами актов. Кто
+    правил хоть один раздел, тот передавал технику — получает «Накладные по
+    передаче». Галочка «разрешено редактирование» у сотрудника больше не
+    действует: правку решает роль.
+    """
+    cur.execute("select value from setting where key = 'perm_model'")
+    if cur.fetchone():
+        return
+    cur.execute("select id, kind from registry")
+    regs = cur.fetchall()
+    cur.execute("select id, perms, reg_access from role")
+    for r in cur.fetchall():
+        perms = set(r["perms"] or [])
+        acc = dict(r["reg_access"] or {})
+        if "ledger.edit" in perms:
+            for g in regs:
+                acc[g["id"]] = "edit"
+            acc.update({"@ip": "edit", "@docs": "edit", "@transfers": "edit"})
+        if perms & {"supply.receive", "supply.issue"}:
+            for g in regs:
+                if g["kind"] == "supplies":
+                    acc[g["id"]] = "edit"
+        if "ip.manage" in perms:
+            acc["@ip"] = "edit"
+        if "docs.scan" in perms:
+            acc["@docs"] = "edit"
+        if any(v == "edit" for k, v in acc.items() if not k.startswith("@")):
+            acc.setdefault("@transfers", "edit")
+        if perms & {"users.manage", "dict.edit"}:
+            acc.update(_DICT_EDIT)
+        if "dict.edit" in perms:
+            acc.update({"@models": "edit", "@acttpl": "edit"})
+        cur.execute("update role set perms = %s, reg_access = %s where id = %s",
+                    (json.dumps(sorted(perms - _LEGACY)), json.dumps(acc), r["id"]))
+    cur.execute("""insert into setting (key, value) values ('perm_model', '2')
+                   on conflict (key) do nothing""")
+
 
 def js_date(v):
     return v.isoformat() if isinstance(v, (datetime.date, datetime.datetime)) else (v or "")
@@ -519,8 +600,7 @@ def load_state(user, org_id):
     """
     allowed = None
     if "admin" not in user["perms"] and not sees_all_orgs(user):
-        # считаем через reg_level: там же учитываются приставка учреждения
-        # и правило «доступ без галочки правки — это просмотр»
+        # считаем через reg_level: там же учитывается приставка учреждения
         allowed = "by-level"
 
     with db() as conn, conn.cursor() as cur:
@@ -597,9 +677,9 @@ def load_state(user, org_id):
         # сотрудники ИТ общие на всю базу, но в списке видно, кто где работает
         staff = [{"id": r["id"], "name": r["full_name"], "position": r["position"],
                   "login": r["login"] or "", "role": r["role_id"] or "",
-                  "orgId": r["org_id"] or "", "canEdit": r["can_edit"],
+                  "orgId": r["org_id"] or "",
                   "isMaster": r["is_master"], "active": r["active"],
-                  "auth": r["auth"] or "local"}
+                  "auth": r["auth"] or "local", "first": r["id"] == FIRST_STAFF}
                  for r in rows("select * from staff order by full_name")]
 
         roles = [{"id": r["id"], "name": r["name"], "descr": r["descr"], "perms": r["perms"],
@@ -733,10 +813,11 @@ def load_state(user, org_id):
 
     me = dict(user)
     me["perms"] = sorted(user["perms"])
-    me["canEdit"] = bool(user.get("can_edit")) or "admin" in user["perms"]
     me["seesAllOrgs"] = sees_all_orgs(user)
     return {"cfg": cfg, "items": items, "me": me, "build": APP_BUILD,
-            "permList": [{"code": c, "title": t} for c, t in PERMS]}
+            "permList": [{"code": c, "title": t} for c, t in PERMS],
+            "areaList": [{"key": k, "title": t, "group": g,
+                          "def": area_level({}, k, g)} for k, _c, t, g in AREAS]}
 
 
 # ------------------------------------------------------------------ запись состояния
@@ -766,16 +847,18 @@ def sync_table(cur, table, key_cols, rows_in, scope=None):
         cur.execute("delete from " + table + " where " + where, args)
 
 
-def manages_all_registries(user):
-    """Справочники разделов правит тот, кому доступны все разделы на запись."""
-    if "admin" in user["perms"] or "ledger.edit" in user["perms"]:
-        return True
-    return False    # частичный доступ к разделам справочники не правит
-
-
-def may_write(user):
-    """Без галочки «разрешено редактирование» доступ к учреждению — только просмотр."""
-    return "admin" in user["perms"] or bool(user.get("can_edit"))
+def _own_rows(cur, table, rows, allowed):
+    """Строки, которые можно писать: раздел строки разрешён на правку, и если
+    строка уже есть в базе — её прежний раздел тоже (иначе её можно было бы
+    «перетащить» из чужого раздела в свой)."""
+    ids = [r.get("id") for r in rows if r.get("id")]
+    was = {}
+    if ids:
+        cur.execute("select id, registry_id from " + table + " where id = any(%s)", (ids,))
+        was = {x["id"]: x["registry_id"] for x in cur.fetchall()}
+    return [r for r in rows
+            if (r.get("registryId") or "") in allowed
+            and (r.get("id") not in was or (was[r.get("id")] or "") in allowed)]
 
 
 def save_cfg(cfg, user, org_id):
@@ -786,20 +869,27 @@ def save_cfg(cfg, user, org_id):
     присылает только своё учреждение — без scope он снёс бы справочники соседнего.
     """
     g = lambda r, k, d="": r.get(k, d)
-    full = manages_all_registries(user)
     org = lambda r: org_id
     in_org = ("org_id = %s", [org_id])
 
     with db() as conn, conn.cursor() as cur:
         # что принадлежит этому учреждению: нужно, чтобы ограничить удаление
-        cur.execute("select id from registry where org_id = %s", (org_id,))
-        my_regs = [r["id"] for r in cur.fetchall()] or [""]
+        cur.execute("select id, kind from registry where org_id = %s", (org_id,))
+        reg_rows = cur.fetchall()
+        my_regs = [r["id"] for r in reg_rows] or [""]
+        # Правка раздела — это всё внутри него, поэтому дерево справочников
+        # пишется по разделам: только те, что открыты на правку.
+        edit_regs = [r["id"] for r in reg_rows if reg_level(user, r["id"]) == "edit"]
+        full = bool(reg_rows) and len(edit_regs) == len(reg_rows)
+        # приход и выдача материалов — правка раздела «Расходные материалы»
+        sup_edit = any(r["kind"] == "supplies" and r["id"] in edit_regs for r in reg_rows)
         cur.execute("select id from supply where org_id = %s", (org_id,))
         my_supplies = [r["id"] for r in cur.fetchall()] or [""]
         in_regs = ("registry_id = any(%s)", [my_regs])
         in_supplies = ("supply_id = any(%s)", [my_supplies])
         # --- разделы учёта ---
-        if "registries" in cfg and full:
+        # настройки самих разделов — только у администратора
+        if "registries" in cfg and can(user, "admin"):
             _REG_ORG.clear()
             sync_table(cur, "registry", {
                 "name": lambda r: g(r, "name"), "icon": lambda r: g(r, "icon", "\u25a3"),
@@ -809,7 +899,7 @@ def save_cfg(cfg, user, org_id):
                 "org_id": org,
             }, cfg["registries"], scope=in_org)
 
-        if "warehouses" in cfg and can(user, "users.manage"):
+        if "warehouses" in cfg and can(user, "warehouses.edit"):
             # Администратор может отдать склад другому учреждению — тогда техника,
             # переданная на этот склад, появится в учёте того учреждения. Остальным
             # склад всегда принадлежит текущему.
@@ -832,10 +922,10 @@ def save_cfg(cfg, user, org_id):
                 "note": lambda r: g(r, "note"), "org_id": wh_org},
                 cfg["warehouses"], scope=in_org)
 
-        # --- модели: справочник, его заполняет тот, кому выдано dict.edit ---
+        # --- модели: справочник, его заполняет тот, кому выдано models.edit ---
         # фото через sync не ходит: оно грузится отдельным запросом, а upsert
         # по имени/примечанию его не трогает
-        if "models" in cfg and can(user, "dict.edit"):
+        if "models" in cfg and can(user, "models.edit"):
             sync_table(cur, "model", {
                 "name": lambda r: g(r, "name"), "note": lambda r: g(r, "note"),
                 "registry_id": lambda r: g(r, "registryId") or None},
@@ -860,7 +950,7 @@ def save_cfg(cfg, user, org_id):
         # --- подразделения, отделы и места раньше людей ---
         for name, table in (("divisions", "division"), ("departments", "department"),
                             ("places", "place")):
-            if name in cfg and can(user, "users.manage"):
+            if name in cfg and can(user, name + ".edit"):
                 # примечание есть только у мест, подразделение — только у отделов
                 cols = {"name": lambda r: g(r, "name"), "org_id": org}
                 if table == "place":
@@ -869,7 +959,7 @@ def save_cfg(cfg, user, org_id):
                     cols["division_id"] = lambda r: g(r, "divisionId") or None
                 sync_table(cur, table, cols, cfg[name], scope=in_org)
 
-        if "users" in cfg and can(user, "users.manage"):
+        if "users" in cfg and can(user, "employees.edit"):
             sync_table(cur, "person", {
                 "name": lambda r: g(r, "name"), "position": lambda r: g(r, "position"),
                 "division_id": lambda r: g(r, "divisionId") or None,
@@ -878,8 +968,9 @@ def save_cfg(cfg, user, org_id):
                 "org_id": org},
                 cfg["users"], scope=in_org)
 
-        # --- дерево справочников раздела ---
-        if full:
+        # --- дерево справочников раздела: только разделы, открытые на правку ---
+        if edit_regs:
+            in_edit = ("registry_id = any(%s)", [edit_regs])
             for name, table, cols in (
                 ("categories", "category", {
                     "name": lambda r: g(r, "name"),
@@ -910,22 +1001,45 @@ def save_cfg(cfg, user, org_id):
                     "registry_id": lambda r: g(r, "registryId") or None,
                     "specs": lambda r: json.dumps(g(r, "specs", []))}),
             ):
-                if name in cfg:
-                    if table == "preset":
+                if name not in cfg:
+                    continue
+                rows_in = cfg[name]
+                if table == "preset":
+                    # набор без раздела общий на учреждение — его правит тот,
+                    # кому открыты на правку все разделы
+                    if full:
                         scope = in_org
-                    elif table == "spec":
-                        # характеристики висят не на разделе, а на подкатегории или типе
-                        scope = ("""(subcategory_id in (select id from subcategory
-                                                         where registry_id = any(%s))
-                                     or type_id in (select id from item_type
-                                                     where registry_id = any(%s)))""",
-                                 [my_regs, my_regs])
                     else:
-                        scope = in_regs
-                    sync_table(cur, table, cols, cfg[name], scope=scope)
+                        scope = ("org_id = %s and registry_id = any(%s)", [org_id, edit_regs])
+                        rows_in = _own_rows(cur, table, rows_in, edit_regs)
+                elif table == "spec":
+                    # характеристики висят не на разделе, а на подкатегории или типе;
+                    # подкатегории и типы к этому месту уже записаны
+                    cur.execute("""select id, registry_id from subcategory where registry_id = any(%s)
+                                   union all
+                                   select id, registry_id from item_type where registry_id = any(%s)""",
+                                (my_regs, my_regs))
+                    owner = {x["id"]: x["registry_id"] for x in cur.fetchall()}
+                    cur.execute("""select s.id from spec s
+                                     left join subcategory g on g.id = s.subcategory_id
+                                     left join item_type t on t.id = s.type_id
+                                    where coalesce(g.registry_id, t.registry_id) <> all(%s)""",
+                                (edit_regs,))
+                    locked = {x["id"] for x in cur.fetchall()}
+                    rows_in = [r for r in rows_in if r.get("id") not in locked and
+                               owner.get(g(r, "subcategoryId") or g(r, "typeId")) in edit_regs]
+                    scope = ("""(subcategory_id in (select id from subcategory
+                                                     where registry_id = any(%s))
+                                 or type_id in (select id from item_type
+                                                 where registry_id = any(%s)))""",
+                             [edit_regs, edit_regs])
+                else:
+                    rows_in = _own_rows(cur, table, rows_in, edit_regs)
+                    scope = in_edit
+                sync_table(cur, table, cols, rows_in, scope=scope)
 
         # --- IP ---
-        if "ipPools" in cfg and can(user, "ip.manage"):
+        if "ipPools" in cfg and can(user, "ip.edit"):
             sync_table(cur, "ip_pool", {
                 "name": lambda r: g(r, "name"), "prefix": lambda r: g(r, "prefix"),
                 "host_from": lambda r: int(g(r, "from", 1) or 1),
@@ -934,7 +1048,7 @@ def save_cfg(cfg, user, org_id):
                 "registry_id": lambda r: g(r, "registryId") or None,
                 "category_id": lambda r: g(r, "categoryId") or None,
                 "org_id": org}, cfg["ipPools"], scope=in_org)
-        if "ipReserved" in cfg and can(user, "ip.manage"):
+        if "ipReserved" in cfg and can(user, "ip.edit"):
             sync_table(cur, "ip_reserved", {
                 "ip": lambda r: g(r, "ip"), "note": lambda r: g(r, "note"),
                 "data": lambda r: json.dumps({k: str(g(r, k) or "") for k in RES_FIELDS},
@@ -942,7 +1056,7 @@ def save_cfg(cfg, user, org_id):
                 "org_id": org}, cfg["ipReserved"], scope=in_org)
 
         # --- расходные материалы: справочник, приходы, выдачи ---
-        if "supplies" in cfg and can(user, "supply.receive"):
+        if "supplies" in cfg and sup_edit:
             if not can(user, "admin"):
                 cur.execute("select value from setting where key = 'units'")
                 u = cur.fetchone()
@@ -961,13 +1075,13 @@ def save_cfg(cfg, user, org_id):
                 "model_id": lambda r: ([x for x in g(r, "models", []) if x] or [None])[0],
                 "org_id": org},
                 cfg["supplies"], scope=in_org)
-        if "receipts" in cfg and can(user, "supply.receive"):
+        if "receipts" in cfg and sup_edit:
             sync_table(cur, "supply_receipt", {
                 "supply_id": lambda r: g(r, "supplyId"), "qty": lambda r: int(g(r, "qty", 0) or 0),
                 "sku": lambda r: g(r, "sku"), "cost": lambda r: to_num(r.get("cost")),
                 "d": lambda r: g(r, "date") or None, "note": lambda r: g(r, "note")},
                 cfg["receipts"], scope=in_supplies)
-        if "issues" in cfg and can(user, "supply.issue"):
+        if "issues" in cfg and sup_edit:
             sync_table(cur, "supply_issue", {
                 "supply_id": lambda r: g(r, "supplyId"),
                 "person_id": lambda r: g(r, "userId") or None,
@@ -976,7 +1090,7 @@ def save_cfg(cfg, user, org_id):
                 "sku": lambda r: g(r, "sku"), "cost": lambda r: to_num(r.get("cost")),
                 "d": lambda r: g(r, "date") or None, "note": lambda r: g(r, "note")},
                 cfg["issues"], scope=in_supplies)
-        if "writeoffs" in cfg and can(user, "supply.issue"):
+        if "writeoffs" in cfg and sup_edit:
             # документальные списания: тот же приём, что и у выдачи, но отдельной таблицей —
             # «Таблица склада» ведёт свой счёт и фактических остатков не трогает
             sync_table(cur, "stock_writeoff", {
@@ -1197,48 +1311,38 @@ def save_items(items, user, org_id):
 
 # ------------------------------------------------------------------ API
 
-def _adauth_cfg(cur):
-    cur.execute("select value from setting where key = 'adauth'")
-    r = cur.fetchone()
-    return adsync.merge_auth(r["value"] if r else {})
+# Первая учётная запись — та, что заведена на экране первого запуска. Она входит
+# всегда и только своим паролем, что бы ни стояло в настройках AD: если домен
+# недоступен или настройки входа сбиты, это единственный способ их поправить.
+FIRST_STAFF = "st_admin"
 
 
 def _ad_login(cur, login, password, row):
     """Вход через домен. Возвращает строку staff или None.
 
-    Локальные учётки (с паролем у нас) через домен не пускаем: иначе доменная
-    учётка с таким же логином открывала бы чужой доступ. Через домен заходят
-    только те, кто заведён как «ad», и те, кого ещё нет — их заводим сами с
-    ролью и учреждением по умолчанию из настроек входа.
+    Входят только те, кого администратор сам добавил в «Пользователи ИТ» с
+    источником LDAP: наличия учётки в домене мало. Локальные учётки (с паролем у
+    нас) через домен не пускаем — иначе доменная учётка с таким же логином
+    открывала бы чужой доступ.
     """
-    auth = _adauth_cfg(cur)
-    if not auth.get("enabled"):
+    if row is None or (row["auth"] or "local") != "ad" or not row["active"]:
         return None
-    if row is not None and (row["auth"] or "local") != "ad":
+    if row["id"] == FIRST_STAFF:
         return None
-    ldap_cfg = _ldap_cfg(cur, auth.get("orgId") or "")
+    # отдельной галочки «вход через домен» нет: вход работает, пока включено
+    # подключение LDAP (выключенное connect() не откроет)
+    ldap_cfg = adsync.merge_config(_ldap_conn(cur))
     try:
-        who = adsync.authenticate(ldap_cfg, auth, login, password)
+        who = adsync.authenticate(ldap_cfg, row["login"] or login, password)
     except Exception:
         traceback.print_exc()
         return None
     if not who:
         return None
-    if row is None:
-        sid = "st" + secrets.token_hex(6)
-        cur.execute("""insert into staff (id, full_name, position, login, role_id, is_master,
-                                          active, org_id, can_edit, auth)
-                       values (%s,%s,%s,%s,%s,false,true,%s,false,'ad')""",
-                    (sid, who["name"] or who["login"], who.get("position") or "", who["login"],
-                     auth.get("roleId") or None, auth.get("newOrgId") or None))
-    else:
-        sid = row["id"]
-        if not row["active"]:
-            return None
-        # ФИО и должность держим свежими — домену виднее
-        cur.execute("update staff set full_name = %s, position = %s where id = %s",
-                    (who["name"] or row["full_name"], who.get("position") or row["position"], sid))
-    cur.execute("select * from staff where id = %s", (sid,))
+    # ФИО и должность держим свежими — домену виднее
+    cur.execute("update staff set full_name = %s, position = %s where id = %s",
+                (who["name"] or row["full_name"], who.get("position") or row["position"], row["id"]))
+    cur.execute("select * from staff where id = %s", (row["id"],))
     return cur.fetchone()
 
 
@@ -1264,7 +1368,8 @@ def _open_session(cur, staff_id):
 def api_login_info():
     """Что показать до входа: включён ли вход через домен и не первый ли это запуск."""
     with db() as conn, conn.cursor() as cur:
-        return jsonify({"ad": bool(_adauth_cfg(cur).get("enabled")),
+        c = _ldap_conn(cur)
+        return jsonify({"ad": bool(c.get("enabled") and c.get("server")),
                         "setup": not has_accounts(cur)})
 
 
@@ -1319,8 +1424,19 @@ def api_login():
     with db() as conn, conn.cursor() as cur:
         cur.execute("select * from staff where lower(login) = lower(%s)", (login,))
         row = cur.fetchone()
-        local_ok = bool(row and row["active"] and (row["auth"] or "local") == "local"
+        if row is None and ("@" in login or "\\" in login):
+            # доменный логин набрали целиком: NGMK\i.ivanov или i.ivanov@ngmk.uz
+            cur.execute("select * from staff where lower(login) = lower(%s)",
+                        (login.split("@")[0].split("\\")[-1],))
+            row = cur.fetchone()
+        first = bool(row and row["id"] == FIRST_STAFF)
+        local_ok = bool(row and (first or (row["active"] and (row["auth"] or "local") == "local"))
                         and check_password(password, row["pass_hash"] or ""))
+        if local_ok and first:
+            # первая учётка входит всегда: что бы с ней ни сделали, возвращаем
+            # ей доступ, свой пароль и роль администратора
+            cur.execute("""update staff set active = true, auth = 'local', role_id = 'role_admin'
+                            where id = %s""", (FIRST_STAFF,))
         if not local_ok:
             row = _ad_login(cur, login, password, row)
             if not row:
@@ -1571,10 +1687,6 @@ def api_cfg():
     org_id = current_org(request.user)
     if not org_id:
         return jsonify({"error": "no_org"}), 403
-    if not may_write(request.user):
-        return jsonify({"error": "read_only",
-                        "message": "Вам открыт только просмотр. Редактирование "
-                                   "включает администратор в карточке сотрудника."}), 403
     try:
         save_cfg(cfg, request.user, org_id)
     except ValueError as e:
@@ -1589,9 +1701,6 @@ def api_items():
     org_id = current_org(request.user)
     if not org_id:
         return jsonify({"error": "no_org"}), 403
-    if not may_write(request.user):
-        return jsonify({"error": "read_only",
-                        "message": "Вам открыт только просмотр."}), 403
     try:
         res = save_items(data.get("items", []), request.user, org_id)
     except ValueError as e:
@@ -1614,9 +1723,6 @@ def api_items_delete():
     reason = (data.get("reason") or "").strip()
     if not ids:
         return jsonify({"ok": True})
-    if not may_write(request.user):
-        return jsonify({"error": "read_only",
-                        "message": "Вам открыт только просмотр."}), 403
     if len(reason) < 3:
         return jsonify({"error": "reason_required"}), 400
 
@@ -1756,7 +1862,7 @@ def _net_cfg(cur, org_id):
 
 
 @app.get("/api/netscan")
-@need_perm("ip.manage")
+@need_perm("ip.edit")
 def api_netscan_get():
     org_id = current_org(request.user)
     with db() as conn, conn.cursor() as cur:
@@ -1767,7 +1873,7 @@ def api_netscan_get():
 
 
 @app.post("/api/netscan")
-@need_perm("ip.manage")
+@need_perm("ip.edit")
 def api_netscan_save():
     data = request.get_json(silent=True) or {}
     org_id = current_org(request.user)
@@ -1820,7 +1926,7 @@ def api_ip_history():
 
 
 @app.post("/api/netscan/run")
-@need_perm("ip.manage")
+@need_perm("ip.edit")
 def api_netscan_run():
     org_id = current_org(request.user)
     with db() as conn, conn.cursor() as cur:
@@ -1909,7 +2015,7 @@ def api_docs_list():
 
 
 @app.post("/api/docs/config")
-@need_perm("docs.scan")
+@need_perm("docs.edit")
 def api_docs_config():
     data = request.get_json(silent=True) or {}
     with db() as conn, conn.cursor() as cur:
@@ -1930,11 +2036,9 @@ def api_docs_config():
 
 
 @app.post("/api/docs/upload")
-@need_perm("docs.scan")
+@need_perm("docs.edit")
 def api_docs_upload():
     """Файл из браузера: кладём в архив, распознаём, разбираем на строки."""
-    if not may_write(request.user):
-        return jsonify({"error": "read_only", "message": "Вам открыт только просмотр."}), 403
     org_id = current_org(request.user)
     f = request.files.get("file")
     if not f or not f.filename:
@@ -1996,15 +2100,13 @@ def api_docs_upload():
 
 
 @app.post("/api/docs/apply")
-@need_perm("docs.scan")
+@need_perm("docs.edit")
 def api_docs_apply():
     """Заводит записи по размеченным строкам накладной.
 
     Оборудование — по отдельной записи на каждую единицу: у них разные
     инвентарные номера. Материалы — одним приходом на всё количество.
     """
-    if not may_write(request.user):
-        return jsonify({"error": "read_only", "message": "Вам открыт только просмотр."}), 403
     d = request.get_json(silent=True) or {}
     did, rows = d.get("id"), d.get("rows") or []
     # дату прихода могли поправить руками: в плохом скане шапка не читается
@@ -2212,15 +2314,13 @@ def api_docs_reopen():
 
 
 @app.post("/api/docs/delete")
-@need_perm("docs.scan")
+@need_perm("docs.edit")
 def api_docs_delete():
     """Убирает ошибочно загруженный документ — с причиной и следом в журнале.
 
     Накладную, по которой уже заведены записи, не удаляем: иначе у техники
     пропадёт основание, откуда она взялась. Сначала удаляют записи.
     """
-    if not may_write(request.user):
-        return jsonify({"error": "read_only", "message": "Вам открыт только просмотр."}), 403
     d = request.get_json(silent=True) or {}
     did = d.get("id")
     reason = (d.get("reason") or "").strip()
@@ -2276,7 +2376,7 @@ def api_docs_delete():
 
 
 @app.get("/api/docs/<doc_id>/file")
-@need_perm("docs.scan")
+@need_perm("docs.edit")
 def api_docs_file(doc_id):
     """Отдаёт сам файл накладной из архива."""
     org_id = current_org(request.user)
@@ -2312,7 +2412,7 @@ def _model_of_org(cur, model_id, org_id):
 
 
 @app.post("/api/models/<model_id>/photo")
-@need_perm("dict.edit")
+@need_perm("models.edit")
 def api_model_photo_set(model_id):
     """Фотография модели: ужимаем до 900 px по большей стороне и храним в базе."""
     org_id = current_org(request.user)
@@ -2342,7 +2442,7 @@ def api_model_photo_set(model_id):
 
 
 @app.post("/api/models/<model_id>/photo/delete")
-@need_perm("dict.edit")
+@need_perm("models.edit")
 def api_model_photo_delete(model_id):
     org_id = current_org(request.user)
     with db() as conn, conn.cursor() as cur:
@@ -2538,8 +2638,10 @@ def api_transfer():
     файл накладной, а JSON файлов не носит. Порядок в карточке: сначала обычное
     сохранение, потом передача — чтобы сохранение не затёрло новый склад.
     """
-    if not may_write(request.user):
-        return jsonify({"error": "read_only", "message": "Вам открыт только просмотр."}), 403
+    if not can(request.user, "transfers.edit"):
+        return jsonify({"error": "forbidden", "need": "transfers.edit",
+                        "message": "Передавать технику может тот, кому открыты на правку "
+                                   "«Накладные по передаче»"}), 403
     org_id = current_org(request.user)
     item_id = (request.form.get("itemId") or "").strip()
     to_wh = (request.form.get("toWh") or "").strip()
@@ -2789,156 +2891,198 @@ def target_org(user, want):
     return current_org(user)
 
 
-def _ldap_cfg(cur, org_id):
-    return adsync.merge_config(org_setting_get(cur, org_id, "ldap") or {})
+def _setting_get(cur, key):
+    cur.execute("select value from setting where key = %s", (key,))
+    r = cur.fetchone()
+    return r["value"] if r else None
 
 
-@app.get("/api/adauth")
-@need_any("ad.view", "ad.sync")
-def api_adauth_get():
-    with db() as conn, conn.cursor() as cur:
-        return jsonify({"config": _adauth_cfg(cur)})
+def _setting_set(cur, key, value):
+    cur.execute("""insert into setting (key, value) values (%s, %s)
+                   on conflict (key) do update set value = excluded.value""",
+                (key, json.dumps(value, ensure_ascii=False)))
 
 
-@app.post("/api/adauth")
-@need_perm("admin")
-def api_adauth_set():
-    """Настройки входа через домен — только администратор: они решают, кто вообще
-    может войти и с какой ролью."""
-    d = request.get_json(silent=True) or {}
-    cfg = adsync.merge_auth({
-        "enabled": bool(d.get("enabled")), "orgId": (d.get("orgId") or "").strip(),
-        "suffix": (d.get("suffix") or "").strip().lstrip("@"), "group": (d.get("group") or "").strip(),
-        "roleId": (d.get("roleId") or "").strip(), "newOrgId": (d.get("newOrgId") or "").strip()})
-    with db() as conn, conn.cursor() as cur:
-        cur.execute("""insert into setting (key, value) values ('adauth', %s)
-                       on conflict (key) do update set value = excluded.value""",
-                    (json.dumps(cfg, ensure_ascii=False),))
-    return jsonify({"ok": True, "config": cfg})
+def _ldap_conn(cur):
+    """Подключение LDAP — одно на всю установку (setting.ldap).
 
-
-@app.post("/api/adauth/test")
-@need_perm("admin")
-def api_adauth_test():
-    """Проверка входа: администратор вводит свой доменный логин и пароль."""
-    d = request.get_json(silent=True) or {}
-    with db() as conn, conn.cursor() as cur:
-        auth = adsync.merge_auth(d.get("config") or _adauth_cfg(cur))
-        ldap_cfg = _ldap_cfg(cur, auth.get("orgId") or "")
-    # группу проверяем отдельно и заранее: опечатка в названии закрывала бы вход
-    # всем, а выглядело бы это как «домен не принял пароль»
-    group = None
-    if (auth.get("group") or "").strip():
-        try:
-            group = adsync.check_group(ldap_cfg, auth["group"])
-        except Exception as e:
-            return jsonify({"error": "ldap", "message": str(e)}), 400
-    try:
-        who = adsync.authenticate(ldap_cfg, auth, d.get("login") or "", d.get("password") or "")
-    except Exception as e:
-        return jsonify({"error": "ldap", "message": str(e)}), 400
-    if not who:
-        msg = "Домен не принял логин и пароль или учётная запись отключена"
-        if group:
-            msg = ("Домен не принял логин и пароль, учётная запись отключена или человек "
-                   "не состоит в группе %s (в ней сейчас %d чел.)"
-                   % (group["dn"], group.get("members") or 0))
-        return jsonify({"error": "bad_credentials", "message": msg, "group": group}), 401
-    # домен-то принял, а войти на странице всё равно не выйдет, если под этим логином
-    # уже заведена учётка с нашим паролем: через домен пускаем только «ad»-учётки
-    with db() as conn, conn.cursor() as cur:
-        cur.execute("""select full_name, auth, active from staff
-                        where lower(login) = lower(%s)""", (who["login"],))
-        row = cur.fetchone()
-    clash = None
-    if row and (row["auth"] or "local") != "ad":
-        clash = {"name": row["full_name"], "active": bool(row["active"])}
-    return jsonify({"ok": True, "who": who, "group": group,
-                    "enabled": bool(auth.get("enabled")), "clash": clash})
-
-
-@app.post("/api/adauth/probe")
-@need_perm("admin")
-def api_adauth_probe():
-    """Почему этот человек не заходит. Пароль его не нужен.
-
-    Проверка идёт служебной учёткой и отвечает по шагам: есть ли такой в домене,
-    попадает ли он под корень поиска из настроек загрузки сотрудников, включён ли,
-    состоит ли в группе доступа и не заведена ли у нас учётка с таким же логином,
-    но с нашим паролем.
+    Раньше сервер, база и служебная учётка жили в настройках каждого учреждения.
+    Если общего подключения ещё нет, берём его оттуда — у учреждения, чьи
+    настройки брал вход через домен, иначе у первого с заполненным сервером.
     """
-    d = request.get_json(silent=True) or {}
-    login = (d.get("login") or "").strip()
-    if not login:
-        return jsonify({"error": "bad_value", "message": "Укажите доменный логин"}), 400
+    saved = _setting_get(cur, "ldap")
+    if saved is not None:
+        return adsync.merge_conn(saved)
+    # прежние настройки входа помнят, чьё подключение брал вход
+    prefer = (_setting_get(cur, "adauth") or {}).get("orgId") or ""
+    cur.execute("select org_id, value from org_setting where key = 'ldap'")
+    olds = [r for r in cur.fetchall() if (r["value"] or {}).get("server")]
+    olds.sort(key=lambda r: (r["org_id"] != prefer, r["org_id"]))
+    conn = adsync.conn_from_legacy(olds[0]["value"] if olds else {})
+    if olds:
+        _setting_set(cur, "ldap", conn)
+    return conn
+
+
+def _ldap_cfg(cur, org_id):
+    """Подключение + настройки загрузки учреждения (подразделение, признак)."""
+    conn = _ldap_conn(cur)
+    load = dict(org_setting_get(cur, org_id, "ldap") or {})
+    # прежняя своя база учреждения, если она уже общей, становится его подразделением
+    old = (load.get("baseDn") or "").strip()
+    if old and not (load.get("ou") or "").strip() and \
+            old.lower() != (conn.get("baseDn") or "").strip().lower():
+        load["ou"] = old
+    return adsync.merge_config(conn, load)
+
+
+def _ldap_status(ok, message="", extra=None):
+    st = {"ok": bool(ok), "at": datetime.datetime.now().isoformat(timespec="seconds"),
+          "message": message}
+    st.update(extra or {})
+    return st
+
+
+@app.get("/api/ldap/conn")
+@need_any("ad.view", "ad.sync", "staff.manage")
+def api_ldap_conn_get():
     with db() as conn, conn.cursor() as cur:
-        auth = adsync.merge_auth(d.get("config") or _adauth_cfg(cur))
-        ldap_cfg = _ldap_cfg(cur, auth.get("orgId") or "")
+        c = _ldap_conn(cur)
+        status = _setting_get(cur, "ldap_status")
+    return jsonify({"config": adsync.public_config(c), "status": status})
+
+
+@app.post("/api/ldap/conn")
+@need_perm("admin")
+def api_ldap_conn_save():
+    """Подключение LDAP — только администратор: от него зависит и вход."""
+    d = request.get_json(silent=True) or {}
+    with db() as conn, conn.cursor() as cur:
+        c = _ldap_conn(cur)
+        for k in ("server", "baseDn", "userBase", "user", "mode"):
+            if k in d:
+                c[k] = str(d[k] or "").strip()
+        for k in ("port", "connectTimeout", "opTimeout"):
+            if k in d:
+                try:
+                    c[k] = int(d[k] or 0)
+                except (TypeError, ValueError):
+                    c[k] = 0
+        if "enabled" in d:
+            c["enabled"] = bool(d["enabled"])
+        # пустое поле пароля означает «оставить прежний», а не «стереть»
+        if d.get("password"):
+            c["password"] = str(d["password"])
+        if d.get("clearPassword"):
+            c["password"] = ""
+        c = adsync.merge_conn(c)
+        _setting_set(cur, "ldap", c)
+    return jsonify({"ok": True, "config": adsync.public_config(c)})
+
+
+@app.post("/api/ldap/conn/test")
+@need_any("admin", "ad.sync")
+def api_ldap_conn_test():
+    """Проверка подключения: сервер, вход служебной учёткой, чтение Base DN."""
+    with db() as conn, conn.cursor() as cur:
+        c = adsync.merge_config(_ldap_conn(cur))
     try:
-        r = adsync.probe_login(ldap_cfg, auth, login)
+        res = adsync.test_connection(c)
+        st = _ldap_status(True, "", res)
+    except Exception as e:
+        st = _ldap_status(False, str(e))
+    with db() as conn, conn.cursor() as cur:
+        _setting_set(cur, "ldap_status", st)
+    if not st["ok"]:
+        return jsonify({"error": "ldap", "message": st["message"], "check": st}), 400
+    return jsonify({"ok": True, "check": st})
+
+
+@app.get("/api/ldap/users")
+@need_perm("staff.manage")
+def api_ldap_users():
+    """Подсказки для «Пользователей ИТ»: люди из AD по части логина, ФИО или почты."""
+    q = (request.args.get("q") or "").strip()
+    if len(q) < 2:
+        return jsonify({"users": []})
+    with db() as conn, conn.cursor() as cur:
+        c = adsync.merge_config(_ldap_conn(cur))
+        cur.execute("select id, full_name, lower(login) as login from staff where login is not null")
+        used = {r["login"]: {"id": r["id"], "name": r["full_name"]} for r in cur.fetchall()}
+    try:
+        found = adsync.search_users(c, q, limit=20)
     except Exception as e:
         return jsonify({"error": "ldap", "message": str(e)}), 400
+    for p in found:
+        p["used"] = used.get(p["login"].lower())
+        p.pop("guid", None)
+    return jsonify({"users": found})
 
+
+@app.get("/api/persons/<pid>/requests")
+@need_auth
+def api_person_requests(pid):
+    """Заявки на сотрудника из программы «Заявки ИТ»: на что сделаны и исполнены ли."""
+    org_ids = [o["id"] for o in orgs_of(request.user)]
     with db() as conn, conn.cursor() as cur:
-        cur.execute("""select full_name, auth, active from staff
-                        where lower(login) = lower(%s)""", (r.get("sam") or login,))
-        row = cur.fetchone()
+        cur.execute("select name, email, ad_guid from person where id = %s and org_id = any(%s)",
+                    (pid, org_ids or [""]))
+        p = cur.fetchone()
+    if not p:
+        return jsonify({"error": "not_found"}), 404
+    try:
+        return jsonify(zayavki.person_info(p, request.host.rsplit(":", 1)[0].strip("[]")))
+    except zayavki.Error as e:
+        return jsonify({"error": "zayavki", "message": str(e)}), 502
 
-    # разбор: что именно закрывает вход
-    why, ok = [], True
-    if not auth.get("enabled"):
-        ok = False
-        why.append("Вход через домен выключен — поставьте галочку и сохраните.")
-    if not r.get("found"):
-        ok = False
-        why.append("В домене такой учётной записи не нашлось (искали по всему %s "
-                   "и по sAMAccountName, и по UPN). Проверьте написание логина."
-                   % (r.get("root") or "домену"))
-    else:
-        if not r.get("enabled"):
-            ok = False
-            why.append("Учётная запись отключена в домене.")
-        if not r.get("inBase"):
-            # входу это больше не мешает — вход ищет по всему домену; но в справочник
-            # сотрудников такой человек не переносится, и знать об этом полезно
-            why.append("Лежит вне корня поиска из настроек загрузки сотрудников («%s»). "
-                       "Входу это не мешает, но в справочник сотрудников он не "
-                       "переносится — если нужен и там, расширьте корень до «%s»."
-                       % (r.get("base") or "", r.get("root") or ""))
-        if r.get("groupWant"):
-            if not r.get("group"):
-                ok = False
-                why.append("Группа «%s» в домене не найдена — проверьте название."
-                           % r["groupWant"])
-            elif not r.get("inGroup"):
-                ok = False
-                why.append("Не состоит в группе %s (с учётом вложенных)." % r["group"])
-    if row and (row["auth"] or "local") != "ad":
-        ok = False
-        why.append("В приложении уже заведена учётка «%s» с нашим паролем. Через домен такие "
-                   "не пускаем: откройте её в «Пользователях ИТ» и переключите способ входа "
-                   "на «AD»." % row["full_name"])
-    if row and not row["active"]:
-        ok = False
-        why.append("Учётная запись «%s» в приложении отключена." % row["full_name"])
-    if ok:
-        why.append("Всё в порядке: этот человек должен заходить. Если не заходит — дело в "
-                   "пароле (истёк, требуется смена) или в раскладке при наборе.")
-    return jsonify({"ok": ok, "probe": r, "why": why,
-                    "staff": ({"name": row["full_name"], "auth": row["auth"],
-                               "active": bool(row["active"])} if row else None)})
+
+def _staff_by_login(cur, login):
+    cur.execute("""select id, full_name, auth, active from staff
+                    where lower(login) = lower(%s)""", (login,))
+    return cur.fetchone()
+
+
+@app.post("/api/ldap/login-test")
+@need_perm("admin")
+def api_ldap_login_test():
+    """Проверка входа: администратор вводит доменный логин и пароль."""
+    d = request.get_json(silent=True) or {}
+    with db() as conn, conn.cursor() as cur:
+        ldap_cfg = adsync.merge_config(_ldap_conn(cur))
+    try:
+        who = adsync.authenticate(ldap_cfg, d.get("login") or "", d.get("password") or "")
+    except Exception as e:
+        return jsonify({"error": "ldap", "message": str(e)}), 400
+    # 400, а не 401: на 401 страница считает, что сессия кончилась, и выкидывает
+    # администратора на экран входа посреди проверки
+    if not who:
+        return jsonify({"error": "bad_credentials",
+                        "message": "Домен не принял логин и пароль или учётная запись отключена"}), 400
+    with db() as conn, conn.cursor() as cur:
+        row = _staff_by_login(cur, who["login"])
+    # домен-то принял, а войти всё равно не выйдет, если человека нет в «Пользователях
+    # ИТ» или он заведён там со своим паролем, а не через LDAP
+    staff = None
+    if row:
+        staff = {"name": row["full_name"], "auth": row["auth"] or "local",
+                 "active": bool(row["active"]), "first": row["id"] == FIRST_STAFF}
+    return jsonify({"ok": True, "who": who, "staff": staff})
 
 
 @app.get("/api/ldap")
 @need_any("ad.view", "ad.sync")
 def api_ldap_get():
+    """Настройки загрузки сотрудников выбранного учреждения."""
     org_id = target_org(request.user, request.args.get("orgId"))
     if not org_id:
         return jsonify({"error": "forbidden", "message": "Учреждение недоступно"}), 403
     with db() as conn, conn.cursor() as cur:
         cfg = _ldap_cfg(cur, org_id)
         last = org_setting_get(cur, org_id, "ldap_last")
-    return jsonify({"config": adsync.public_config(cfg), "last": last, "orgId": org_id})
+    load = {k: cfg[k] for k in adsync.LOAD_DEFAULTS}
+    return jsonify({"config": load, "baseDn": cfg.get("baseDn") or "",
+                    "ready": bool(cfg.get("server") and cfg.get("enabled")),
+                    "last": last, "orgId": org_id})
 
 
 @app.post("/api/ldap")
@@ -2950,24 +3094,16 @@ def api_ldap_save():
         return jsonify({"error": "forbidden", "message": "Учреждение недоступно"}), 403
     with db() as conn, conn.cursor() as cur:
         cfg = _ldap_cfg(cur, org_id)
-        for k in ("server", "baseDn", "user", "ou", "markAttr", "markValue"):
+        load = {k: cfg[k] for k in adsync.LOAD_DEFAULTS}
+        for k in ("ou", "markAttr", "markValue"):
             if k in data:
-                cfg[k] = str(data[k] or "").strip()
-        for k in ("skipDisabled", "useSsl", "subtree"):
+                load[k] = str(data[k] or "").strip()
+        for k in ("skipDisabled", "subtree"):
             if k in data:
-                cfg[k] = bool(data[k])
-        if "port" in data:
-            try:
-                cfg["port"] = int(data["port"] or 0)
-            except (TypeError, ValueError):
-                cfg["port"] = 0
-        # пустое поле пароля означает «оставить прежний», а не «стереть»
-        if data.get("password"):
-            cfg["password"] = str(data["password"])
-        if data.get("clearPassword"):
-            cfg["password"] = ""
-        org_setting_set(cur, org_id, "ldap", cfg)
-    return jsonify({"ok": True, "config": adsync.public_config(cfg), "orgId": org_id})
+                load[k] = bool(data[k])
+        load = adsync.merge_load(load)
+        org_setting_set(cur, org_id, "ldap", load)
+    return jsonify({"ok": True, "config": load, "orgId": org_id})
 
 
 @app.post("/api/ldap/test")
@@ -2995,9 +3131,6 @@ def api_ldap_sync():
     org_id = target_org(request.user, (request.get_json(silent=True) or {}).get("orgId"))
     if not org_id:
         return jsonify({"error": "forbidden", "message": "Учреждение недоступно"}), 403
-    if not may_write(request.user):
-        return jsonify({"error": "read_only",
-                        "message": "Вам открыт только просмотр."}), 403
     with db() as conn, conn.cursor() as cur:
         cfg = _ldap_cfg(cur, org_id)
         try:
@@ -3019,22 +3152,33 @@ def api_staff():
     sid = s.get("id")
     if not sid or not (s.get("name") or "").strip():
         return jsonify({"error": "bad_request"}), 400
+    if sid == FIRST_STAFF:
+        # первая учётка: входит своим паролем, всегда включена и остаётся администратором
+        s["auth"], s["active"], s["role"] = "local", True, "role_admin"
+        if not (s.get("login") or "").strip():
+            return jsonify({"error": "bad_value",
+                            "message": "У первой учётной записи должен быть логин"}), 400
     with db() as conn, conn.cursor() as cur:
         cur.execute("""
             insert into staff (id, full_name, position, login, role_id, is_master, active,
-                               org_id, can_edit)
-            values (%s,%s,%s,%s,%s,%s,%s,%s,%s)
+                               org_id)
+            values (%s,%s,%s,%s,%s,%s,%s,%s)
             on conflict (id) do update set
               full_name = excluded.full_name, position = excluded.position,
               login = excluded.login, role_id = excluded.role_id,
               is_master = excluded.is_master, active = excluded.active,
-              org_id = excluded.org_id, can_edit = excluded.can_edit
+              org_id = excluded.org_id
         """, (sid, s["name"].strip(), s.get("position", ""), (s.get("login") or "").strip() or None,
               s.get("role") or None, bool(s.get("isMaster")), bool(s.get("active", True)),
-              s.get("orgId") or None, bool(s.get("canEdit"))))
-        # откуда пароль: «ad» — проверяет домен, свой пароль стирается
-        auth = "ad" if s.get("auth") == "ad" else "local"
-        cur.execute("update staff set auth = %s where id = %s", (auth, sid))
+              s.get("orgId") or None))
+        # откуда пароль: «ad» — проверяет домен, свой пароль стирается.
+        # Не прислали — оставляем как было, а не сбрасываем на «local».
+        if "auth" in s:
+            auth = "ad" if s.get("auth") == "ad" else "local"
+            cur.execute("update staff set auth = %s where id = %s", (auth, sid))
+        else:
+            cur.execute("select coalesce(auth, 'local') as auth from staff where id = %s", (sid,))
+            auth = cur.fetchone()["auth"]
         if auth == "ad":
             cur.execute("update staff set pass_hash = null where id = %s", (sid,))
         elif s.get("password"):
@@ -3049,6 +3193,9 @@ def api_staff_delete():
     sid = (request.get_json(silent=True) or {}).get("id")
     if sid == request.user["id"]:
         return jsonify({"error": "self"}), 400
+    if sid == FIRST_STAFF:
+        return jsonify({"error": "first", "message": "Первую учётную запись удалить нельзя: "
+                        "она входит всегда, даже когда домен недоступен"}), 400
     with db() as conn, conn.cursor() as cur:
         cur.execute("delete from staff where id = %s", (sid,))
     return jsonify({"ok": True})
@@ -3062,7 +3209,9 @@ def api_roles():
     if not rid or not (r.get("name") or "").strip():
         return jsonify({"error": "bad_request"}), 400
     perms = [p for p in (r.get("perms") or []) if p in PERM_CODES]
-    access = {k: v for k, v in (r.get("regAccess") or {}).items() if v in ("view", "edit")}
+    # «none» нужен только справочникам: у них по умолчанию просмотр
+    access = {k: v for k, v in (r.get("regAccess") or {}).items()
+              if v in ("view", "edit") or (v == "none" and k.startswith("@"))}
     with db() as conn, conn.cursor() as cur:
         cur.execute("""
             insert into role (id, name, descr, perms, reg_access, builtin)
@@ -3204,7 +3353,7 @@ def api_acttpl():
 
 
 @app.post("/api/acttpl")
-@need_perm("dict.edit")
+@need_perm("acttpl.edit")
 def api_acttpl_save():
     """Добавить шаблон или поправить у заведённого название, примечание, файл.
 
@@ -3255,7 +3404,7 @@ def api_acttpl_save():
 
 
 @app.post("/api/acttpl/delete")
-@need_perm("dict.edit")
+@need_perm("acttpl.edit")
 def api_acttpl_delete():
     org_id = current_org(request.user)
     tid = ((request.get_json(silent=True) or {}).get("id") or "").strip()
@@ -3368,7 +3517,7 @@ def api_writeoff_act(act):
 # раздел открыть, она решает сама по адресу. Список первых частей адреса — тот
 # же, что ROUTES в web/static/js/nav.js; чего в нём нет, получает страницу 404.
 SPA_ROUTES = {"overview", "orgs", "notices", "repairs", "deletions", "transfer-history", "ips",
-              "invoices", "transfers", "employees", "warehouses", "ad", "it-staff", "roles",
+              "invoices", "transfers", "employees", "warehouses", "ldap", "it-staff", "roles",
               "divisions", "departments", "places", "models", "act-templates"}
 
 
@@ -3392,6 +3541,24 @@ def page_registry(reg_id, tab=""):
     return _page()
 
 
+# вкладки раздела LDAP: /ldap — подключение, /ldap/load — загрузка сотрудников
+AD_TABS = {"load"}
+
+
+@app.get("/ad")
+@app.get("/ad/<path:rest>")
+def page_ad_old(rest=""):
+    """Раздел назывался «Active Directory» и жил на /ad — старые закладки ведём на /ldap."""
+    return redirect("/ldap/load" if rest == "load" else "/ldap")
+
+
+@app.get("/ldap/<tab>")
+def page_ad_tab(tab):
+    if tab not in AD_TABS:
+        return on_error(NotFound())
+    return _page()
+
+
 @app.get("/<route>")
 def page_route(route):
     if route not in SPA_ROUTES:
@@ -3403,6 +3570,13 @@ def page_route(route):
 # лежат `server/.env` с паролем базы, дампы в `backup/` и сами исходники, и всё
 # это отдавалось кому угодно в сети, даже без входа. Наружу уходит только то,
 # что лежит в web/static: стили и скрипты страницы.
+@app.get("/favicon.ico")
+def favicon():
+    """Браузер спрашивает значок по корню сам — и на страницах без <link rel="icon">."""
+    return send_from_directory(webpage.WEB / "static" / "favicon", "favicon.ico",
+                               mimetype="image/vnd.microsoft.icon")
+
+
 @app.get("/static/<path:filename>")
 def static_files(filename):
     return send_from_directory(webpage.WEB / "static", filename)
@@ -3413,6 +3587,6 @@ if __name__ == "__main__":
     start_netscan()
     host = os.environ.get("HOST", "0.0.0.0")
     port = int(os.environ.get("PORT", "8000"))
-    print("Сервер «Учёт ИТ-отдела» — http://{}:{}".format(
+    print("Сервер «Athena» — http://{}:{}".format(
         "localhost" if host == "0.0.0.0" else host, port))
     app.run(host=host, port=port, threaded=True)

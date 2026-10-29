@@ -10,12 +10,10 @@
     </div>
 
     <div class="sec">
-      <b>Что разрешено делать</b>
-      <div id="rl_perms" style="margin-top:10px"></div>
-    </div>
-
-    <div class="sec">
-      <b>Доступ к разделам учёта</b>
+      <b>Разделы учёта</b>
+      <div class="note" style="margin:6px 0 0">Редактирование раздела — это всё внутри него:
+        записи, категории, подкатегории, типы, характеристики, наборы, ремонт и списание;
+        у расходных материалов — приход и выдача.</div>
       <div class="tablewrap" style="margin-top:10px">
         <table>
           <colgroup><col style="width:55%"><col style="width:45%"></colgroup>
@@ -23,6 +21,24 @@
           <tbody id="rl_regs"></tbody>
         </table>
       </div>
+    </div>
+
+    <div class="sec">
+      <b>Справочники</b>
+      <div class="note" style="margin:6px 0 0">Без просмотра справочника нет в меню; на просмотре
+        в нём ничего не нажимается.</div>
+      <div class="tablewrap" style="margin-top:10px">
+        <table>
+          <colgroup><col style="width:55%"><col style="width:45%"></colgroup>
+          <thead><tr><th>Справочник</th><th>Доступ</th></tr></thead>
+          <tbody id="rl_dicts"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="sec">
+      <b>Закрытые страницы и все учреждения</b>
+      <div id="rl_perms" style="margin-top:10px"></div>
     </div>
   </div>
   <div class="dlg-foot">

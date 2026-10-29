@@ -108,8 +108,8 @@
       </section>
 
       <!-- ---- категории ---- -->
-      <section id="r-categories" hidden>
-        <div class="card pad" style="margin-bottom:14px">
+      <section id="r-categories" class="reg-dict" hidden>
+        <div class="card pad edit-only" style="margin-bottom:14px">
           <h2>Новая категория</h2>
           <div class="row">
             <input id="newCategories" placeholder="Например: Компьютеры" style="flex:1;min-width:240px">
@@ -129,8 +129,8 @@
       </section>
 
       <!-- ---- подкатегории ---- -->
-      <section id="r-subcategories" hidden>
-        <div class="card pad" style="margin-bottom:14px">
+      <section id="r-subcategories" class="reg-dict" hidden>
+        <div class="card pad edit-only" style="margin-bottom:14px">
           <h2>Новая подкатегория</h2>
           <div class="grid2">
             <div class="field"><label for="newSubCat">Категория</label><select id="newSubCat"></select></div>
@@ -152,8 +152,8 @@
       </section>
 
       <!-- ---- типы ---- -->
-      <section id="r-types" hidden>
-        <div class="card pad" style="margin-bottom:14px">
+      <section id="r-types" class="reg-dict" hidden>
+        <div class="card pad edit-only" style="margin-bottom:14px">
           <h2>Новый тип</h2>
           <div class="grid2">
             <div class="field"><label for="newTypeCat">Категория</label><select id="newTypeCat"></select></div>
@@ -176,14 +176,14 @@
       </section>
 
       <!-- ---- характеристики ---- -->
-      <section id="r-specs" hidden>
+      <section id="r-specs" class="reg-dict" hidden>
         <div class="card pad" style="margin-bottom:14px">
           <h2>Характеристики</h2>
           <div class="field" style="max-width:470px">
             <label for="specScope">Где задаём характеристики</label><select id="specScope"></select>
           </div>
           <div class="note" id="specHint" style="margin:6px 0 14px"></div>
-          <div class="grid2">
+          <div class="grid2 edit-only">
             <div class="field"><label for="newSpecName">Название характеристики</label>
               <input id="newSpecName" placeholder="Например: Оперативная память"></div>
             <div class="field"><label for="newSpecKind">Вид значения</label>
@@ -201,18 +201,18 @@
             <div class="field"><label for="newSpecGroup">Группа в карточке (необязательно)</label>
               <input id="newSpecGroup" placeholder="Например: AD и сеть"></div>
           </div>
-          <div class="field" style="margin-top:10px"><label>Правила заполнения</label>
+          <div class="field edit-only" style="margin-top:10px"><label>Правила заполнения</label>
             <label class="chk"><input type="checkbox" id="newSpecReq"> Обязательная</label>
             <label class="chk"><input type="checkbox" id="newSpecUniq"> Уникальная — значение не должно повторяться</label>
             <label class="chk"><input type="checkbox" id="newSpecOpt"> Разрешить «нет значения» (галочка в карточке)</label>
             <label class="chk"><input type="checkbox" id="newSpecMulti"> Может быть несколько (второй диск, третья планка)</label>
           </div>
-          <div class="field" id="reqStWrap" hidden style="margin-top:10px">
+          <div class="field edit-only" id="reqStWrap" hidden style="margin-top:10px">
             <label>Обязательна при статусах</label>
             <div class="stlist" id="newSpecReqSts"></div>
           </div>
-          <div class="row" style="margin-top:12px"><button class="btn-primary" id="btnAddSpec">Добавить характеристику</button></div>
-          <div class="sec" id="presetRow" hidden>
+          <div class="row edit-only" style="margin-top:12px"><button class="btn-primary" id="btnAddSpec">Добавить характеристику</button></div>
+          <div class="sec edit-only" id="presetRow" hidden>
             <b>Применить готовый набор</b>
             <div class="row" style="margin-top:10px;align-items:center">
               <select id="applyPreset" style="min-width:230px"></select>
@@ -235,8 +235,8 @@
       </section>
 
       <!-- ---- наборы ---- -->
-      <section id="r-presets" hidden>
-        <div class="card pad" style="margin-bottom:14px">
+      <section id="r-presets" class="reg-dict" hidden>
+        <div class="card pad edit-only" style="margin-bottom:14px">
           <h2>Новый набор характеристик</h2>
           <div class="row">
             <input id="newPresets" placeholder="Например: Компьютер" style="flex:1;min-width:240px">
@@ -247,12 +247,12 @@
           <div class="field" style="max-width:470px">
             <label for="presetSel">Набор</label><select id="presetSel"></select>
           </div>
-          <div class="row" style="margin-top:10px">
+          <div class="row edit-only" style="margin-top:10px">
             <button class="btn-sm" id="btnRenPreset">Переименовать</button>
             <button class="btn-sm btn-danger" id="btnDelPreset">Удалить набор</button>
             <button class="btn-sm" id="btnPresetHere" hidden>Закрепить за этим разделом</button>
           </div>
-          <div class="sec">
+          <div class="sec edit-only">
             <b>Добавить характеристику в набор</b>
             <div class="grid2" style="margin-top:10px">
               <div class="field"><label for="pName">Название характеристики</label>

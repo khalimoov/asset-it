@@ -40,6 +40,7 @@ function renderNav(){
   $("cntDeps").textContent  = cfg.departments.length;
   document.querySelectorAll("aside.side button[data-nav]").forEach(function(b){
     var v = b.dataset.nav;
+    if(v.indexOf("reg:") !== 0) b.hidden = !navAllowed(v);
     b.classList.toggle("on", v === (nav==="reg" ? "reg:"+curReg : nav));
     b.onclick = function(){ go(v); };
   });
@@ -47,7 +48,7 @@ function renderNav(){
 /* смена раздела: сбрасываем фильтры и выбор области характеристик — они хранят чужие id */
 function resetRegState(){
   curSpecScope = "";
-  ["fCat","fSub","fType","fStatus","fDiv","fDep","fAttach"].forEach(function(id){ $(id).value = ""; });
+  ["fCat","fSub","fType","fModel","fStatus","fDiv","fDep","fAttach"].forEach(function(id){ $(id).value = ""; });
   $("q").value = "";
 }
 function openReg(id, tab){
@@ -58,9 +59,13 @@ function openReg(id, tab){
 }
 /* Разделы, закрытые правами, не просто прячем — в них нельзя войти вовсе,
    иначе сотрудник правит форму и получает отказ только при сохранении. */
-/* Закрытых страниц немного: пользователи ИТ и роли, AD, журнал удалений и
-   «Все учреждения». Остальное видят все — права нужны, чтобы править. */
-var NAV_PERM = {staff:"staff.view", roles:"staff.view", dels:"deletions.view", ad:"ad.view"};
+/* Закрытые страницы: пользователи ИТ и роли, AD, журнал удалений, «Все
+   учреждения» и справочники, которые роль не открыла даже на просмотр
+   (шаблоны актов закрыты, пока их не выдали). Разделы учёта видят все. */
+var NAV_PERM = {staff:"staff.view", roles:"staff.view", dels:"deletions.view", ad:"ad.view",
+  users:"employees.view", warehouses:"warehouses.view", divisions:"divisions.view",
+  departments:"departments.view", places:"places.view", models:"models.view",
+  acttpl:"acttpl.view"};
 function navAllowed(v){
   /* сводка по всем учреждениям — начальнику отдела, а не только администратору */
   if(v === "all") return !!(me && me.seesAllOrgs);
@@ -72,7 +77,7 @@ function navAllowed(v){
    поэтому при входе эта память очищается. */
 function rememberScreen(){
   try{ sessionStorage.setItem("it_inv_screen",
-    JSON.stringify({nav:nav, reg:curReg, tab:regTab, sup:supTab})); }catch(e){}
+    JSON.stringify({nav:nav, reg:curReg, tab:regTab, sup:supTab, ad:adTab})); }catch(e){}
 }
 /* Адреса разделов. Страница одна, но у каждого раздела свой адрес: обновил —
    остался на месте, ссылку можно переслать коллеге, «назад» в браузере
@@ -80,7 +85,7 @@ function rememberScreen(){
    страницу — список первых частей продублирован в app.py (SPA_ROUTES). */
 var ROUTES = {dash:"", all:"overview", orgs:"orgs", notices:"notices", repairs:"repairs",
   dels:"deletions", xhist:"transfer-history", ips:"ips", docs:"invoices", transfers:"transfers",
-  users:"employees", warehouses:"warehouses", ad:"ad", staff:"it-staff", roles:"roles",
+  users:"employees", warehouses:"warehouses", ad:"ldap", staff:"it-staff", roles:"roles",
   divisions:"divisions", departments:"departments", places:"places", models:"models",
   acttpl:"act-templates"};
 var SUP_ROUTES = {stock:"fact", wh:"warehouse", receipts:"receipts"};
@@ -94,6 +99,7 @@ function screenPath(){
     if(isSupplyReg(curReg)) return p + "/" + (SUP_ROUTES[supTab] || SUP_ROUTES.stock);
     return regTab && regTab !== "items" ? p + "/" + regTab : p;
   }
+  if(nav === "ad" && adTab !== "ldap") return "/ldap/" + adTab;
   return "/" + (ROUTES[nav] || "");
 }
 function parsePath(path){
@@ -111,6 +117,9 @@ function parsePath(path){
     }
     return v;
   }
+  /* вкладки раздела LDAP: /ldap — подключение, /ldap/load — загрузка сотрудников */
+  if(parts[0] === "ldap" && parts.length === 2)
+    return AD_TABS.indexOf(parts[1]) > 0 ? {nav:"ad", ad:parts[1]} : null;
   if(parts.length > 1) return null;
   var hit = null;
   Object.keys(ROUTES).forEach(function(k){ if(ROUTES[k] === parts[0]) hit = k; });
@@ -127,6 +136,7 @@ function applyScreen(v){
   } else if(VIEWS.indexOf(v.nav) === -1 || !navAllowed(v.nav)){
     return false;
   }
+  if(v.nav === "ad") adTab = v.ad || "ldap";
   nav = v.nav;
   return true;
 }
@@ -135,7 +145,7 @@ function applyScreen(v){
 function syncUrl(){
   if(!urlOn || !me) return;
   /* во вкладке браузера и в истории видно, какой это раздел */
-  document.title = ($("ttl").textContent ? $("ttl").textContent + " — " : "") + "Учёт ИТ-отдела";
+  document.title = ($("ttl").textContent ? $("ttl").textContent + " — " : "") + "Athena";
   var p = screenPath();
   if(p !== location.pathname){
     try{
@@ -170,6 +180,7 @@ function restoreScreen(){
   if(v.reg && cfg.registries.some(function(r){ return r.id === v.reg; })) curReg = v.reg;
   if(v.tab && RTABS.indexOf(v.tab) !== -1) regTab = v.tab;
   if(v.sup) supTab = v.sup === "issued" ? "stock" : v.sup;
+  if(v.ad && AD_TABS.indexOf(v.ad) !== -1) adTab = v.ad;
   nav = v.nav;
 }
 function forgetScreen(){
@@ -214,6 +225,7 @@ function render(){
   $("s-receipts").hidden = !(cur==="sup" && supTab==="receipts");
   $("s-wh").hidden       = !(cur==="sup" && supTab==="wh");
   document.querySelectorAll("#supTabs button").forEach(function(b){ b.classList.toggle("on", b.dataset.st===supTab); });
+  adTabShow();
   $("topActions").hidden = !((cur==="reg" && regTab==="items") || cur==="sup" ||
                              cur==="dash" || cur==="ips" || cur==="repairs" || cur==="dels");
   /* импорт есть только там, куда его осмысленно грузить */
@@ -232,7 +244,7 @@ function render(){
             acttpl:["Шаблоны актов","По ним оформляется АКТ на списание материалов; у каждого учреждения свои"],
             all:["Все учреждения","Сводка по всем сразу: техника, ремонты, люди"],
             orgs:["Учреждения","Каждое ведёт свой учёт; доступ выдаёт администратор"],
-            ad:["Active Directory","Сотрудники, подразделения и отделы приходят из домена"],
+            ad:["LDAP","Подключение к Active Directory: вход пользователей ИТ и загрузка сотрудников"],
             staff:["Пользователи ИТ","Кто обслуживает технику; мастера видны при статусе «В ремонте»"],
             roles:["Роли и доступ","Наборы прав, которые назначаются сотрудникам"],
             divisions:["Подразделения","Общий справочник"],

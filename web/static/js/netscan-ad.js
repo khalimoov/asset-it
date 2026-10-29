@@ -23,7 +23,7 @@ function netCell(ip){
 
 var pingCfg = null;
 function loadPing(){
-  if(!can("ip.manage")) return Promise.resolve();
+  if(!can("ip.edit")) return Promise.resolve();
   return api("/api/netscan").then(function(d){
     pingCfg = d.config || {};
     $("pg_every").value = pingCfg.everyMin || 15;
@@ -68,11 +68,107 @@ $("btnPingRun").onclick = function(){
                       $("btnPingRun").textContent = "Опросить сейчас"; });
 };
 
-/* ================== Active Directory ==================
+/* ================== LDAP (Active Directory) ==================
+   Две вкладки:
+     «Подключение LDAP»      — одно на всё: сервер, Base DN, служебная учётка. Оно же —
+                               вход: пользователь ИТ с источником LDAP входит доменным
+                               паролем, пока подключение включено; кто входит, решает
+                               администратор поимённо в «Пользователях ИТ»;
+     «Загрузка сотрудников»  — у каждого учреждения своя: подразделение AD, признак.
    Пароль служебной учётной записи живёт только на сервере: сюда он не приходит
    никогда, а пустое поле при сохранении означает «оставить прежний». */
+var adTab = "ldap";
+var AD_TABS = ["ldap", "load"];
+function adTabShow(){
+  AD_TABS.forEach(function(t){ $("a-" + t).hidden = (t !== adTab); });
+  document.querySelectorAll("#adTabs button").forEach(function(b){
+    b.classList.toggle("on", b.dataset.at === adTab); });
+}
+document.querySelectorAll("#adTabs button").forEach(function(b){
+  b.onclick = function(){ adTab = b.dataset.at; rememberScreen(); renderAll(); };
+});
+
+/* ---------- подключение LDAP ---------- */
+var lcCfg = null;
+function lcStatus(st){
+  var el = $("lc_status");
+  if(!st){ el.innerHTML = '<span class="badge b-info">Подключение ещё не проверялось</span>'; return; }
+  el.innerHTML = (st.ok ? '<span class="badge b-ok">Подключение успешно</span>'
+                        : '<span class="badge b-danger">Ошибка подключения</span>') +
+    '<span>Последняя проверка: ' + esc(fmtWhen(st.at)) + '</span>' +
+    (st.ok ? (st.server ? '<span>' + esc(st.server) + ' · вход как ' + esc(st.bindAs || "") + '</span>' : '')
+           : (st.message ? '<span style="color:var(--danger)">' + esc(st.message) + '</span>' : ''));
+}
+function lcModeWarn(){ $("lc_modeWarn").hidden = $("lc_mode").value !== "plain"; }
+$("lc_mode").onchange = function(){
+  /* порт по умолчанию меняется вместе с режимом, если его не вписывали руками */
+  var p = $("lc_port").value.trim();
+  if(!p || p === "389" || p === "636") $("lc_port").value = this.value === "ldaps" ? "636" : "389";
+  lcModeWarn();
+};
+function loadLdapConn(){
+  if(!can("ad.view") && !can("ad.sync")) return Promise.resolve();
+  return api("/api/ldap/conn").then(function(d){
+    lcCfg = d.config || {};
+    $("lc_on").checked   = lcCfg.enabled !== false;
+    $("lc_server").value = lcCfg.server || "";
+    $("lc_port").value   = lcCfg.port ? String(lcCfg.port) : (lcCfg.mode === "ldaps" ? "636" : "389");
+    $("lc_mode").value   = lcCfg.mode || "plain";
+    $("lc_base").value   = lcCfg.baseDn || "";
+    $("lc_ubase").value  = lcCfg.userBase || "";
+    $("lc_user").value   = lcCfg.user || "";
+    $("lc_cto").value    = lcCfg.connectTimeout || 5000;
+    $("lc_oto").value    = lcCfg.opTimeout || 10000;
+    $("lc_pass").value   = "";
+    $("lc_passHint").textContent = lcCfg.hasPassword
+      ? "Пароль сохранён. Оставьте поле пустым, чтобы не менять его."
+      : "Пароль не задан.";
+    lcModeWarn();
+    lcStatus(d.status);
+    $("cntAd").textContent = lcCfg.server && lcCfg.enabled !== false ? "✓" : "";
+    var adm = isAdmin();
+    ["lc_on","lc_server","lc_port","lc_mode","lc_base","lc_ubase","lc_user","lc_pass","lc_cto","lc_oto"]
+      .forEach(function(id){ $(id).disabled = !adm; });
+    hide("btnLcSave", adm);
+    hide("btnLcTest", adm || can("ad.sync"));
+    if(!adm) $("lc_err").textContent = "Подключение меняет только администратор.";
+  }).catch(function(){});
+}
+function lcSave(){
+  var o = {enabled:$("lc_on").checked, server:$("lc_server").value.trim(),
+           port:parseInt($("lc_port").value, 10) || 0, mode:$("lc_mode").value,
+           baseDn:$("lc_base").value.trim(), userBase:$("lc_ubase").value.trim(),
+           user:$("lc_user").value.trim(),
+           connectTimeout:parseInt($("lc_cto").value, 10) || 5000,
+           opTimeout:parseInt($("lc_oto").value, 10) || 10000};
+  if($("lc_pass").value) o.password = $("lc_pass").value;
+  return api("/api/ldap/conn", o);
+}
+$("btnLcSave").onclick = function(){
+  $("lc_err").textContent = "";
+  if($("lc_on").checked && !$("lc_server").value.trim()){ $("lc_err").textContent = "Укажите LDAP сервер"; return; }
+  $("btnLcSave").disabled = true;
+  lcSave().then(function(){ toast("Настройки LDAP сохранены"); return loadLdapConn(); })
+    .catch(function(e){ $("lc_err").textContent = "Не удалось сохранить" + apiWhy(e); })
+    .then(function(){ $("btnLcSave").disabled = false; });
+};
+$("btnLcTest").onclick = function(){
+  $("lc_err").textContent = "";
+  $("btnLcTest").disabled = true; $("btnLcTest").textContent = "Проверяю…";
+  api("/api/ldap/conn/test", {}).then(function(d){
+    lcStatus(d.check); toast("Подключение работает");
+  }).catch(function(e){
+    /* поле status ответа занято кодом HTTP — итог проверки приходит в check */
+    if(e && e.check) lcStatus(e.check);
+    $("lc_err").textContent = "Проверка не прошла" + apiWhy(e);
+  }).then(function(){
+    $("btnLcTest").disabled = false; $("btnLcTest").textContent = "Проверить подключение";
+  });
+};
+
+/* ---------- загрузка сотрудников ---------- */
 var adCfg = null;
-/* Учреждение-получатель. Настройки домена у каждого свои, поэтому выбор здесь
+/* Учреждение-получатель. Настройки загрузки у каждого свои, поэтому выбор здесь
    одновременно и «чьи настройки показываем», и «куда попадут люди». */
 var adOrg = "";
 
@@ -85,143 +181,28 @@ function adOrgFill(){
   sel.disabled = orgs.length < 2;
   $("ad_orgHint").textContent = orgs.length < 2
     ? "Учреждение одно — сотрудники попадут в него."
-    : "У каждого учреждения свои настройки домена. Сотрудники, подразделения и отделы " +
-      "попадут именно в выбранное — проверьте перед загрузкой.";
+    : "Сотрудники, подразделения и отделы попадут именно в выбранное — проверьте перед загрузкой.";
 }
 $("ad_org").onchange = function(){
   adOrg = $("ad_org").value;
-  loadAd();
+  loadAdLoad();
 };
 
-/* ---------- вход через домен ---------- */
-var aaCfg = null;
-function loadAdAuth(){
-  if(!can("ad.view")) return Promise.resolve();
-  return api("/api/adauth").then(function(d){
-    aaCfg = d.config || {};
-    var orgOpts = orgs.map(function(o){ return '<option value="'+esc(o.id)+'">'+esc(o.name)+'</option>'; }).join("");
-    $("aa_org").innerHTML = orgOpts; $("aa_neworg").innerHTML = orgOpts;
-    $("aa_role").innerHTML = '<option value="">— без роли (только просмотр) —</option>' +
-      (cfg.roles||[]).map(function(r){ return '<option value="'+esc(r.id)+'">'+esc(r.name)+'</option>'; }).join("");
-    $("aa_on").checked = !!aaCfg.enabled;
-    $("aa_org").value = aaCfg.orgId || orgId;
-    $("aa_neworg").value = aaCfg.newOrgId || orgId;
-    $("aa_suffix").value = aaCfg.suffix || "";
-    $("aa_group").value = aaCfg.group || "";
-    $("aa_role").value = aaCfg.roleId || "";
-    var adm = isAdmin();
-    ["aa_on","aa_org","aa_neworg","aa_suffix","aa_group","aa_role"].forEach(function(id){ $(id).disabled = !adm; });
-    hide("btnAaSave", adm); hide("btnAaTest", adm); hide("btnAaProbe", adm);
-    $("aa_probe").disabled = !adm;
-    $("aa_hint").textContent = aaCfg.enabled ? "Вход через домен включён." : "Вход через домен выключен — заходят только по паролям, выданным администратором.";
-  }).catch(function(){});
-}
-function aaBody(){
-  return {enabled:$("aa_on").checked, orgId:$("aa_org").value, newOrgId:$("aa_neworg").value,
-          suffix:$("aa_suffix").value.trim(), group:$("aa_group").value.trim(), roleId:$("aa_role").value};
-}
-$("btnAaSave").onclick = function(){
-  $("aa_err").textContent = "";
-  api("/api/adauth", aaBody()).then(function(){ toast("Сохранено"); return loadAdAuth(); })
-    .catch(function(e){ $("aa_err").textContent = "Не удалось сохранить" + apiWhy(e); });
-};
-/* Раньше логин и пароль спрашивались через prompt(), а он показывает набранное
-   открытым текстом — пароль видел любой, кто стоит рядом. Теперь обычное окно
-   с полем type="password". */
-$("btnAaTest").onclick = function(){
-  $("aat_login").value = me ? (me.login || "") : "";
-  $("aat_pass").value = "";
-  $("aat_err").textContent = "";
-  $("dlgAaTest").showModal();
-  setTimeout(function(){ $(($("aat_login").value ? "aat_pass" : "aat_login")).focus(); }, 30);
-};
-$("btnAaTestCancel").onclick = function(){ $("aat_pass").value = ""; $("dlgAaTest").close(); };
-$("btnAaTestGo").onclick = function(){
-  var lg = $("aat_login").value.trim(), pw = $("aat_pass").value;
-  if(!lg){ $("aat_err").textContent = "Укажите доменный логин"; return; }
-  if(!pw){ $("aat_err").textContent = "Введите пароль этой учётной записи"; return; }
-  $("aat_pass").value = "";      /* в поле пароль не держим дольше нужного */
-  $("dlgAaTest").close();
-  $("aa_err").textContent = "";
-  /* сначала сохраняем: иначе проверка идёт по тому, что набрано на странице,
-     и «проверка прошла» при невключённом входе сбивает с толку */
-  api("/api/adauth", aaBody())
-    .then(function(){ return api("/api/adauth/test", {login:lg, password:pw, config:aaBody()}); })
-    .then(function(d){
-      var w = d.who || {};
-      toast("Домен принял: " + (w.name || w.login));
-      var g = d.group, txt = "Проверка прошла: " + (w.name || "") + " (" + (w.login || "") + ")" +
-        (w.position ? ", " + w.position : "") + "; групп: " + ((w.groups || []).length) +
-        (g && g.dn ? ". Доступ по группе " + g.dn + " — в ней " + (g.members || 0) + " чел."
-                   : ". Группа не задана: вход открыт всем, у кого есть учётка в домене.");
-      $("aa_hint").textContent = txt;
-      var warn = [];
-      if(!d.enabled) warn.push("Вход через домен выключен: поставьте галочку «Разрешить вход " +
-        "через домен» и нажмите «Сохранить» — иначе на экране входа доменный пароль не примут.");
-      if(d.clash) warn.push("Под логином «" + (w.login || "") + "» уже заведена учётная запись с " +
-        "паролем от нас (" + d.clash.name + "). Через домен такие не пускаем — откройте её в " +
-        "«Пользователях ИТ» и переключите способ входа на «AD».");
-      $("aa_err").textContent = warn.join(" ");
-      /* loadAdAuth() здесь не зовём: он пишет в aa_hint свою строку и затирает итог
-         проверки, а форма и так совпадает с тем, что только что сохранили */
-    })
-    .catch(function(e){ $("aa_err").textContent = (e && e.message) ? e.message : ("Проверка не прошла" + apiWhy(e)); });
-};
-
-/* Разбор «почему этот человек не заходит». Пароль сотрудника не нужен:
-   сервер смотрит служебной учёткой, есть ли он в домене, попадает ли под
-   корень поиска, включён ли, состоит ли в группе — и отвечает по шагам. */
-$("btnAaProbe").onclick = function(){
-  var lg = $("aa_probe").value.trim();
-  if(!lg){ $("aa_err").textContent = "Укажите доменный логин сотрудника"; return; }
-  $("aa_err").textContent = "";
-  $("aa_probe_out").textContent = "Проверяю…";
-  api("/api/adauth/probe", {login:lg, config:aaBody()}).then(function(d){
-    var r = d.probe || {}, lines = [];
-    if(r.found){
-      lines.push("В домене найден: " + (r.name || lg) + " — " + (r.dn || ""));
-      lines.push("Учётка " + (r.enabled ? "включена" : "ОТКЛЮЧЕНА") +
-                 ", групп у него " + (r.groups || 0) +
-                 ", в корне поиска " + (r.inBase ? "да" : "НЕТ"));
-      if(r.groupWant)
-        lines.push("Группа доступа: " + (r.group || "не найдена") +
-                   (r.group ? " — состоит: " + (r.inGroup ? "да" : "НЕТ") +
-                     "; в ней видно " + (r.membersInBase || 0) + " чел. из корня поиска и " +
-                     (r.membersInRoot || 0) + " чел. из всего домена" : ""));
-    } else {
-      lines.push("В домене не найден: " + lg);
-    }
-    (d.why || []).forEach(function(w){ lines.push("• " + w); });
-    $("aa_probe_out").textContent = lines.join("  ");
-    $("aa_probe_out").style.color = d.ok ? "" : "var(--danger, #e05555)";
-  }).catch(function(e){
-    $("aa_probe_out").textContent = "";
-    $("aa_err").textContent = (e && e.message) ? e.message : ("Проверка не прошла" + apiWhy(e));
-  });
-};
-
-function loadAd(){
-  loadAdAuth();
+function loadAdLoad(){
   if(!can("ad.sync")) return Promise.resolve();
   adOrgFill();
   return api("/api/ldap?orgId=" + encodeURIComponent(adOrg)).then(function(d){
     adCfg = d.config || {};
     adOrg = d.orgId || adOrg;
     $("ad_org").value = adOrg;
-    $("ad_server").value = adCfg.server || "";
-    $("ad_base").value   = adCfg.baseDn || "";
-    $("ad_user").value   = adCfg.user || "";
     $("ad_ou").value     = adCfg.ou || "";
     $("ad_sub").checked  = adCfg.subtree !== false;
     $("ad_attr").value   = adCfg.markAttr || "employeeType";
     $("ad_val").value    = adCfg.markValue || "ok";
-    $("ad_port").value   = adCfg.port ? String(adCfg.port) : "";
-    $("ad_ssl").checked  = !!adCfg.useSsl;
     $("ad_skip").checked = adCfg.skipDisabled !== false;
-    $("ad_pass").placeholder = adCfg.hasPassword
-      ? "пароль сохранён — оставьте пустым, чтобы не менять"
-      : "пароль не задан";
-    $("cntAd").textContent = adCfg.server ? "✓" : "";
+    $("ad_connHint").textContent = d.ready
+      ? "Ищем внутри Base DN «" + (d.baseDn || "—") + "» — он задаётся на вкладке «Подключение LDAP»."
+      : "Сначала настройте и включите подключение на вкладке «Подключение LDAP».";
     var L = d.last;
     $("adLast").textContent = L
       ? ("Последняя загрузка в «" + orgName(adOrg) + "»: " + fmtWhen(L.at) +
@@ -232,29 +213,20 @@ function loadAd(){
 }
 
 function adPayload(){
-  var o = {orgId:adOrg,
-           server:$("ad_server").value.trim(), baseDn:$("ad_base").value.trim(),
-           ou:$("ad_ou").value.trim(), subtree:$("ad_sub").checked,
-           user:$("ad_user").value.trim(), markAttr:$("ad_attr").value.trim() || "employeeType",
-           markValue:$("ad_val").value.trim() || "ok",
-           port:parseInt($("ad_port").value, 10) || 0,
-           useSsl:$("ad_ssl").checked, skipDisabled:$("ad_skip").checked};
-  if($("ad_pass").value) o.password = $("ad_pass").value;
-  return o;
+  return {orgId:adOrg, ou:$("ad_ou").value.trim(), subtree:$("ad_sub").checked,
+          markAttr:$("ad_attr").value.trim() || "employeeType",
+          markValue:$("ad_val").value.trim() || "ok", skipDisabled:$("ad_skip").checked};
 }
-function adBusy(on, who){
-  ["btnAdSave","btnAdTest","btnAdSync"].forEach(function(id){ $(id).disabled = on; });
-  if(who) $(who).textContent = on ? "Подождите…" : AD_LABEL[who];
-  else ["btnAdTest","btnAdSync"].forEach(function(id){ $(id).textContent = AD_LABEL[id]; });
-}
-var AD_LABEL = {btnAdSave:"Сохранить настройки", btnAdTest:"Проверить подключение",
+var AD_LABEL = {btnAdSave:"Сохранить настройки", btnAdTest:"Проверить выборку",
                 btnAdSync:"Загрузить сотрудников"};
-
-function adSave(){
-  return api("/api/ldap", adPayload()).then(function(){
-    $("ad_pass").value = "";
-    return loadAd();
+function adBusy(on, who){
+  ["btnAdSave","btnAdTest","btnAdSync"].forEach(function(id){
+    $(id).disabled = on;
+    $(id).textContent = on && id === who ? "Подождите…" : AD_LABEL[id];
   });
+}
+function adSave(){
+  return api("/api/ldap", adPayload()).then(loadAdLoad);
 }
 function adShow(title, stats, lines){
   $("adResultCard").hidden = false;
@@ -269,7 +241,7 @@ function adError(e){
 $("btnAdSave").onclick = function(){
   $("ad_err").textContent = ""; adBusy(true, "btnAdSave");
   adSave().then(function(){ toast("Настройки сохранены"); })
-    .catch(adError).then(function(){ adBusy(false); $("btnAdSave").textContent = AD_LABEL.btnAdSave; });
+    .catch(adError).then(function(){ adBusy(false); });
 };
 $("btnAdTest").onclick = function(){
   $("ad_err").textContent = ""; adBusy(true, "btnAdTest");
@@ -284,11 +256,11 @@ $("btnAdTest").onclick = function(){
       " в этом подразделении не нашлось ни одной учётной записи.",
       "Проверьте: признак стоит у людей (свойства пользователя → «Редактор атрибутов») " +
       "и подразделение указано верно — где искали, видно строкой выше."];
-    adShow("Проверка подключения",
+    adShow("Проверка выборки",
            '<div class="note" style="margin:0">Ищем в: <code>' + esc(d.base || "—") +
            '</code><br>Запрос: <code>' + esc(d.filter) + "</code></div>", lines);
     toast("Подключение работает");
-  }).catch(adError).then(function(){ adBusy(false); $("btnAdTest").textContent = AD_LABEL.btnAdTest; });
+  }).catch(adError).then(function(){ adBusy(false); });
 };
 $("btnAdSync").onclick = function(){
   $("ad_err").textContent = ""; adBusy(true, "btnAdSync");
@@ -301,5 +273,45 @@ $("btnAdSync").onclick = function(){
       d.log && d.log.length ? d.log : ["Новых сотрудников и справочников не появилось."]);
     toast("Загружено в «" + orgName(adOrg) + "»: " + (t.found || 0));
     return loadState();
-  }).catch(adError).then(function(){ adBusy(false); $("btnAdSync").textContent = AD_LABEL.btnAdSync; });
+  }).catch(adError).then(function(){ adBusy(false); });
 };
+
+/* ---------- проверка входа сотрудника ----------
+   Кнопка живёт в «Пользователях ИТ»: вкладка подключения — только подключение.
+   Логин и пароль — в обычном окне с полем type="password", а не через prompt():
+   тот показывает набранное открытым текстом. Итог показывается в том же окне. */
+$("btnAaTest").onclick = function(){
+  $("aat_login").value = "";
+  $("aat_pass").value = "";
+  $("aat_err").textContent = ""; $("aat_out").textContent = "";
+  $("dlgAaTest").showModal();
+  setTimeout(function(){ $("aat_login").focus(); }, 30);
+};
+$("btnAaTestCancel").onclick = function(){ $("aat_pass").value = ""; $("dlgAaTest").close(); };
+$("btnAaTestGo").onclick = function(){
+  var lg = $("aat_login").value.trim(), pw = $("aat_pass").value;
+  if(!lg){ $("aat_err").textContent = "Укажите доменный логин"; return; }
+  if(!pw){ $("aat_err").textContent = "Введите пароль этой учётной записи"; return; }
+  $("aat_pass").value = "";      /* в поле пароль не держим дольше нужного */
+  $("aat_err").textContent = ""; $("aat_out").textContent = "Проверяю…";
+  api("/api/ldap/login-test", {login:lg, password:pw}).then(function(d){
+    var w = d.who || {}, s = d.staff, warn = "";
+    $("aat_out").textContent = "Домен принял: " + (w.name || "") + " (" + (w.login || "") + ")" +
+      (w.position ? ", " + w.position : "") + ".";
+    if(!s) warn = "Но войти он не сможет: в «Пользователях ИТ» его нет. Добавьте его там с источником LDAP.";
+    else if(s.first) warn = "Это первая учётная запись — она входит только своим паролем.";
+    else if(s.auth !== "ad") warn = "В «Пользователях ИТ» «" + s.name + "» заведён со своим паролем. " +
+      "Чтобы входил доменным, откройте его и выберите источник LDAP.";
+    else if(!s.active) warn = "Учётная запись «" + s.name + "» в приложении отключена.";
+    else $("aat_out").textContent += " Войти сможет.";
+    $("aat_err").textContent = warn;
+  }).catch(function(e){
+    $("aat_out").textContent = "";
+    $("aat_err").textContent = (e && e.message) ? e.message : ("Проверка не прошла" + apiWhy(e));
+  });
+};
+
+function loadAd(){
+  loadLdapConn();
+  return loadAdLoad();
+}

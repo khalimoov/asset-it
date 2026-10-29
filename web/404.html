@@ -4,510 +4,227 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>404 — страница не найдена</title>
+<link rel="icon" href="/static/favicon/favicon.ico" sizes="any">
+<link rel="icon" href="/static/favicon/favicon.svg" type="image/svg+xml">
+<link rel="icon" type="image/png" sizes="32x32" href="/static/favicon/favicon-32x32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="/static/favicon/favicon-16x16.png">
+<link rel="apple-touch-icon" sizes="180x180" href="/static/favicon/apple-touch-icon.png">
+<link rel="manifest" href="/static/favicon/site.webmanifest">
+<!-- Шрифты с Google не держат показ страницы: на сервере без интернета она сразу
+     открывается системными шрифтами, а не ждёт, пока запрос отвалится. -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@700;800&family=Nunito:wght@400;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@700;800&family=Nunito:wght@400;700&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
 <style>
   :root {
-    --sky:#CFE1DC; --ink:#1F2B33; --muted:#44545E;
-    --ground:#8A6A45; --ground-dark:#6B5034; --grass:#6E8A3A; --rock:#9FAEA8; --rock-dark:#86958F;
-    --skin:#E2A57B; --skin-shade:#C98A62; --cheek:#E88D78; --iris:#5B3A1E;
-    --hide:#8C5A2E; --hide-light:#B07A42; --rope:#D8C08A; --hair:#3E2615;
-    --wood:#7A5632; --board:#C9A26B; --cable:#23303A; --copper:#D08A3A;
-    --spark:#FFD23F; --bone:#F6F3E8; --xray:#243441; --smoke:#9AA7AD;
+    --bg-top:#E3EEF0; --bg-bottom:#F4ECDD; --ink:#1F2B33; --muted:#4A5963; --accent:#F2B84B;
+    --paper:#FFF9EC; --paper-line:#C9B98F; --wing:#FFFFFF;
     color-scheme: light dark;
   }
   @media (prefers-color-scheme: dark) {
     :root:not([data-theme="light"]) {
-      --sky:#17222A; --ink:#E4EDEF; --muted:#A9B8BF;
-      --ground:#5A4630; --ground-dark:#3E2F20; --grass:#4F6630; --rock:#3F4D55; --rock-dark:#334047;
-      --cable:#0C1217; --xray:#0E1418; --smoke:#5B6870;
+      --bg-top:#0F1A21; --bg-bottom:#1D2B34; --ink:#E6EEF1; --muted:#A8B7BE;
+      --paper:#F4EEDD; --wing:#E8EEF0;
     }
   }
   :root[data-theme="dark"] {
-    --sky:#17222A; --ink:#E4EDEF; --muted:#A9B8BF;
-    --ground:#5A4630; --ground-dark:#3E2F20; --grass:#4F6630; --rock:#3F4D55; --rock-dark:#334047;
-    --cable:#0C1217; --xray:#0E1418; --smoke:#5B6870;
+    --bg-top:#0F1A21; --bg-bottom:#1D2B34; --ink:#E6EEF1; --muted:#A8B7BE;
+    --paper:#F4EEDD; --wing:#E8EEF0;
   }
   :root { box-sizing:border-box; padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px); }
   *, *::before, *::after { box-sizing:inherit; }
   html, body { height:100%; margin:0; }
   body {
-    display:flex; align-items:center; justify-content:center;
-    background:var(--sky); color:var(--ink);
-    font-family:"Nunito", "Segoe UI", system-ui, -apple-system, Roboto, Arial, sans-serif;
+    display:flex; align-items:center; justify-content:center; overflow:hidden;
+    background:var(--bg-bottom); background-image:linear-gradient(180deg, var(--bg-top), var(--bg-bottom));
+    color:var(--ink); font-family:"Nunito","Segoe UI",system-ui,-apple-system,Roboto,Arial,sans-serif;
   }
-  main { width:min(680px, 100%); padding:1.5rem 1.25rem 2.5rem; text-align:center; }
-  #scene { display:block; width:100%; height:auto; }
-  h1 {
-    font-family:"Unbounded", "Arial Black", "Segoe UI", sans-serif;
-    font-weight:800; font-size:clamp(1.7rem, 5.5vw, 2.7rem);
-    line-height:1.1; letter-spacing:-0.01em; margin:.4em 0 .35em;
+  main { width:min(640px,100%); padding:4.5rem 1.25rem 2.5rem; text-align:center; position:relative; z-index:1; }
+  .digits {
+    font-family:"Unbounded","Arial Black","Segoe UI",sans-serif; font-weight:800;
+    font-size:clamp(5rem, 22vw, 9.5rem); line-height:1; letter-spacing:.02em;
+    display:flex; justify-content:center; gap:.08em; user-select:none;
   }
-  p { max-width:40ch; margin:0 auto; font-size:1.125rem; line-height:1.55; color:var(--muted); }
-  .actions { display:flex; flex-wrap:wrap; gap:.75rem; justify-content:center; margin-top:1.75rem; }
-  .btn {
-    font:700 1rem/1 "Nunito", "Segoe UI", system-ui, sans-serif;
-    padding:.95em 1.5em; border-radius:14px; text-decoration:none; cursor:pointer;
-    border:2px solid var(--ink); transition:transform .15s ease;
-  }
+  h1 { font-family:"Unbounded","Arial Black","Segoe UI",sans-serif; font-weight:800; font-size:clamp(1.5rem,4.8vw,2.3rem); line-height:1.15; margin:.6em 0 .35em; }
+  p { max-width:40ch; margin:0 auto; font-size:1.1rem; line-height:1.55; color:var(--muted); }
+  .actions { display:flex; flex-wrap:wrap; gap:.75rem; justify-content:center; margin-top:1.6rem; }
+  .btn { font:700 1rem/1 "Nunito","Segoe UI",system-ui,sans-serif; padding:.95em 1.5em; border-radius:14px; text-decoration:none; cursor:pointer; border:2px solid var(--ink); transition:transform .15s ease; }
   .btn:hover { transform:translateY(-2px); }
-  .btn:focus-visible { outline:3px solid var(--spark); outline-offset:3px; }
-  .btn-primary { background:var(--ink); color:var(--sky); }
+  .btn:focus-visible, .icon-btn:focus-visible { outline:3px solid var(--accent); outline-offset:3px; }
+  .btn-primary { background:var(--ink); color:var(--bg-bottom); }
   .btn-secondary { background:transparent; color:var(--ink); }
+  .score { min-height:1.5em; margin-top:1rem; font-weight:700; color:var(--ink); opacity:0; transition:opacity .3s; }
+  .score.on { opacity:1; }
 
-  /* SVG */
-  .ground{fill:var(--ground)} .ground-dark{fill:var(--ground-dark)} .grass{fill:var(--grass)}
-  .rock{fill:var(--rock)} .rock-dark{fill:var(--rock-dark)}
-  .wood{fill:var(--wood)} .board{fill:var(--board);stroke:var(--wood);stroke-width:3}
-  .signtext{font:800 25px "Unbounded","Arial Black",sans-serif;fill:var(--wood);text-anchor:middle}
-  .insulator{fill:var(--bone);stroke:var(--wood);stroke-width:2}
-  .skin{fill:var(--skin)} .shade{fill:var(--skin-shade)} .cheek{fill:var(--cheek);opacity:.45}
-  .hide{fill:var(--hide)} .hide-light{fill:none;stroke:var(--hide-light);stroke-width:2;stroke-linecap:round}
-  .rope{fill:none;stroke:var(--rope);stroke-width:4;stroke-linecap:round}
-  .hair{fill:var(--hair)}
-  .brow{fill:none;stroke:var(--hair);stroke-width:4.5;stroke-linecap:round}
-  .eye-white{fill:#fff} .iris{fill:var(--iris)} .pupil{fill:#140c06} .glint{fill:#fff}
-  .lid{fill:var(--skin)} .lid-line{fill:none;stroke:#3a2416;stroke-width:2;stroke-linecap:round}
-  .mouth-line{fill:none;stroke:#3a1a10;stroke-width:2.5;stroke-linecap:round}
-  .mouth-fill{fill:#3B1A12} .tooth{fill:#fff} .tongue{fill:#C8575A}
-  .soot{fill:#1F2B33;opacity:.35}
-  .cable,.cable-line{fill:none;stroke:var(--cable);stroke-width:5;stroke-linecap:round}
-  .wire{fill:none;stroke:var(--copper);stroke-width:2.2;stroke-linecap:round}
-  .cable-cap{fill:var(--cable)}
-  .spark{fill:var(--spark);stroke:#1F2B33;stroke-width:1.5;stroke-linejoin:round}
-  .spark-core{fill:#fff}
-  .bolt{fill:var(--spark);stroke:#1F2B33;stroke-width:1.5;stroke-linejoin:round}
-  .smoke{fill:var(--smoke)}
-  .flash{fill:var(--spark);pointer-events:none}
-  .halo{fill:none;stroke:var(--spark);stroke-linecap:round;stroke-linejoin:round}
-  .bone{fill:var(--bone)} .bone-line{fill:none;stroke:var(--bone);stroke-linecap:round;stroke-linejoin:round}
-  .socket{fill:var(--xray)} .socket-line{stroke:var(--xray);stroke-width:1.5}
+  .topbar { position:fixed; top:calc(env(safe-area-inset-top,0px) + 12px); left:12px; right:12px; display:flex; justify-content:space-between; gap:8px; z-index:3; }
+  .icon-btn { width:44px; height:44px; border-radius:12px; border:2px solid var(--ink); background:transparent; color:var(--ink); display:grid; place-items:center; cursor:pointer; padding:0; flex:none; }
+  .icon-btn svg { width:22px; height:22px; fill:none; stroke:currentColor; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; }
 
-  .xonly{display:none}
-  #scene.xray .xonly{display:inline}
-  #scene.xray .skin, #scene.xray .shade, #scene.xray .hide, #scene.xray .hair, #scene.xray .lid { fill:var(--xray); }
-  #scene.xray .rope, #scene.xray .hide-light { stroke:var(--xray); }
-  #scene.xray .face, #scene.xray .cheek { visibility:hidden; }
+  #stage { position:fixed; inset:0; width:100%; height:100%; pointer-events:none; z-index:2; overflow:visible; }
+  .eye-w { fill:#fff; stroke:#2A333A; stroke-width:1; } .eye-p { fill:#141A1F; }
+  .mouth { fill:#3B1A12; }
+  .paper { fill:var(--paper); stroke:#2A333A; stroke-width:1.6; stroke-linejoin:round; }
+  .paper-line { fill:none; stroke:var(--paper-line); stroke-width:1.4; stroke-linecap:round; }
+  .wing { fill:var(--wing); stroke:#2A333A; stroke-width:1.4; stroke-linejoin:round; }
+  .stamp { fill:#E46B4F; } .stamp-t { font:800 4.2px "Unbounded",sans-serif; fill:#fff; text-anchor:middle; }
 </style>
 </head>
 <body>
+<div class="topbar" style="justify-content:flex-end">
+  <button class="icon-btn" id="themeBtn" type="button" aria-label="Переключить тему"></button>
+</div>
+
 <main>
-  <svg id="scene" viewBox="0 70 600 330" role="img" aria-labelledby="sceneTitle">
-    <title id="sceneTitle">Пещерный человек поднимает оборванный кабель, кусает его, его бьёт током, и он отбрасывает кабель</title>
-    <defs>
-      <filter id="glow" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="7"/></filter>
-    </defs>
-
-    <!-- земля -->
-    <ellipse class="ground-dark" cx="300" cy="362" rx="288" ry="36"/>
-    <ellipse class="ground" cx="300" cy="356" rx="290" ry="40"/>
-    <path class="rock-dark" d="M70 330 Q64 286 96 270 Q128 258 146 284 Q160 306 152 330 Z"/>
-    <path class="rock" d="M74 328 Q70 290 98 276 Q124 266 138 288 Q148 306 142 328 Z"/>
-    <path class="grass" d="M150 326 l4 -12 l3 10 l4 -15 l3 14 l3 -9 l2 12 z"/>
-    <path class="grass" d="M190 321 l3 -9 l3 8 l3 -12 l3 13 z"/>
-    <path class="grass" d="M512 333 l4 -11 l3 9 l4 -13 l3 15 z"/>
-
-    <!-- столб с табличкой -->
-    <rect class="wood" x="470" y="236" width="10" height="92" rx="2"/>
-    <path class="cable-line" d="M475 242 L475 322"/>
-    <circle class="insulator" cx="475" cy="238" r="6"/>
-    <g transform="rotate(-5 479 270)">
-      <rect class="board" x="438" y="250" width="82" height="40" rx="6"/>
-      <text class="signtext" x="479" y="280">404</text>
-    </g>
-
-    <g id="rig">
-      <g id="haloG" filter="url(#glow)" style="display:none">
-        <path id="halo" class="halo" style="stroke-width:26"/>
-        <circle id="haloHead" class="halo" r="36" style="stroke-width:26"/>
-      </g>
-
-      <!-- ноги -->
-      <path id="legL" class="skin"/>
-      <path id="legR" class="skin"/>
-      <path id="footL" class="skin"/>
-      <path id="footR" class="skin"/>
-
-      <!-- туловище: 0,0 — таз -->
-      <g id="torso">
-        <path class="skin" d="M-7 -84 H7 V-66 H-7Z"/>
-        <path class="skin" d="M-25 -66 Q0 -76 25 -66 Q30 -40 24 -8 H-24 Q-30 -40 -25 -66Z"/>
-        <path class="hide" d="M-27 -44 Q-14 -64 18 -72 Q27 -70 26 -62 Q31 -34 28 6 L22 14 L15 7 L9 16 L1 8 L-6 15 L-13 7 L-20 14 L-28 6 Q-31 -20 -27 -44Z"/>
-        <path class="hide-light" d="M-16 -34 q4 -3 8 0 M6 -48 q4 -3 8 0 M-10 -8 q4 -3 8 0 M12 -20 q4 -3 8 0"/>
-        <path class="rope" d="M-27 -14 Q0 -8 28 -14"/>
-        <path class="rope" style="stroke-width:3" d="M16 -12 l3 10 M20 -12 l6 8"/>
-        <g class="xonly">
-          <path class="bone-line" style="stroke-width:5;stroke-dasharray:6 3;stroke-linecap:butt" d="M0 6 V-80"/>
-          <path class="bone-line" style="stroke-width:3.5" d="M-18 -60 Q0 -68 18 -60 M-19 -49 Q0 -57 19 -49 M-18 -38 Q0 -46 18 -38 M-16 -27 Q0 -34 16 -27"/>
-          <path class="bone-line" style="stroke-width:4" d="M-22 -66 H22"/>
-          <path class="bone" d="M-17 2 Q0 -6 17 2 L11 12 H-11Z"/>
-        </g>
-      </g>
-
-      <!-- голова: 0,0 — центр лица -->
-      <g id="head">
-        <ellipse class="skin" cx="-26" cy="2" rx="6" ry="8"/>
-        <ellipse class="skin" cx="26" cy="2" rx="6" ry="8"/>
-        <ellipse class="shade" cx="-26" cy="2" rx="2.5" ry="4"/>
-        <ellipse class="shade" cx="26" cy="2" rx="2.5" ry="4"/>
-        <ellipse class="skin" cx="0" cy="0" rx="26" ry="30"/>
-        <path id="hairN" class="hair" d="M-27 2 Q-34 -26 -18 -36 Q-6 -46 10 -40 Q30 -36 29 -6 Q27 4 25 6 Q22 -12 12 -20 Q4 -12 -4 -20 Q-12 -12 -20 -18 Q-24 -6 -27 2Z"/>
-        <path id="hairZ" class="hair" style="display:none" d="M-27 2 L-44 -30 L-22 -24 L-26 -58 L-8 -30 L2 -66 L10 -32 L28 -58 L22 -24 L44 -32 L27 4 Q22 -12 12 -20 Q4 -12 -4 -20 Q-12 -12 -20 -18 Q-24 -6 -27 2Z"/>
-        <ellipse class="cheek" cx="-14" cy="10" rx="5" ry="3.5"/>
-        <ellipse class="cheek" cx="14" cy="10" rx="5" ry="3.5"/>
-        <path class="hair" d="M-24 10 Q-26 36 -8 40 Q0 44 8 40 Q26 36 24 10 Q20 24 10 24 Q4 20 0 23 Q-4 20 -10 24 Q-20 24 -24 10Z"/>
-        <path class="shade" d="M-4 -2 Q0 -6 4 -2 L6 9 Q0 13 -6 9Z"/>
-        <g class="face">
-          <path id="browN" class="brow" d="M-18 -13 Q-11 -17 -4 -14 M4 -14 Q11 -17 18 -13"/>
-          <path id="browUp" class="brow" style="display:none" d="M-19 -19 Q-11 -25 -4 -20 M4 -20 Q11 -25 19 -19"/>
-          <path id="browSad" class="brow" style="display:none" d="M-18 -12 Q-11 -16 -4 -18 M4 -18 Q11 -16 18 -12"/>
-          <g id="eyes">
-            <ellipse class="eye-white" cx="-10" cy="-4" rx="5.5" ry="6"/>
-            <ellipse class="eye-white" cx="10" cy="-4" rx="5.5" ry="6"/>
-            <g id="irises">
-              <circle class="iris" cx="-10" cy="-4" r="3.4"/>
-              <circle class="iris" cx="10" cy="-4" r="3.4"/>
-              <circle class="pupil" cx="-10" cy="-4" r="1.8"/>
-              <circle class="pupil" cx="10" cy="-4" r="1.8"/>
-              <circle class="glint" cx="-8.8" cy="-5.4" r=".9"/>
-              <circle class="glint" cx="11.2" cy="-5.4" r=".9"/>
-            </g>
-            <g id="lids">
-              <rect id="lidL" class="lid" x="-16" y="-11" width="12" height="0"/>
-              <rect id="lidR" class="lid" x="4" y="-11" width="12" height="0"/>
-            </g>
-          </g>
-          <g id="eZ" style="display:none">
-            <circle class="eye-white" cx="-11" cy="-5" r="8"/>
-            <circle class="eye-white" cx="11" cy="-5" r="8"/>
-            <circle class="pupil" cx="-11" cy="-5" r="1.5"/>
-            <circle class="pupil" cx="11" cy="-5" r="1.5"/>
-          </g>
-          <path id="eD" class="lid-line" style="display:none" d="M-15 -4 q5 3 10 0 M5 -4 q5 3 10 0"/>
-          <path id="mN" class="mouth-line" d="M-6 17 Q0 20 6 17"/>
-          <g id="mO" style="display:none">
-            <ellipse class="mouth-fill" cx="0" cy="18" rx="6" ry="5"/>
-            <rect class="tooth" x="-4" y="13.5" width="8" height="2.2"/>
-          </g>
-          <g id="mZ" style="display:none">
-            <rect class="mouth-fill" x="-11" y="13" width="22" height="10" rx="3"/>
-            <rect class="tooth" x="-9" y="14.5" width="18" height="7"/>
-            <path class="mouth-line" style="stroke-width:1.2" d="M-4.5 14.5v7 M0 14.5v7 M4.5 14.5v7 M-9 18h18"/>
-          </g>
-          <g id="mD" style="display:none">
-            <path class="mouth-line" d="M-7 18 q3 -3 6 0 t6 0"/>
-            <ellipse class="tongue" cx="4" cy="21" rx="3" ry="2.5"/>
-          </g>
-          <g id="soot" style="opacity:0">
-            <ellipse class="soot" cx="-16" cy="4" rx="5" ry="3"/>
-            <ellipse class="soot" cx="16" cy="1" rx="4" ry="3"/>
-            <ellipse class="soot" cx="3" cy="-24" rx="6" ry="3"/>
-          </g>
-        </g>
-        <path class="hair" d="M-12 12 Q-6 8 0 11 Q6 8 12 12 Q6 13 0 14 Q-6 13 -12 12Z"/>
-        <g class="xonly">
-          <ellipse class="bone" cx="0" cy="-3" rx="21" ry="24"/>
-          <circle class="socket" cx="-9" cy="-5" r="5.5"/>
-          <circle class="socket" cx="9" cy="-5" r="5.5"/>
-          <path class="socket" d="M0 3 l-3.5 6 h7z"/>
-          <rect class="bone" x="-10" y="13" width="20" height="10" rx="3"/>
-          <path class="socket-line" d="M-5 14v8 M-1.5 14v8 M1.5 14v8 M5 14v8"/>
-        </g>
-      </g>
-
-      <path id="cable" class="cable"/>
-      <g id="tip">
-        <path class="wire" d="M0 0 l9 -5 M0 0 l10 0 M0 0 l8 5"/>
-        <circle class="cable-cap" r="3.5"/>
-      </g>
-
-      <!-- руки -->
-      <path id="armL" class="skin"/>
-      <path id="armR" class="skin"/>
-      <path id="handL" class="skin"/>
-      <path id="handR" class="skin"/>
-
-      <path id="bonesLimbs" class="bone-line xonly" style="stroke-width:4"/>
-    </g>
-
-    <g id="spark" style="display:none">
-      <path class="spark" d="M0 -14 L3 -4 L13 -6 L5 1 L10 11 L0 5 L-10 11 L-5 1 L-13 -6 L-3 -4Z"/>
-      <circle class="spark-core" r="3"/>
-    </g>
-
-    <g id="bolts" style="display:none">
-      <path class="bolt" transform="translate(186 110) rotate(-20)" d="M0 0 L10 -2 L4 12 L14 10 L-2 34 L4 16 L-6 18 Z"/>
-      <path class="bolt" transform="translate(320 100) rotate(18)" d="M0 0 L10 -2 L4 12 L14 10 L-2 34 L4 16 L-6 18 Z"/>
-      <path class="bolt" transform="translate(172 226) rotate(-35)" d="M0 0 L10 -2 L4 12 L14 10 L-2 34 L4 16 L-6 18 Z"/>
-      <path class="bolt" transform="translate(340 214) rotate(28)" d="M0 0 L10 -2 L4 12 L14 10 L-2 34 L4 16 L-6 18 Z"/>
-    </g>
-
-    <g id="smoke">
-      <circle class="smoke" r="0"/>
-      <circle class="smoke" r="0"/>
-      <circle class="smoke" r="0"/>
-    </g>
-
-    <rect id="flash" class="flash" x="0" y="70" width="600" height="330" opacity="0"/>
-  </svg>
-
+  <div class="digits" aria-hidden="true"><span>4</span><span id="zero">0</span><span>4</span></div>
   <h1>Страница не найдена</h1>
-  <p>Ошибка 404: кто-то перегрыз кабель к этой странице. Проверьте адрес или начните с главной.</p>
+  <p id="lead"></p>
   <div class="actions">
     <a class="btn btn-primary" href="/">На главную</a>
     <button class="btn btn-secondary" type="button" onclick="history.length > 1 ? history.back() : (location.href='/')">Вернуться назад</button>
   </div>
+  <p id="score" class="score" role="status" aria-live="polite"></p>
 </main>
+
+<svg id="stage" aria-hidden="true">
+  <g id="bits"></g>
+  <g id="gMail"></g>
+</svg>
 
 <script>
 (function () {
   var $ = function (id) { return document.getElementById(id); };
-  var svg = $('scene'), rig = $('rig'), torso = $('torso'), headG = $('head'), irises = $('irises');
-  var lidL = $('lidL'), lidR = $('lidR');
-  var cable = $('cable'), tip = $('tip'), spark = $('spark'), bolts = $('bolts'), flash = $('flash');
-  var soot = $('soot'), haloG = $('haloG'), halo = $('halo'), haloHead = $('haloHead'), bonesLimbs = $('bonesLimbs');
-  var smoke = $('smoke').querySelectorAll('circle'), boltEls = bolts.querySelectorAll('path');
-  var parts = {};
-  ['hairN','hairZ','eyes','eZ','eD','mN','mO','mZ','mD','browN','browUp','browSad'].forEach(function (id) { parts[id] = $(id); });
-  var el = {};
-  ['armL','armR','handL','handR','legL','legR','footL','footR'].forEach(function (id) { el[id] = $(id); });
-
-  var T = 8.5;
-  var UPPER = 35, FORE = 32, THIGH = 38, SHIN = 36;
-  var START = { x:475, y:322 }, E0 = { x:316, y:316 }, LAND = { x:405, y:318 };
-  var OFF = { x:-13, y:-7 };
-
-  // Позы. Точки: abs — в сцене, pel — от таза, mouth — от рта.
-  // Точки: abs — в сцене, pel — от таза, sh — от своего плеча, mouth — от рта.
-  var idle   = { P:[255,244], lean:0,  head:0,   hL:['sh',-15,63], hR:['sh',15,63],   fL:['abs',236,318], fR:['abs',274,318] };
-  var antic  = { P:[254,242], lean:-4, head:-4,  hL:['sh',-17,62], hR:['sh',17,62],   fL:['abs',236,318], fR:['abs',274,318] };
-  var reach  = { P:[258,258], lean:50, head:-32, hL:['sh',2,62], hR:['abs',318,306], fL:['abs',230,318], fR:['abs',286,318] };
-  var look   = { aR:.6, P:[257,248], lean:8,  head:-4,  hL:['sh',-15,63], hR:['pel',40,-80],  fL:['abs',236,318], fR:['abs',276,318] };
-  var bite   = { aR:.4, P:[255,246], lean:-2, head:4,   hL:['sh',-15,63], hR:['mouth',13,7], fL:['abs',236,318], fR:['abs',274,318] };
-  var stiff  = { P:[255,236], lean:0,  head:0,   hL:['sh',-42,62], hR:['sh',42,62], fL:['pel',-18,86], fR:['pel',18,86] };
-  var yank   = { aR:.4, P:[250,246], lean:-6, head:-6,  hL:['sh',-16,63], hR:['mouth',13,7], fL:['abs',234,318], fR:['abs',272,318] };
-  var fling  = { P:[262,246], lean:10, head:6,   hL:['sh',-20,61], hR:['pel',74,-50],  fL:['abs',234,318], fR:['abs',278,318] };
-  var dazed  = { P:[255,250], lean:3,  head:8,   hL:['sh',-13,64], hR:['sh',13,64],   fL:['abs',233,318], fR:['abs',277,318] };
-  function at(t, p) { var o = { t:t }; for (var k in p) o[k] = p[k]; return o; }
-  var K = [at(0,idle), at(1.0,idle), at(1.25,antic), at(1.85,reach), at(2.1,reach), at(2.5,look),
-           at(3.05,bite), at(3.35,bite), at(3.5,stiff), at(4.85,stiff), at(5.05,yank), at(5.3,fling),
-           at(5.7,dazed), at(7.1,dazed), at(7.9,idle), at(T,idle)];
-
-  function ease(k) { return k * k * k * (k * (k * 6 - 15) + 10); }
-  function clamp01(v) { return Math.max(0, Math.min(1, v)); }
-  function lerp(a, b, k) { return a + (b - a) * k; }
-  function lerpPt(a, b, k) { return { x: lerp(a.x, b.x, k), y: lerp(a.y, b.y, k) }; }
-  function rot(p, deg) { var r = deg * Math.PI / 180, c = Math.cos(r), s = Math.sin(r); return { x: p.x * c - p.y * s, y: p.x * s + p.y * c }; }
-  function within(t, a, b) { return t >= a && t < b; }
-  function show(e, on) { e.style.display = on ? '' : 'none'; }
-  function rnd(n) { var x = Math.sin(n * 12.9898) * 43758.5453; return x - Math.floor(x); }
+  var NS = 'http://www.w3.org/2000/svg';
+  function mk(tag, attrs, parent) { var e = document.createElementNS(NS, tag); for (var k in attrs) e.setAttribute(k, attrs[k]); if (parent) parent.appendChild(e); return e; }
   function f(n) { return n.toFixed(1); }
-  function pt(p) { return f(p.x) + ' ' + f(p.y); }
-
-  function pose(t) {
-    var i = 0;
-    while (i < K.length - 2 && t > K[i + 1].t) i++;
-    var a = K[i], b = K[i + 1];
-    var k = b.t === a.t ? 0 : ease(clamp01((t - a.t) / (b.t - a.t)));
-    var P = { x: lerp(a.P[0], b.P[0], k), y: lerp(a.P[1], b.P[1], k) };
-    var lean = lerp(a.lean, b.lean, k), head = lerp(a.head, b.head, k);
-    var calm = t < 1.0 || t >= 7.9;
-    var breath = Math.sin(t * 2.6) * (calm || within(t, 5.7, 7.9) ? 1 : 0.3);
-    if (calm) { P.x += Math.sin(t * 1.3) * 1.2; head += Math.sin(t * 0.9) * 3; }
-    if (within(t, 5.7, 7.1)) { head += Math.sin((t - 5.7) * 4.5) * 7; lean += Math.sin((t - 5.7) * 3) * 3; }
-    var toW = function (lp) { var r = rot(lp, lean); return { x: P.x + r.x, y: P.y + r.y }; };
-    var hp = rot({ x:0, y:17 }, head);
-    var mouth = toW({ x: hp.x, y: -104 - breath * .6 + hp.y });
-    var shW = { L: toW({ x:-22, y:-64 }), R: toW({ x:22, y:-64 }) };
-    function res(s, side) {
-      if (s[0] === 'abs') return { x: s[1], y: s[2] };
-      if (s[0] === 'sh') return { x: shW[side].x + s[1], y: shW[side].y + s[2] };
-      if (s[0] === 'pel') return { x: P.x + s[1], y: P.y + s[2] };
-      return { x: mouth.x + s[1], y: mouth.y + s[2] };
-    }
-    var bendR = lerp(a.aR || .5, b.aR || .5, k), bendL = lerp(a.aL || .5, b.aL || .5, k);
-    var o = { bendR:bendR, bendL:bendL, P:P, lean:lean, head:head, breath:breath, toW:toW, mouth:mouth, headC: toW({ x:0, y:-104 - breath * .6 }) };
-    ['hL','hR','fL','fR'].forEach(function (key) { var sd = key.charAt(1); o[key] = lerpPt(res(a[key], sd), res(b[key], sd), k); });
-    return o;
-  }
-
-  function ik(A, Tg, l1, l2, pref, flat) {
-    var dx = Tg.x - A.x, dy = Tg.y - A.y, d = Math.hypot(dx, dy) || 1;
-    var ux = dx / d, uy = dy / d;
-    var dd = Math.max(Math.abs(l1 - l2) + 1, Math.min(d, l1 + l2 - 0.5));
-    var along = (l1 * l1 - l2 * l2 + dd * dd) / (2 * dd);
-    var h = Math.sqrt(Math.max(0, l1 * l1 - along * along));
-    var nx = -uy, ny = ux;
-    if (nx * pref.x + ny * pref.y < 0) { nx = -nx; ny = -ny; }
-    h *= (flat || 1);
-    return { A: A, J: { x: A.x + ux * along + nx * h, y: A.y + uy * along + ny * h }, E: { x: A.x + ux * dd, y: A.y + uy * dd } };
-  }
-
-  // Мягкая «капсула» от точки A (радиус r1) до B (радиус r2)
-  function capsule(A, B, r1, r2) {
-    var dx = B.x - A.x, dy = B.y - A.y, d = Math.hypot(dx, dy) || 1;
-    var nx = -dy / d, ny = dx / d;
-    var a1 = { x: A.x + nx * r1, y: A.y + ny * r1 }, a2 = { x: A.x - nx * r1, y: A.y - ny * r1 };
-    var b1 = { x: B.x + nx * r2, y: B.y + ny * r2 }, b2 = { x: B.x - nx * r2, y: B.y - ny * r2 };
-    return 'M' + pt(a1) + ' L' + pt(b1) + ' A' + f(r2) + ' ' + f(r2) + ' 0 0 0 ' + pt(b2) +
-           ' L' + pt(a2) + ' A' + f(r1) + ' ' + f(r1) + ' 0 0 0 ' + pt(a1) + 'Z';
-  }
-  function limb(c, r1, rJ, r2) {
-    // бицепс/бедро чуть толще в середине — добавляем «мышцу»
-    var mid = lerpPt(c.A, c.J, .45);
-    return capsule(c.A, mid, r1, r1 * 1.08) + capsule(mid, c.J, r1 * 1.08, rJ) + capsule(c.J, c.E, rJ, r2);
-  }
-  function handShape(c, side) {
-    var dx = c.E.x - c.J.x, dy = c.E.y - c.J.y, d = Math.hypot(dx, dy) || 1;
-    var ux = dx / d, uy = dy / d, nx = -uy * side, ny = ux * side;
-    var palm = { x: c.E.x + ux * 3, y: c.E.y + uy * 3 };
-    var thumbA = { x: c.E.x + nx * 4, y: c.E.y + ny * 4 };
-    var thumbB = { x: thumbA.x + ux * 4 + nx * 3, y: thumbA.y + uy * 4 + ny * 3 };
-    return capsule(c.E, palm, 5.2, 6.2) + capsule(thumbA, thumbB, 2.4, 2.2);
-  }
-  var tiptoe = 0;
-  function footShape(c, side) {
-    var heel = { x: c.E.x - side * 2, y: c.E.y + 2 - tiptoe * 3 };
-    var toe = { x: c.E.x + side * lerp(11, 6, tiptoe), y: c.E.y + 3 + tiptoe * 8 };
-    return capsule(heel, toe, 5, 4.2);
-  }
-
-  // Где кабель: лежит → в руке → во рту → в руке → брошен точно на исходное место
-  var lastHeld = null;
-  function cableEnd(t, hand, mouth) {
-    var held = { x: hand.x + OFF.x, y: hand.y + OFF.y };
-    if (t < 1.85) return E0;
-    if (t < 2.1)  return lerpPt(E0, held, ease((t - 1.85) / .25));
-    if (t < 2.8)  return held;
-    if (t < 3.0)  return lerpPt(held, mouth, ease((t - 2.8) / .2));   // плавно подводит ко рту
-    if (t < 4.85) return mouth;                                        // зажал зубами
-    if (t < 5.0)  return lerpPt(mouth, held, ease((t - 4.85) / .15)); // выдёргивает
-    if (t < 5.25) { lastHeld = held; return held; }
-    if (t < 5.7) {
-      var k = (t - 5.25) / .45, R = lastHeld || held;
-      var bounce = k > .8 ? Math.sin((k - .8) / .2 * Math.PI) * 5 : 0;
-      return { x: lerp(R.x, E0.x, ease(k)), y: lerp(R.y, E0.y, k * k) - 40 * k * (1 - k) - bounce };
-    }
-    return E0;                                                         // лежит там же, где в начале
-  }
-
-  function frame(t) {
-    var zap = within(t, 3.4, 4.85);
-    var p = pose(t);
-    tiptoe = within(t, 3.35, 4.95) ? clamp01(Math.min((t - 3.35) / .15, (4.95 - t) / .15)) : 0;
-
-    var jx = 0, jy = 0;
-    if (zap) { jx = (Math.random() - .5) * 6; jy = (Math.random() - .5) * 6; }
-    rig.setAttribute('transform', 'translate(' + f(jx) + ' ' + f(jy) + ')');
-
-    var br = p.breath;
-    torso.setAttribute('transform', 'translate(' + pt(p.P) + ') rotate(' + f(p.lean) + ') scale(1 ' + (1 + br * 0.012).toFixed(3) + ')');
-    var dip = within(t, 3.05, 3.35) ? Math.sin((t - 3.05) / .3 * Math.PI) * 3 : 0;
-    headG.setAttribute('transform', 'translate(' + pt(p.P) + ') rotate(' + f(p.lean) + ') translate(0 ' + f(-104 - br * .6 + dip) + ') rotate(' + f(p.head) + ')');
-
-    var shL = p.toW({ x:-22, y:-64 - br }), shR = p.toW({ x:22, y:-64 - br });
-    var hipL = p.toW({ x:-12, y:3 }), hipR = p.toW({ x:12, y:3 });
-    var aL = ik(shL, p.hL, UPPER, FORE, { x:-0.8, y:1 }, p.bendL);
-    var aR = ik(shR, p.hR, UPPER, FORE, { x:0.8, y:1 }, p.bendR);
-    var lL = ik(hipL, p.fL, THIGH, SHIN, { x:-1, y:-0.15 }, 0.35);
-    var lR = ik(hipR, p.fR, THIGH, SHIN, { x:1, y:-0.15 }, 0.35);
-
-    el.armL.setAttribute('d', limb(aL, 6.8, 5.2, 4.2));
-    el.armR.setAttribute('d', limb(aR, 6.8, 5.2, 4.2));
-    el.legL.setAttribute('d', limb(lL, 9, 6.6, 4.6));
-    el.legR.setAttribute('d', limb(lR, 9, 6.6, 4.6));
-    el.handL.setAttribute('d', handShape(aL, 1));
-    el.handR.setAttribute('d', handShape(aR, -1));
-    el.footL.setAttribute('d', footShape(lL, -1));
-    el.footR.setAttribute('d', footShape(lR, 1));
-
-    var bones = '';
-    [aL, aR, lL, lR].forEach(function (c) { bones += 'M' + pt(c.A) + ' L' + pt(c.J) + ' L' + pt(c.E); });
-    bonesLimbs.setAttribute('d', bones);
-
-    // кабель
-    var E = cableEnd(t, aR.E, p.mouth);
-    var c2 = { x: E.x + 30, y: Math.min(330, E.y + 70) };
-    cable.setAttribute('d', 'M' + START.x + ' ' + START.y + ' C440 332 ' + pt(c2) + ' ' + pt(E));
-    var ang = Math.atan2(E.y - c2.y, E.x - c2.x);
-    tip.style.display = within(t, 3.0, 4.85) ? 'none' : '';
-    tip.setAttribute('transform', 'translate(' + pt(E) + ') rotate(' + f(ang * 180 / Math.PI) + ')');
-
-    // взгляд следит за концом кабеля
-    var toCable = rot({ x: E.x - p.headC.x, y: E.y - p.headC.y }, -(p.lean + p.head));
-    var gl = Math.hypot(toCable.x, toCable.y) || 1;
-    irises.setAttribute('transform', 'translate(' + f(toCable.x / gl * 1.8) + ' ' + f(toCable.y / gl * 1.8) + ')');
-
-    // моргание
-    var cyc = (t + 0.4) % 2.9, blink = cyc < 0.14 ? Math.sin(cyc / 0.14 * Math.PI) : 0;
-    var lidH = within(t, 5.7, 7.1) ? 7 : blink * 13;
-    lidL.setAttribute('height', f(lidH)); lidR.setAttribute('height', f(lidH));
-
-    // искры
-    var onGround = t < 1.85 || t >= 5.7;
-    var sparkOn = false, scale = .6, r = 0;
-    if (zap) { sparkOn = true; scale = 1.1 + Math.random() * .5; r = Math.random() * 90; }
-    else if (onGround) sparkOn = within(t, 5.7, 5.95) || (Math.sin(t * 37) + Math.sin(t * 11)) > 1.55;
-    show(spark, sparkOn);
-    if (sparkOn) spark.setAttribute('transform', 'translate(' + f(E.x + Math.cos(ang) * 8 + jx) + ' ' + f(E.y + Math.sin(ang) * 8 + jy) + ') rotate(' + f(r) + ') scale(' + scale.toFixed(2) + ')');
-
-    // удар током: рентген мигает не чаще 2,5 раза в секунду
-    var xray = zap && Math.floor((t - 3.4) / 0.2) % 2 === 0;
-    svg.classList.toggle('xray', xray);
-    flash.setAttribute('opacity', xray ? '0.15' : '0');
-    show(haloG, zap);
-    if (zap) {
-      haloG.style.opacity = (0.55 + Math.sin(t * 9) * 0.12).toFixed(2);
-      halo.setAttribute('d', bones + 'M' + pt(p.P) + ' L' + pt(p.toW({ x:0, y:-70 })));
-      haloHead.setAttribute('cx', f(p.headC.x)); haloHead.setAttribute('cy', f(p.headC.y));
-      var seed = Math.floor(t * 8);
-      for (var i = 0; i < boltEls.length; i++) boltEls[i].style.opacity = rnd(seed * 7 + i) > .35 ? 1 : 0;
-    }
-    show(bolts, zap);
-
-    // мимика
-    var dz = within(t, 5.3, 7.3), open = within(t, 2.72, 3.08), worried = within(t, 2.3, 3.35);
-    show(parts.hairN, !within(t, 3.4, 7.3));
-    show(parts.hairZ, within(t, 3.4, 7.3));
-    show(parts.eZ, zap);
-    show(parts.eD, dz && !zap);
-    show(parts.eyes, !zap && !dz);
-    show(parts.mO, open);
-    show(parts.mZ, zap);
-    show(parts.mD, dz && !zap);
-    show(parts.mN, !open && !zap && !dz);
-    show(parts.browUp, zap || within(t, 4.85, 5.3));
-    show(parts.browSad, dz && !within(t, 4.85, 5.3));
-    show(parts.browN, !zap && !dz && !within(t, 4.85, 5.3));
-    if (worried && !open) show(parts.browN, true);
-    var so = 0;
-    if (within(t, 3.5, 7.3)) so = 1; else if (within(t, 7.3, 7.8)) so = 1 - (t - 7.3) / .5;
-    soot.style.opacity = so;
-
-    // дымок
-    for (var j = 0; j < smoke.length; j++) {
-      var q = (t - 5.2 - j * .35) / 1.7, c = smoke[j];
-      if (q > 0 && q < 1) {
-        c.setAttribute('cx', f(p.headC.x - 14 + j * 14));
-        c.setAttribute('cy', f(p.headC.y - 40));
-        c.setAttribute('r', f(5 + q * 9));
-        c.setAttribute('transform', 'translate(' + f(Math.sin(q * 6 + j) * 5) + ' ' + f(-q * 50) + ')');
-        c.style.opacity = (1 - q) * .85;
-      } else c.setAttribute('r', '0');
-    }
-  }
-
+  function clamp(v, a, b) { return Math.max(a, Math.min(b, v)); }
+  function clamp01(v) { return clamp(v, 0, 1); }
+  function lerp(a, b, k) { return a + (b - a) * k; }
+  function angDiff(a, b) { var d = b - a; while (d > Math.PI) d -= 2 * Math.PI; while (d < -Math.PI) d += 2 * Math.PI; return d; }
   var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-  if (reduce) { frame(0.5); return; }
-  var start = null;
-  function loop(now) {
-    if (start === null) start = now;
-    frame(((now - start) / 1000) % T);
-    requestAnimationFrame(loop);
+
+  // ---------- общее ----------
+  var mouse = null, caught = 0;
+  function track(e) { mouse = { x: e.clientX, y: e.clientY, t: performance.now() / 1000 }; }
+  window.addEventListener('pointermove', track);
+  window.addEventListener('pointerdown', track);
+  document.addEventListener('pointerleave', function () { mouse = null; });
+  function home() { var r = $('zero').getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top - 10 }; }
+  function scale() { return window.innerWidth < 520 ? 1 : 1.25; }
+
+  var bitsG = $('bits'), scoreEl = $('score');
+  function burst(x, y, color, square) {
+    for (var i = 0; i < 8; i++) {
+      var e = square ? mk('rect', { width: 4, height: 4, x: -2, y: -2, fill: color }, bitsG) : mk('circle', { r: 2, fill: color }, bitsG);
+      var a = Math.random() * Math.PI * 2, v = 50 + Math.random() * 70;
+      e._d = { x: x, y: y, vx: Math.cos(a) * v, vy: Math.sin(a) * v - 50, life: 0, rot: Math.random() * 360 };
+    }
   }
-  frame(0);
-  requestAnimationFrame(loop);
+  function updateBits(dt) {
+    Array.prototype.slice.call(bitsG.childNodes).forEach(function (e) {
+      var d = e._d; d.life += dt; d.vy += 240 * dt; d.x += d.vx * dt; d.y += d.vy * dt; d.rot += 400 * dt;
+      e.setAttribute('transform', 'translate(' + f(d.x) + ' ' + f(d.y) + ') rotate(' + f(d.rot) + ')');
+      e.style.opacity = clamp01(1 - d.life / .9).toFixed(2);
+      if (d.life > .9) bitsG.removeChild(e);
+    });
+  }
+  function plural(n) { var a = n % 10, b = n % 100; return (a >= 2 && a <= 4 && (b < 12 || b > 14)) ? 'раза' : 'раз'; }
+  function scored() {
+    caught++;
+    scoreEl.textContent = 'Вас поймали ' + caught + ' ' + plural(caught) + '.';
+    scoreEl.classList.add('on');
+  }
+
+  // =====================================================================
+  // Потерянный конверт с бумажными крылышками
+  // =====================================================================
+  var Mail = (function () {
+    var g = $('gMail'), root, flapEl, mouthEl, wingL, wingR, pupils = [];
+    var pos, vx = 0, vy = 0, tilt = 0, chomp = -1, cooldown = 0, openS = 0;
+    function init() {
+      g.innerHTML = ''; pupils = [];
+      root = mk('g', {}, g);
+      wingL = mk('path', { class: 'wing' }, root);
+      wingR = mk('path', { class: 'wing' }, root);
+      mouthEl = mk('path', { class: 'mouth', d: 'M-22 -14 L22 -14 L0 3Z' }, root);
+      mk('rect', { class: 'paper', x: -22, y: -14, width: 44, height: 28, rx: 3 }, root);
+      mk('path', { class: 'paper-line', d: 'M-21 13 L-4 1 M21 13 L4 1' }, root);
+      mk('rect', { class: 'stamp', x: 11, y: 3, width: 8, height: 8, rx: 1 }, root);
+      mk('text', { class: 'stamp-t', x: 15, y: 8.6 }, root).textContent = '404';
+      [-7, 7].forEach(function (ex) {
+        mk('circle', { class: 'eye-w', cx: ex, cy: 3, r: 4 }, root);
+        pupils.push(mk('circle', { class: 'eye-p', cx: ex, cy: 3, r: 1.9 }, root));
+      });
+      flapEl = mk('path', { class: 'paper' }, root);
+      var H = home(); pos = { x: H.x, y: H.y - 6 }; vx = vy = 0;
+    }
+    function update(dt, now, hunting) {
+      var H = home(), sc = scale();
+      var tx = hunting ? mouse.x : H.x, ty = hunting ? mouse.y : H.y - 6 * sc;
+      // летит мягко, как на пружинке
+      var k = hunting ? 7 : 5, damp = 4.2;
+      vx += ((tx - pos.x) * k - vx * damp) * dt; vy += ((ty - pos.y) * k - vy * damp) * dt;
+      var sp = Math.hypot(vx, vy); if (sp > 320) { vx *= 320 / sp; vy *= 320 / sp; sp = 320; }
+      pos.x = clamp(pos.x + vx * dt, 30, innerWidth - 30); pos.y = clamp(pos.y + vy * dt, 30, innerHeight - 30);
+      var d = Math.hypot(tx - pos.x, ty - pos.y);
+      var resting = !hunting && d < 6 && sp < 15;
+      var flying = !resting;
+      tilt = lerp(tilt, clamp(vx * .07, -22, 22), Math.min(1, dt * 6));
+      var bob = flying ? Math.sin(now * 6) * 3 : 0;
+      // крылышки машут в полёте и складываются, когда сидит
+      var flap = flying ? Math.sin(now * (hunting ? 20 : 12)) : -1;
+      var wy = -10 - flap * 12, wy2 = -2 - flap * 6;
+      wingL.setAttribute('d', 'M-20 -4 L' + f(-40) + ' ' + f(wy) + ' L' + f(-32) + ' ' + f(wy2 + 6) + ' Z');
+      wingR.setAttribute('d', 'M20 -4 L40 ' + f(wy) + ' L32 ' + f(wy2 + 6) + ' Z');
+      wingL.style.display = wingR.style.display = resting ? 'none' : '';
+      cooldown -= dt;
+      if (hunting && cooldown <= 0 && d < 18 * sc) {
+        cooldown = 1; chomp = 0; scored(); burst(mouse.x, mouse.y, 'var(--paper)', true);
+        vy -= 120;
+      }
+      // клапан — это рот: открывается, когда курсор близко
+      var target = hunting ? clamp01(1.2 - d / 130) : 0;
+      if (chomp >= 0) { chomp += dt; target = chomp < .12 ? 1 : 0; if (chomp > .6) chomp = -1; }
+      openS = lerp(openS, target, Math.min(1, dt * (chomp >= 0 ? 30 : 8)));
+      var tipY = lerp(3, -34, openS);
+      flapEl.setAttribute('d', 'M-22 -14 L22 -14 L0 ' + f(tipY) + 'Z');
+      mouthEl.style.opacity = openS > .15 ? 1 : 0;
+      var look = mouse || { x: pos.x, y: pos.y + 100 }, la = Math.atan2(look.y - pos.y, look.x - pos.x);
+      pupils.forEach(function (p, i) { p.setAttribute('cx', f((i ? 7 : -7) + Math.cos(la) * 1.6)); p.setAttribute('cy', f(3 + Math.sin(la) * 1.6)); });
+      var shake = chomp >= 0 ? Math.sin(chomp * 50) * 5 : 0;
+      root.setAttribute('transform', 'translate(' + f(pos.x) + ' ' + f(pos.y + bob) + ') rotate(' + f(tilt + shake) + ') scale(' + sc + ')');
+    }
+    return { g: g, init: init, update: update,
+             lead: 'Эта страница потерялась, как письмо без адреса. Зато конверт нашёлся, и он очень хочет с вами познакомиться. Проверьте адрес или вернитесь на главную.' };
+  })();
+
+  // ---------- запуск ----------
+  var current = Mail;
+  current.init();
+  $('lead').textContent = current.lead;
+  var lastT = null;
+  function tick(ms) {
+    var now = ms / 1000, dt = lastT === null ? 0 : Math.min(.05, now - lastT); lastT = now;
+    current.update(dt, now, !!(mouse && now - mouse.t < 3));
+    updateBits(dt);
+    requestAnimationFrame(tick);
+  }
+  if (reduce) current.update(0, 0, false); else requestAnimationFrame(tick);
+
+  // ---------- тема ----------
+  var root = document.documentElement, themeBtn = $('themeBtn');
+  var mq = window.matchMedia ? window.matchMedia('(prefers-color-scheme: dark)') : null;
+  var ICON_MOON = '<svg viewBox="0 0 24 24"><path d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z"/></svg>';
+  var ICON_SUN = '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>';
+  function isDark() { var d = root.getAttribute('data-theme'); return d ? d === 'dark' : !!(mq && mq.matches); }
+  function paint() { themeBtn.innerHTML = isDark() ? ICON_SUN : ICON_MOON; themeBtn.setAttribute('aria-label', isDark() ? 'Включить светлую тему' : 'Включить тёмную тему'); }
+  try { var saved = localStorage.getItem('theme404'); if (saved === 'light' || saved === 'dark') root.setAttribute('data-theme', saved); } catch (e) {}
+  themeBtn.addEventListener('click', function () {
+    var next = isDark() ? 'light' : 'dark'; root.setAttribute('data-theme', next);
+    try { localStorage.setItem('theme404', next); } catch (e) {}
+    paint();
+  });
+  if (mq && mq.addEventListener) mq.addEventListener('change', paint);
+  paint();
 })();
 </script>
 </body>

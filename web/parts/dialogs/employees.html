@@ -1,18 +1,29 @@
 <!-- Окна: dlgUserInfo, dlgUser -->
-<dialog id="dlgUserInfo">
+<dialog id="dlgUserInfo" class="xwide">
   <div class="dlg-head" id="uiTitle">Сотрудник</div>
-  <div class="dlg-body">
+  <div class="dlg-body ui-grid">
+   <div class="ui-main">
     <div class="kv">
       <div><span>Должность</span><b id="ui_pos">—</b></div>
       <div><span>Подразделение</span><b id="ui_div">—</b></div>
       <div><span>Отдел</span><b id="ui_dep">—</b></div>
+      <div><span>Телефон</span><b id="ui_phone" class="mono">—</b></div>
+      <div><span>Почта</span><b id="ui_mail">—</b></div>
     </div>
     <div class="sec"><b>Закреплённое оборудование</b><div id="ui_items"></div></div>
     <div class="sec"><b>Расходные материалы</b><div id="ui_sup"></div></div>
+    <div class="sec"><b>Заявки ИТ</b><div id="ui_req"></div></div>
+   </div>
+   <aside class="ui-side">
+    <div class="ui-side-head"><b>Полномочия</b>
+      <a id="ui_reqLink" class="btn btn-accent" target="_blank" rel="noopener" hidden
+         title="Карточка сотрудника в программе «Заявки ИТ» — откроется в новой вкладке">Открыть в «Заявках» ↗</a></div>
+    <div id="ui_rights"></div>
+   </aside>
   </div>
   <div class="dlg-foot">
     <button id="btnUiEdit">Изменить данные</button>
-    <button id="btnUiClose" class="btn-primary">Закрыть</button>
+    <button id="btnUiClose" class="btn-primary" autofocus>Закрыть</button>
   </div>
 </dialog>
 

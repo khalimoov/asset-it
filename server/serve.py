@@ -36,7 +36,7 @@ def main():
     shown = "localhost" if host in ("0.0.0.0", "") else host
 
     print()
-    print("  Учёт ИТ-отдела")
+    print("  Athena — учёт ИТ-отдела")
     print("  адрес в сети:  http://{}:{}".format(shown, port))
     if host in ("0.0.0.0", ""):
         print("  сотрудникам:   http://<имя-или-адрес-сервера>:{}".format(port))
