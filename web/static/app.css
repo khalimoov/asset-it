@@ -432,6 +432,7 @@ td.st-x .badge{white-space:nowrap}
 /* пункты верхнего уровня разделены пунктиром */
 .rt + .rg-sys,.rt.child + .rt:not(.child){margin-top:6px;padding-top:9px;border-top:1px dashed var(--border);
   border-radius:0}
+.ub-msg{margin:0 0 12px;line-height:1.5}
 .ui-removed{margin-top:12px;padding-top:10px;border-top:1px dashed var(--border)}
 .ui-removed summary{cursor:pointer;font-size:12px;color:var(--muted);margin-bottom:6px}
 .ui-removed .rt{color:var(--muted);text-decoration:line-through}

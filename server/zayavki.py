@@ -26,6 +26,9 @@ ROOT = Path(__file__).resolve().parent.parent
 TIMEOUT = 6
 LIST_TTL = 300          # список сотрудников «Заявок» перечитываем раз в 5 минут
 LOOPBACK = {"127.0.0.1", "localhost", "::1", "0.0.0.0"}
+# Пока у сотрудника есть такие полномочия, удалить его у нас нельзя: сначала их снимают
+# заявкой в «Заявках». «На снятии» (revoking) не держит — заявка на снятие уже сделана.
+KEEPS_PERSON = ("active", "requested")
 
 _cache = {"at": 0.0, "key": None, "persons": []}
 _lock = threading.Lock()
@@ -161,7 +164,8 @@ def person_info(person, browser_host=""):
         return {"system": r.get("system") or "", "resource": r.get("resource") or "",
                 "permission": r.get("permission") or "", "info": r.get("info") or "",
                 "state": r.get("state") or "", "stateName": r.get("state_name") or "",
-                "requestDate": req.get("date") or "", "url": link(req.get("url"))}
+                "requestDate": req.get("date") or "", "url": link(req.get("url")),
+                "keep": (r.get("state") or "") in KEEPS_PERSON}
 
     return {
         "configured": True, "found": True,
@@ -179,3 +183,17 @@ def person_info(person, browser_host=""):
         "rights": [right(r) for r in full.get("rights") or []],
         "removed": [right(r) for r in full.get("removed_rights") or []],
     }
+
+
+def delete_block(person):
+    """Почему сотрудника нельзя удалить: текст отказа или "" — можно.
+    Не настроена связь или в «Заявках» его нет — удалять не мешаем; нет связи — Error."""
+    d = person_info(person)
+    keep = [r for r in d.get("rights") or [] if r["keep"]]
+    if not keep:
+        return ""
+    # названия систем бывают в абзац длиной — в отказе хватит ресурсов
+    names = [r["resource"] for r in keep]
+    return ("Нельзя удалить «%s»: в «Заявках ИТ» у него действуют полномочия — %d (%s). "
+            "Сначала сделайте в «Заявках» заявку на снятие полномочий, потом удалите сотрудника."
+            % (person.get("name") or "", len(keep), "; ".join(names[:3]) + ("…" if len(names) > 3 else "")))

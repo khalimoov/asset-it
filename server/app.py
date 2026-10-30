@@ -872,6 +872,23 @@ def save_cfg(cfg, user, org_id):
     org = lambda r: org_id
     in_org = ("org_id = %s", [org_id])
 
+    # Удалить сотрудника можно, только когда в «Заявках ИТ» с него сняты полномочия.
+    # Проверяем до транзакции: «Заявки» отвечают по сети, держать на этом базу незачем.
+    if "users" in cfg and can(user, "employees.edit"):
+        keep_ids = [g(r, "id") for r in cfg["users"] if g(r, "id")]
+        with db() as conn, conn.cursor() as cur:
+            cur.execute("select id, name, email, ad_guid from person where org_id = %s and id <> all(%s)",
+                        (org_id, keep_ids or [""]))
+            gone = cur.fetchall()
+        for p in gone:
+            try:
+                why = zayavki.delete_block(p)
+            except zayavki.Error as e:
+                raise ValueError("Сотрудник «%s» не удалён: не удалось проверить его полномочия "
+                                 "в «Заявках ИТ» — %s." % (p["name"], e))
+            if why:
+                raise ValueError(why)
+
     with db() as conn, conn.cursor() as cur:
         # что принадлежит этому учреждению: нужно, чтобы ограничить удаление
         cur.execute("select id, kind from registry where org_id = %s", (org_id,))

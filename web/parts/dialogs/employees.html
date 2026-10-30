@@ -1,4 +1,4 @@
-<!-- Окна: dlgUserInfo, dlgUser -->
+<!-- Окна: dlgUserInfo, dlgUser, dlgUserBlock -->
 <dialog id="dlgUserInfo" class="xwide">
   <div class="dlg-head" id="uiTitle">Сотрудник</div>
   <div class="dlg-body ui-grid">
@@ -43,5 +43,20 @@
     <button id="btnUserDel" class="btn-danger" hidden>Удалить</button>
     <button id="btnUserCancel">Отмена</button>
     <button id="btnUserSave" class="btn-primary">Сохранить</button>
+  </div>
+</dialog>
+
+<!-- удалить сотрудника нельзя, пока в «Заявках ИТ» у него есть полномочия -->
+<dialog id="dlgUserBlock">
+  <div class="dlg-head">Сотрудника нельзя удалить</div>
+  <div class="dlg-body">
+    <p id="ub_msg" class="ub-msg"></p>
+    <div class="ui-side"><div class="ui-side-head"><b>Полномочия, которые надо снять</b></div>
+      <div id="ub_rights"></div></div>
+  </div>
+  <div class="dlg-foot">
+    <a id="ub_link" class="btn btn-accent" target="_blank" rel="noopener" hidden
+       title="Карточка сотрудника в программе «Заявки ИТ» — откроется в новой вкладке">Открыть в «Заявках» ↗</a>
+    <button id="btnUbClose" class="btn-primary" autofocus>Понятно</button>
   </div>
 </dialog>

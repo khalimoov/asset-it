@@ -231,16 +231,34 @@ $("btnUserDel").onclick = function(){
     toast("Нельзя удалить: за сотрудником числится техника — "+active.length+". Сначала переведите её на склад, на другого сотрудника или спишите.");
     return;
   }
-  var used = itemsOfUser(u.id), iss = cfg.issues.filter(function(x){ return x.userId===u.id; }).length;
-  if(!confirm("Удалить сотрудника «"+u.name+"»?"+
-    (used?"\nВ "+used+" списанных позициях он останется только в истории.":"")+
-    (iss?"\nЗаписей о выданных материалах: "+iss+" — сотрудник в них перестанет отображаться.":""))) return;
-  cfg.users = cfg.users.filter(function(x){ return x.id!==u.id; });
-  var touched = items.filter(function(i){ return i.owner===u.id; });
-  touched.forEach(function(i){ i.owner=""; });
-  saveCfg(); if(touched.length) saveItems(touched);
-  $("dlgUser").close(); toast("Удалено");
+  /* полномочия в «Заявках ИТ» должны быть сняты (или на снятии); сервер проверит то же самое */
+  api("/api/persons/"+encodeURIComponent(u.id)+"/requests").then(function(d){
+    var keep = d.found ? d.rights.filter(function(x){ return x.keep; }) : [];
+    if(keep.length){ showUserBlock(u, d, keep); return; }
+    var off = d.found ? d.rights.length : 0;
+    var used = itemsOfUser(u.id), iss = cfg.issues.filter(function(x){ return x.userId===u.id; }).length;
+    if(!confirm("Удалить сотрудника «"+u.name+"»?"+
+      (off?"\nПолномочий на снятии в «Заявках»: "+off+" — заявка на снятие ещё не исполнена.":"")+
+      (used?"\nВ "+used+" списанных позициях он останется только в истории.":"")+
+      (iss?"\nЗаписей о выданных материалах: "+iss+" — сотрудник в них перестанет отображаться.":""))) return;
+    cfg.users = cfg.users.filter(function(x){ return x.id!==u.id; });
+    var touched = items.filter(function(i){ return i.owner===u.id; });
+    touched.forEach(function(i){ i.owner=""; });
+    saveCfg(); if(touched.length) saveItems(touched);
+    $("dlgUser").close(); toast("Удалено");
+  }, function(e){
+    if(e && e.auth) return;
+    toast("Не удалось проверить полномочия в «Заявках ИТ» — сотрудник не удалён"+apiWhy(e));
+  });
 };
+function showUserBlock(u, d, keep){
+  $("ub_msg").textContent = "В «Заявках ИТ» у «"+u.name+"» действуют полномочия — "+keep.length+
+    ". Сначала сделайте в «Заявках» заявку на снятие полномочий, потом удалите сотрудника.";
+  $("ub_rights").innerHTML = rightsList(keep, "");
+  $("ub_link").hidden = !d.url; if(d.url) $("ub_link").href = d.url;
+  $("dlgUserBlock").showModal();
+}
+$("btnUbClose").onclick = function(){ $("dlgUserBlock").close(); };
 $("usersBody").addEventListener("click", function(e){
   var tr = e.target.closest("tr"); if(!tr) return;
   var u = byId("users", tr.dataset.u); if(!u) return;
